@@ -1,7 +1,7 @@
 {
   "name": "spreadable",
-  "version": "0.0.1",
-  "description": "Spreadable - distributed newtork mechanism",
+  "version": "0.0.2",
+  "description": "Distributed newtork mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
   },
