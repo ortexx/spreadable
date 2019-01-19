@@ -71,7 +71,7 @@ utils.getCpuUsage = async function(options = {}) {
       }      
     }, options.timeout);
   });
-}
+};
 
 /**
  * Check the port is used
@@ -82,7 +82,7 @@ utils.getCpuUsage = async function(options = {}) {
  */
 utils.isPortUsed = async function (port) {
   return await tcpPortUsed.check(+port, 'localhost');
-}
+};
 
 /**
  * Get ip address by hostname
@@ -165,7 +165,7 @@ utils.getRemoteIp = function (req) {
  */
 utils.isValidPort = function (port) {
   return +port > 0 &&  +port <= 65535;
-}
+};
 
 /**
  * Check the  ip is valid
@@ -175,7 +175,7 @@ utils.isValidPort = function (port) {
  */
 utils.isValidIp = function (ip) {
   return validateIP(ip);
-}
+};
 
 /**
  * Check the hostname is valid
@@ -189,7 +189,7 @@ utils.isValidHostname = function (hostname) {
   }
   
   return this.hostValidationRegex.test(hostname) || this.isValidIp(hostname);
-}
+};
 
 /**
  * Check the address is valid
