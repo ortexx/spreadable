@@ -1068,6 +1068,7 @@ module.exports = () => {
     /**
      * Get the network size
      * 
+     * @aync
      * @returns {integer}
      */
     async getNetworkSize() {
@@ -1077,6 +1078,7 @@ module.exports = () => {
     /**
      * Get candidate suspicion level
      * 
+     * @aync
      * @returns {integer}
      */
     async getCandidateSuspicionLevel() {
@@ -1088,6 +1090,7 @@ module.exports = () => {
     /**
      * Get candidate suspicion level
      * 
+     * @aync
      * @returns {integer}
      */
     async getCandidateExculpationStep() {
@@ -1098,6 +1101,7 @@ module.exports = () => {
     /**
      * Get candidate max suspicion level
      * 
+     * @aync
      * @returns {integer}
      */
     async getCandidateMaxSuspicionLevel() {

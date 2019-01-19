@@ -8,6 +8,12 @@ const utils = {
   hostValidationRegex: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/
 };
 
+/**
+ * Get a random element from an array
+ * 
+ * @param {array} arr
+ * @returns {*}
+ */
 utils.getRandomElement = function (arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 };

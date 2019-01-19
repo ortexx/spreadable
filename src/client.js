@@ -48,6 +48,8 @@ module.exports = () => {
 
     /**
      * Initialize the client
+     * 
+     * @aync
      */
     async init() {
       await this.prepareServices();
@@ -59,6 +61,8 @@ module.exports = () => {
 
     /**
      * Deinitialize the client
+     * 
+     * @aync
      */
     async deinit() {
       this.initializationFilter();
