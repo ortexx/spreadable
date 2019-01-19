@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Distributed newtork mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -27,15 +27,15 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "get-port": "^4.0.0",
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "eslint": "^5.9.0"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
     "bytes": "^3.0.0",
     "chalk": "^2.4.1",
     "cli-spinner": "^0.2.8",
-    "cron": "^1.6.0",
-    "eslint": "^5.9.0",
+    "cron": "^1.6.0",    
     "express": "^4.16.4",
     "external-ip": "^2.0.3",
     "fs-extra": "^7.0.1",
