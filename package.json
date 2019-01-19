@@ -1,0 +1,61 @@
+{
+  "name": "spreadable",
+  "version": "0.0.1",
+  "description": "Spreadable - distributed newtork mechanism",
+  "bin": {
+    "spreadable": "./bin/index.js"
+  },
+  "main": "./src/index.js",
+  "author": {
+    "name": "Alexandr Balasyan",
+    "email": "mywebstreet@gmail.com"
+  },
+  "homepage": "https://github.com/ortexx/spreadable",
+  "scripts": {
+    "eslint": "eslint src bin",
+    "test": "mocha ./test/index.js"
+  },
+  "keywords": [
+    "spreadable",
+    "network",
+    "distributed",
+    "distribution",
+    "information",
+    "data"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "get-port": "^4.0.0",
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "bytes": "^3.0.0",
+    "chalk": "^2.4.1",
+    "cli-spinner": "^0.2.8",
+    "cron": "^1.6.0",
+    "eslint": "^5.9.0",
+    "express": "^4.16.4",
+    "external-ip": "^2.0.3",
+    "fs-extra": "^7.0.1",
+    "hasha": "^3.0.0",
+    "lodash": "^4.17.11",
+    "lokijs": "^1.5.5",
+    "ms": "^2.1.1",
+    "node-cron": "^2.0.3",
+    "optimist": "^0.6.1",
+    "pretty-ms": "^4.0.0",
+    "request": "^2.88.0",
+    "signal-exit": "^3.0.2",
+    "tcp-port-used": "^1.0.1",
+    "validate-ip-node": "^1.0.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ortexx/spreadable"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  }
+}
