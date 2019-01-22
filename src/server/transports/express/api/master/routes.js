@@ -21,7 +21,7 @@ module.exports = [
   },
 
   /**
-   * Get a random node from the network
+   * Get an available node from the network
    * 
    * @api {post} /api/master/get-available-node
    * @apiSuccess {object} - { candidates: ... }

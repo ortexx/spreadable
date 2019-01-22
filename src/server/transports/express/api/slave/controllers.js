@@ -8,9 +8,9 @@ module.exports.register = node => {
   return async (req, res, next) => {
     try {
       const target = req.body.target;
-      const targetIp = await utils.getHostIp((target + '').split(':')[0]);    
+      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]);    
       
-      if(!targetIp || targetIp != req.clientIp || !utils.isValidAddress(target) || target == node.address) {
+      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target) || target == node.address) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       }
 
@@ -74,10 +74,10 @@ module.exports.syncUp = node => {
   return async (req, res, next) => {
     try {
       const target = req.body.target;
-      const targetIp = await utils.getHostIp((target + '').split(':')[0]);   
+      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]);  
       const masters = req.body.masters || [];         
 
-      if(!targetIp || targetIp != req.clientIp || !utils.isValidAddress(target)) {
+      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target)) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       }
 
@@ -101,13 +101,13 @@ module.exports.syncDown = node => {
   return async (req, res, next) => {
     try {
       const target = req.body.target;
-      const targetIp = await utils.getHostIp((target + '').split(':')[0]);   
+      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]); 
       const backlinkChain = req.body.backlinkChain || [];
       const masters = req.body.masters || [];
 
-      if(!targetIp || targetIp != req.clientIp || !utils.isValidAddress(target)) {
+      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target)) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
-      }
+      }     
       
       const backlink = await node.db.getBacklink();
 

@@ -52,7 +52,7 @@ module.exports.register = node => {
 };
 
 /**
- * Get a random node from the network
+ * Get an available node from the network
  */
 module.exports.getAvailableNode = node => {
   return async (req, res, next) => {

@@ -8,7 +8,7 @@ module.exports = [
   { name: 'clientByEndpointLimit', fn: midds.requestQueueClientByEndpoint },
 
   /**
-   * Get a random node from the network
+   * Get an available node from the network
    * 
    * @api {post} /client/get-available-node
    */

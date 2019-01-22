@@ -1,5 +1,5 @@
 /**
- * Get a random node address from the network
+ * Get an available node address from the network
  */
 module.exports.getAvailableNode = node => {
   return async (req, res, next) => {

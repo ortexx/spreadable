@@ -3,6 +3,7 @@ const bytes = require('bytes');
 const ms = require('ms');
 const dns = require('dns');
 const tcpPortUsed = require('tcp-port-used');
+const ip6addr = require('ip6addr'); 
 
 const utils = {
   hostValidationRegex: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/
@@ -150,8 +151,9 @@ utils.getRequestTimer = function (timeout) {
 utils.getRemoteIp = function (req) {
   let ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
 
-  if(ip.match('::')) {
+  if(ip.match(':')) {
     ip = ip.replace(/^::1/, '127.0.0.1').replace(/^::ffff:/, '');
+    this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
   }
 
   return ip;
@@ -175,6 +177,62 @@ utils.isValidPort = function (port) {
  */
 utils.isValidIp = function (ip) {
   return validateIP(ip);
+};
+
+/**
+ * Get ip v6 in full format
+ * 
+ * @param {string} ip
+ * @returns {string}
+ */
+utils.getFullIpv6 = function (ip) {
+  return ip6addr.parse(ip).toString({ format: 'v6', zeroElide: false, zeroPad: true });
+};
+
+/**
+ * Check the ip is v6
+ * 
+ * @param {string} ip
+ * @returns {boolean}
+ */
+utils.isIpv6 = function (ip) {
+  return validateIP(ip) && ip.match(':');
+};
+
+/**
+ * Convert ipv4 to ipv6 format
+ * 
+ * @param {string} ip
+ * @returns {string}
+ */
+utils.ipv4Tov6 = function (ip) {
+  return this.getFullIpv6('::ffff:' + ip);
+};
+
+/**
+ * Create an address from hostname and port
+ * 
+ * @param {string} hostname
+ * @param {integer} port
+ * @returns {string}
+ */
+utils.createAddress = function (hostname, port) {
+  if(this.isIpv6(hostname)) {
+    return `[${this.getFullIpv6(hostname)}]:${port}`;
+  }
+
+  return `${hostname}:${port}`;
+};
+
+/**
+ * Check two ip addresses are equal
+ * 
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+utils.isIpEqual = function (a, b) {
+  return ip6addr.compare(ip6addr.parse(a), ip6addr.parse(b)) == 0;
 };
 
 /**
@@ -202,10 +260,32 @@ utils.isValidAddress = function (address) {
     return false;
   }
 
-  const parts = address.split(/:(?=[0-9]{1,5}$)/);
+  const parts = this.splitAddress(address);
   const host = parts[0];
-  const port = +parts[1];
+  const port = parts[1];
   return this.isValidHostname(host) && this.isValidPort(port);
+};
+
+/**
+ * Split the address to hostname and port
+ * 
+ * @param {string} address
+ * @returns {string[]}
+ */
+utils.splitAddress = function (address) {
+  let sp;
+
+  if(!address || typeof address != 'string') {
+    return [];
+  }
+
+  if(address.match(']')) {
+    sp = address.split(']:');
+    return [this.getFullIpv6(sp[0].slice(1)), +sp[1]];
+  }
+
+  sp = address.split(':');
+  return [sp[0], +sp[1]];
 };
 
 /**

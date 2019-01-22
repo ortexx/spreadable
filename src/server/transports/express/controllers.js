@@ -3,9 +3,9 @@ const errors = require('../../../errors');
 const utils = require('../../../utils');
 
 /**
- * Set http request client id
+ * Set http request client ip
  */
-module.exports.clientId = () => {
+module.exports.clientIp = () => {
   return (req, res, next) => (req.clientIp = utils.getRemoteIp(req), next());
 };
 

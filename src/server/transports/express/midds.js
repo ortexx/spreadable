@@ -27,10 +27,10 @@ module.exports.checkMasterAcception = node => {
 module.exports.updateClientInfo = node => {
   return async (req, res, next) => {
     try {
-      const source = req.body.source;
-      const sourceIp = await utils.getHostIp((source + '').split(':')[0]);   
+      const source = req.body.source; 
+      const sourceIp = await utils.getHostIp(utils.splitAddress(source)[0]);
 
-      if(!source || sourceIp != req.clientIp || !utils.isValidAddress(source)) {
+      if(!source || !utils.isIpEqual(sourceIp, req.clientIp) || !utils.isValidAddress(source)) {
         return next();
       }
 
@@ -54,7 +54,7 @@ module.exports.networkAccess = (node, checks = {}) => {
       if(checks.hostname) {
         const hostname = req.headers['original-hostname'];
       
-        if(!hostname || (await utils.getHostIp(hostname)) != req.clientIp) {
+        if(!hostname || (!utils.isIpEqual(await utils.getHostIp(hostname), req.clientIp))) {
           throw new errors.AccessError('Wrong hostname');
         }
 

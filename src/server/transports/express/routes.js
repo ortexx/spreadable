@@ -1,7 +1,7 @@
 const controllers = require('./controllers');
 
 module.exports = [
- { name: 'clientId', fn: controllers.clientId }, 
+ { name: 'clientIp', fn: controllers.clientIp }, 
  { name: 'timeout', fn: controllers.timeout }, 
  { name: 'bodyParser', fn: controllers.bodyParser },
  { name: 'api', url: '/api', fn: node => node.server.getApiRouter() },

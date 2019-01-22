@@ -92,7 +92,7 @@ module.exports = () => {
      */
     async init() {
       this.hostname = this.options.hostname || (await this.getExternalIp()) || (await this.getLocalIp());
-      this.address = `${this.hostname}:${this.port}`;
+      this.address = utils.createAddress(this.hostname, this.port);
       this.ip = await utils.getHostIp(this.hostname);
 
       if(!this.ip) {
@@ -482,7 +482,7 @@ module.exports = () => {
         throw new errors.WorkError('Not found an interview summary', 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
       }
 
-      if(!utils.isValidHostname((summary.address + '').split(':')[0])) {
+      if(!utils.isValidHostname(utils.splitAddress(summary.address)[0])) {
         throw new errors.WorkError('Invalid interview summary address', 'ERR_SPREADABLE_INTERVIEW_INVALID_SUMMARY_ADDRESS');
       }
     }
@@ -671,7 +671,7 @@ module.exports = () => {
         await this.db.addCandidate(candidate.address, 'getAvailablity');
       }
       
-      if(!candidate || !(await this.checkHostnameIsAllowed((candidate.address + '').split(':')[0]))) {
+      if(!candidate || !(await this.checkHostnameIsAllowed(utils.splitAddress(candidate.address)[0]))) {
         return this.address;
       }
 
@@ -682,7 +682,7 @@ module.exports = () => {
      * Prepare candidates suspicion info
      * 
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @returns {object}
      */
     async prepareCandidateSuscpicionInfo(action) {
@@ -754,26 +754,28 @@ module.exports = () => {
      */
     async hostnameFilter(hostname) {
       let ip;
+      let ipv6;
 
       try {
         ip = await utils.getHostIp(hostname);
       }
       catch(err) {
         throw new errors.AccessError(`Hostname ${hostname} is invalid`);
-      }
-      
-      const white = this.options.network.whitelist || [];
-      const black = this.options.network.blacklist || [];
+      }           
 
       if(!utils.isValidHostname(ip)) {
         throw new errors.AccessError(`Hostname ${ip} is invalid`);
       }
 
-      if(white.length && white.indexOf(ip) == -1 && white.indexOf(hostname) == -1) {
+      const white = this.options.network.whitelist || [];
+      const black = this.options.network.blacklist || [];
+      ipv6 = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
+
+      if(white.length && white.indexOf(ip) == -1 && white.indexOf(hostname) == -1 && white.indexOf(ipv6) == -1) {
         throw new errors.AccessError(`Hostname ${ip} is denied`);
       }
 
-      if(black.length && (black.indexOf(ip) != -1 || black.indexOf(hostname) != -1)) {
+      if(black.length && (black.indexOf(ip) != -1 || black.indexOf(hostname) != -1 || black.indexOf(ipv6) != -1)) {
         throw new errors.AccessError(`Hostname ${ip} is in blacklist`);
       }
     }    
@@ -1115,6 +1117,8 @@ module.exports = () => {
       this.options.request.timeoutSlippage = utils.getMs(this.options.request.timeoutSlippage);
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
+      this.options.network.whitelist = this.options.network.whitelist.map(ip => utils.isIpv6(ip)? utils.getFullIpv6(ip): ip);
+      this.options.network.blacklist = this.options.network.blacklist.map(ip => utils.isIpv6(ip)? utils.getFullIpv6(ip): ip);
     }
 
     /**
