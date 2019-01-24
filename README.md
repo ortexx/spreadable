@@ -90,7 +90,7 @@ For the network working, all nodes must be able to communicate with each other. 
 The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__ By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as option manually. If the node address changes, then it is simply re-registering on the network.
 
 ## How exactly the library can be used
-You can extend the library code and add various interesting features. For example, the [storacle](http://https://github.com/ortexx/storacle/) organizes file storage using the protocol.
+You can extend the library code and add various interesting features. For example, the [storacle](https://github.com/ortexx/storacle/) organizes file storage using the protocol.
 
 ## How to use https
 
