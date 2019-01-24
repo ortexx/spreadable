@@ -37,10 +37,14 @@ module.exports.ping = node => {
  * Get the node status
  */
 module.exports.status = node => {
-  return async (req, res) => res.send({ 
-    availability: await node.getAvailability(), 
-    isMaster: await node.isMaster() 
-  });
+  return async (req, res, next) => {
+    try {
+      res.send(await node.getStatusInfo(req.query.pretty !== undefined));
+    }
+    catch(err) {
+      next(err);
+    }
+  };
 };
 
 /**

@@ -98,7 +98,8 @@ module.exports = (Parent) => {
       const router = express.Router();
   
       routes.forEach(route => {
-        router[route.method || 'use'](route.url || '*', route.fn(this.node));
+        const fn = Array.isArray(route.fn)? route.fn.map(fn => fn(this.node)): route.fn(this.node);
+        router[route.method || 'use'](route.url || '*', fn);
       });
   
       return router;

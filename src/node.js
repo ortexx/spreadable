@@ -530,6 +530,26 @@ module.exports = () => {
     }
 
     /**
+     * Get the node status info
+     * 
+     * @async
+     * @param {boolean} [pretty=false]
+     * @returns {object}
+     */
+    async getStatusInfo(pretty = false) {
+      const availability = await this.getAvailability(); 
+      const networkSize = await this.getNetworkSize();
+      
+      return { 
+        availability: pretty? availability.toFixed(2): availability, 
+        isMaster: await this.isMaster(),
+        isNormalized: await this.isNormalized(),
+        registered: !!(await this.db.getBacklink()) || networkSize == 1,
+        networkSize: await this.getNetworkSize()
+      }
+    }
+
+    /**
      * Get servers status lifetime
      * 
      * @async
