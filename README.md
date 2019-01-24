@@ -1,4 +1,4 @@
-# [Spreadable](http://https://github.com/ortexx/spreadable/) [alpha]
+# [Spreadable](https://github.com/ortexx/spreadable/) [alpha]
 
 Spreadable is a simple decentralized distributed network mechanism.
 You can use it to combine servers in a public or private network for any purpose. The library consists of two parts:
