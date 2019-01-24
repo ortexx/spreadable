@@ -8,11 +8,14 @@ module.exports.register = node => {
   return async (req, res, next) => {
     try {
       const target = req.body.target;
-      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]);    
-      
-      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target) || target == node.address) {
+
+      if(
+        target == node.address ||
+        !utils.isValidAddress(target) ||
+        !utils.isIpEqual(await utils.getHostIp(utils.splitAddress(target)[0]), req.clientIp)
+      ) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
-      }
+      } 
 
       const backlinkChain = await node.getBacklinkChain();
 
@@ -73,11 +76,13 @@ module.exports.getInterviewSummary = node => {
 module.exports.syncUp = node => {
   return async (req, res, next) => {
     try {
-      const target = req.body.target;
-      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]);  
+      const target = req.body.target; 
       const masters = req.body.masters || [];         
 
-      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target)) {
+      if(
+        !utils.isValidAddress(target) ||
+        !utils.isIpEqual(await utils.getHostIp(utils.splitAddress(target)[0]), req.clientIp)
+      ) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       }
 
@@ -101,11 +106,13 @@ module.exports.syncDown = node => {
   return async (req, res, next) => {
     try {
       const target = req.body.target;
-      const targetIp = await utils.getHostIp(utils.splitAddress(target)[0]); 
       const backlinkChain = req.body.backlinkChain || [];
       const masters = req.body.masters || [];
 
-      if(!targetIp || !utils.isIpEqual(targetIp, req.clientIp) || !utils.isValidAddress(target)) {
+      if(
+        !utils.isValidAddress(target) ||
+        !utils.isIpEqual(await utils.getHostIp(utils.splitAddress(target)[0]), req.clientIp)
+      ) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       }     
       

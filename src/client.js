@@ -143,24 +143,33 @@ module.exports = () => {
         const start = Date.now();        
 
         const req = request(options, (err, res, body) => {
-          this.logger.info(`Request to "${options.url}":`, prettyMs(Date.now() - start));
-          
-          if(err) {
-            utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
-            err.requestOptions = options;
-            return reject(err);
-          }
+          try {
+            this.logger.info(`Request to "${options.url}":`, prettyMs(Date.now() - start));
+            
+            if(err) {
+              utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
+              err.requestOptions = options;
+              return reject(err);
+            }
 
-          if(res.statusCode < 400) {
-            return resolve(body);          
-          }
+            if(res.statusCode < 400) {
+              return resolve(body);
+            }
 
-          if(!body || !body.code) {
-            return reject(new Error(body.message));
+            if(!body || typeof body != 'object') {
+              return reject(new Error(body || 'Unknown error'));
+            }
+
+            if(!body.code) {
+              return reject(new Error(body.message));
+            }
+            
+            err = new errors.WorkError(body.message, body.code);
+            reject(err);
           }
-          
-          err = new errors.WorkError(body.message, body.code);
-          return reject(err);
+          catch(err) {
+            reject(err);
+          }
         });
 
         options.getRequest && options.getRequest(req);

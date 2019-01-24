@@ -11,7 +11,7 @@ module.exports.register = node => {
       
       if(!utils.isValidAddress(target)) {
         throw new WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
-      }  
+      }
 
       const networkSize = await node.getNetworkSize();
 

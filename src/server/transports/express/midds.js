@@ -28,9 +28,11 @@ module.exports.updateClientInfo = node => {
   return async (req, res, next) => {
     try {
       const source = req.body.source; 
-      const sourceIp = await utils.getHostIp(utils.splitAddress(source)[0]);
 
-      if(!source || !utils.isIpEqual(sourceIp, req.clientIp) || !utils.isValidAddress(source)) {
+      if(
+        !utils.isValidAddress(source) || 
+        !utils.isIpEqual(await utils.getHostIp(utils.splitAddress(source)[0]), req.clientIp)
+      ) {
         return next();
       }
 
@@ -52,7 +54,7 @@ module.exports.networkAccess = (node, checks = {}) => {
       checks = _.merge({ secretKey: true, hostname: false, version: false }, checks);
 
       if(checks.hostname) {
-        const hostname = req.headers['original-hostname'];
+        const hostname = req.headers['original-hostname'] || '';
       
         if(!hostname || (!utils.isIpEqual(await utils.getHostIp(hostname), req.clientIp))) {
           throw new errors.AccessError('Wrong hostname');

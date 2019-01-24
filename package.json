@@ -1,7 +1,7 @@
 {
   "name": "spreadable",
-  "version": "0.0.4",
-  "description": "Distributed newtork mechanism",
+  "version": "0.0.5",
+  "description": "Decentralized distributed network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
   },
@@ -19,6 +19,8 @@
     "spreadable",
     "network",
     "distributed",
+    "decentralized",
+    "decentralization",
     "distribution",
     "information",
     "data"
