@@ -537,14 +537,14 @@ module.exports = () => {
      * @returns {object}
      */
     async getStatusInfo(pretty = false) {
+      this.initializationFilter();
       const availability = await this.getAvailability(); 
-      const networkSize = await this.getNetworkSize();
       
       return { 
         availability: pretty? availability.toFixed(2): availability, 
         isMaster: await this.isMaster(),
         isNormalized: await this.isNormalized(),
-        registered: !!(await this.db.getBacklink()) || networkSize == 1,
+        isRegistered: await this.isRegistered(),
         networkSize: await this.getNetworkSize()
       }
     }
@@ -571,6 +571,17 @@ module.exports = () => {
     async isNormalized() {
       this.initializationFilter();
       return Date.now() - await this.getSyncLifetime() > this.__initialized;
+    }
+
+    /**
+     * Check the node is registered
+     * 
+     * @async
+     * @returns {boolean}
+     */
+    async isRegistered() {
+      this.initializationFilter();
+      return  !!(await this.db.getBacklink()) || ((await this.getNetworkSize()) == 1);
     }
 
     /**
@@ -679,10 +690,7 @@ module.exports = () => {
     async getAvailableNode(options = {}) {
       this.initializationFilter();
       
-      const results = await this.requestMasters('get-available-node', {
-        timeout: options.timeout
-      });
-      
+      const results = await this.requestMasters('get-available-node', { timeout: options.timeout });      
       const filterOptions = await this.getAvailabilityCandidateFilterOptions();
       const candidates = this.filterCandidatesMatrix(results.map(r => r.candidates), filterOptions);
       const candidate = candidates[0];
@@ -866,11 +874,13 @@ module.exports = () => {
      * @param {string} action
      * @param {object} [options]
      * @param {number} [options.timeout]
+     * @param {number} [options.masterTimeout]
+     * @param {number} [options.slaveTimeout] 
      * @param {object} [options.body]
      * @returns {array}
      */
     async requestMasters(action, options = {}) {
-      const preferredTimeout = this.getRequestMastersTimeout();
+      const preferredTimeout = this.getRequestMastersTimeout(options);
       const timeout = options.timeout || preferredTimeout;
       const body = options.body || {};
       const masters = await this.db.getMasters();
@@ -892,8 +902,9 @@ module.exports = () => {
           this.requestServer(address, `/api/master/${action}`, {
             body: Object.assign({}, body, {
               ignoreAcception: !masters.length,
-              timeout,
-              timestamp: Date.now()
+              timeout,              
+              timestamp: Date.now(),
+              slaveTimeout: options.slaveTimeout
             }),
             timeout,
             preferredTimeout
@@ -926,10 +937,11 @@ module.exports = () => {
      * @param {object} [options]
      * @param {number} [options.timeout]
      * @param {object} [options.body]
+     * @param {number} [options.slaveTimeout] 
      * @returns {array}
      */
     async requestSlaves(action, options = {}) {
-      const preferredTimeout = this.getRequestSlavesTimeout();
+      const preferredTimeout = this.getRequestSlavesTimeout(options);
       const timeout = options.timeout || preferredTimeout;
       const body = options.body || {};
       const slaves = await this.db.getSlaves();
@@ -1199,6 +1211,21 @@ module.exports = () => {
     }
 
     /**
+     * Create request slaves options
+     * 
+     * @param {object} data 
+     * @param {object} [options]
+     * @returns {object}
+     */
+    createRequestSlavesOptions(body, options = {}) {
+      return _.merge({
+        body,
+        timeout: this.createRequestTimeout(body),
+        slaveTimeout: body.slaveTimeout
+      }, options);
+    }
+
+    /**
      * Get request server timeout
      * 
      * @returns {integer}
@@ -1210,19 +1237,25 @@ module.exports = () => {
     /**
      * Get request masters timeout
      * 
+     * @param {object} [options]
+     * @param {number} [options.masterTimeout]
+     * @param {number} [options.slaveTimeout]
      * @returns {integer}
      */
-    getRequestMastersTimeout() {
-      return this.getRequestSlavesTimeout() + this.getRequestServerTimeout();
+    getRequestMastersTimeout(options = {}) {    
+      const masterTimeout = options.masterTimeout || this.getRequestServerTimeout();      
+      return masterTimeout + this.getRequestSlavesTimeout(options);
     }
 
      /**
      * Get request slaves timeout
      * 
+     * @param {object} [options]
+     * @param {number} [options.slaveTimeout]
      * @returns {integer}
      */
-    getRequestSlavesTimeout() {
-      return this.getRequestServerTimeout();
+    getRequestSlavesTimeout(options = {}) {
+      return options.slaveTimeout || this.getRequestServerTimeout();
     }    
 
     /**

@@ -87,7 +87,7 @@ const Client = require('spreadable').Client;
 For the network working, all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it, or the old one will leave, including the masters. After a while, another server will take over this role.
 
 ## How nodes distinguish each other
-The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__ By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as option manually. If the node address changes, then it is simply re-registering on the network.
+The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as option manually. If the node address changes, then it is simply re-registering on the network.
 
 ## How exactly the library can be used
 You can extend the library code and add various interesting features. For example, the [storacle](https://github.com/ortexx/storacle/) organizes file storage using the protocol.

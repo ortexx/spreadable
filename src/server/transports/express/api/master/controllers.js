@@ -57,11 +57,7 @@ module.exports.register = node => {
 module.exports.getAvailableNode = node => {
   return async (req, res, next) => {
     try {
-      const results = await node.requestSlaves('get-availability-info', {
-        timeout: node.createRequestTimeout(req.body),
-        body: req.body
-      });
-      
+      const results = await node.requestSlaves('get-availability-info', node.createRequestSlavesOptions(req.body));      
       const candidates = node.filterCandidates(results, await node.getAvailabilityCandidateFilterOptions()); 
       res.send({ candidates });
     }
