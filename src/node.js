@@ -581,7 +581,7 @@ module.exports = () => {
      */
     async isRegistered() {
       this.initializationFilter();
-      return  !!(await this.db.getBacklink()) || ((await this.getNetworkSize()) == 1);
+      return !!(await this.db.getBacklink());
     }
 
     /**
