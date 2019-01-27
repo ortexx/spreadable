@@ -129,6 +129,7 @@ Suppose you have a trusted certificate for __example.com__.
 
 ```javascript
 const Node = require('spreadable').Node;
+const fs = require('fs');
 const key = fs.readFileSync('key.pem');
 const cert = fs.readFileSync('cert.pem');
 
