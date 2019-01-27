@@ -245,7 +245,7 @@ const Node = require('spreadable').Node;
         port: 4000 + i,
         publicPort: 443,
         initialNetworkAddress: 'sub1.example.com:443',
-        hostname: `sub${i}.example.com`,
+        hostname: `sub${i + 1}.example.com`,
         server: {
           https: true
         }
