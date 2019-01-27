@@ -72,6 +72,7 @@ module.exports = () => {
     
       this.prepareOptions();
       this.port = this.options.port;
+      this.publicPort = this.options.publicPort || this.port;
       this.initialNetworkAddress = this.options.initialNetworkAddress;
       this.DatabaseTransport = this.constructor.DatabaseTransport;
       this.ServerTransport = this.constructor.ServerTransport;
@@ -92,7 +93,7 @@ module.exports = () => {
      */
     async init() {
       this.hostname = this.options.hostname || (await this.getExternalIp()) || (await this.getLocalIp());
-      this.address = utils.createAddress(this.hostname, this.port);
+      this.address = utils.createAddress(this.hostname, this.publicPort);
       this.ip = await utils.getHostIp(this.hostname);
 
       if(!this.ip) {
@@ -106,11 +107,6 @@ module.exports = () => {
       await this.prepareServices();
       await this.initServices();
       await this.checkNodeAddress(this.address);
-
-      if(this.options.server.https === true && !this.options.hostname) {
-        this.logger.warn('If you use your own https server, you probably need to pass the domain name in option "hostname"');
-      }
-      
       this.__initialized = Date.now();
       await this.sync();
     }
@@ -406,7 +402,7 @@ module.exports = () => {
      */
     async register() {
       this.initializationFilter();
-
+      
       if(await this.db.getBacklink()) {
         return;
       }

@@ -84,19 +84,15 @@ const Client = require('spreadable').Client;
 ```
 
 ## How the network works
-
 For the network working, all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it, or the old one will leave, including the masters. After a while, another server will take over this role.
 
 ## How nodes distinguish each other
-
 The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as option manually. If the node address changes, then it is simply re-registering on the network.
 
 ## What are the limitations
-
 To implement various features, it is often required to go through the entire network to find the necessary information. The protocol is allowed to do this for a sequence of 2 http requests for the requesting host. In this case, several requests can be made in parallel in an amount up to the square root of the network size at a time on a single node. Therefore, with a larger network size, each node must be configured to be able to work with a large number of tcp connections simultaneously. It is difficult to calculate the exact constraints, since there are a lot of different factors, starting with how each particular node will behave, as it ends the number of clients using the network. But for example, take a network of 10,000 nodes. For maximum network performance, each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network. Also, the load on the master nodes will be greater than the slave.
 
 ## How to control the time of requests
-
 When making requests the client can always specify a timeout.
 
 ```javascript
@@ -128,21 +124,24 @@ You can extend the library code and add various interesting features. A detailed
 
 ## How to use https
 
-### 1. Use trusted ssl certificates. 
-Suppose you have a certificate for all __example.com__ subdomains
+### 1. Run https server on the node using trusted ssl certificates
+Suppose you have a trusted certificate for __example.com__.
 
 ```javascript
 const Node = require('spreadable').Node;
+const key = fs.readFileSync('key.pem');
+const cert = fs.readFileSync('cert.pem');
 
 (async () => {  
   try {
-    for(let i = 1; i < 10; i++) {
+    for(let i = 0; i < 10; i++) {
       const node = new Node({
-        port: 80,
-        initialNetworkAddress: 'sub1.example.com:80',
-        hostname: `sub${i}.example.com`,
+        port: 4000 + i,
+        initialNetworkAddress: 'example.com:4000',
+        hostname: 'example.com',
         server: {
-          https: true
+          key,
+          cert
         }
       });
       await node.init();
@@ -158,10 +157,10 @@ const Node = require('spreadable').Node;
 ```javascript
 const Client = require('spreadable').Client;
 
-(async () => {  
+(async () => {
   try {
     const client = new Client({
-      address: 'sub1.example.com:80',
+      address: 'example.com:4000',
       https: true
     });
     await client.init();
@@ -173,9 +172,7 @@ const Client = require('spreadable').Client;
 })();
 ```
 
-So, we have 9 servers that interact through https
-
-### 2. Use self-signed certificates. 
+### 2. Run https server on the node using self-signed certificates
 You can also create a self-signed certificate, and use an authentication certificate to make requests. To simplify the example, suppose that one certificate simultaneously contains the addresses of all network nodes.
 
 ```javascript
@@ -187,11 +184,11 @@ const ca = fs.readFileSync('ca.pem');
 
 (async () => {
   try {
-    for(let i = 1; i < 10; i++) {
+    for(let i = 0; i < 10; i++) {
       const node = new Node({
         port: 4000 + i,
         hostname: 'localhost',
-        initialNetworkAddress: 'localhost:4001',
+        initialNetworkAddress: 'localhost:4000',
         server: {
           https: {
             key, 
@@ -231,12 +228,60 @@ const ca = fs.readFileSync('ca.pem');
   }
 })();
 ```
+
 Don't forget to pass the authentication certificate in this case.
+
+### 3. Use ningx / apache / e.t.c over the node server
+Suppose you have a certificate for all __example.com__ subdomains.
+
+```javascript
+const Node = require('spreadable').Node;
+
+(async () => {  
+  try {
+    for(let i = 0; i < 10; i++) {
+      const node = new Node({
+        port: 4000 + i,
+        publicPort: 443,
+        initialNetworkAddress: 'sub1.example.com:443',
+        hostname: `sub${i}.example.com`,
+        server: {
+          https: true
+        }
+      });
+      await node.init();
+    }    
+  }
+  catch(err) {
+    console.error(err.stack);
+    process.exit(1);
+  }
+})();
+```
+
+```javascript
+const Client = require('spreadable').Client;
+
+(async () => {  
+  try {
+    const client = new Client({
+      address: 'sub1.example.com:443',
+      https: true
+    });
+    await client.init();
+  }
+  catch(err) {
+    console.error(err.stack);
+    process.exit(1);
+  }
+})();
+```
+
+You need to make all the necessary settings and redirects on the receiving server.
 
 ## How to create a private network
 
 ### 1. Use a secret key
-
 ```javascript
 const Node = require('spreadable').Node;
 const sercretKey = 'mySecretKey';
