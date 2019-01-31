@@ -10,6 +10,15 @@ const utils = {
 };
 
 /**
+ * Check it is the browser environment
+ * 
+ * @returns {boolean}
+ */
+utils.isBrowserEnv = function () {
+  return typeof window == 'object';
+}
+
+/**
  * Get a random element from an array
  * 
  * @param {array} arr
@@ -111,6 +120,16 @@ utils.getHostIp = async function (hostname) {
     });
   });
 };
+
+/**
+ * Get the address ip
+ * 
+ * @see utils.getHostIp
+ * @param {string} address
+ */
+utils.getAddressIp = async function (address) {
+  return await this.getHostIp(this.splitAddress(address)[0]);
+}
 
 /**
  * Make multiple requests with the common timeout
@@ -306,7 +325,7 @@ utils.createRequestTimeoutError = function () {
  * @returns {boolean}
  */
 utils.isRequestTimeoutError = function (err) {
-  return ['ESOCKETTIMEDOUT', 'ETIMEDOUT'].indexOf(err.code) != -1;
+  return (['ESOCKETTIMEDOUT', 'ETIMEDOUT'].indexOf(err.code) != -1) || err.type == 'request-timeout';
 };
 
 module.exports = utils;

@@ -2,6 +2,12 @@ const errors = require('../../../errors');
 const utils = require('../../../utils');
 const _ = require('lodash');
 const crypto = require('crypto');
+const cors = require('cors');
+
+/**
+ * Cors control
+ */
+module.exports.cors = () => cors();
 
 /**
  * Accept the node is master
@@ -27,16 +33,7 @@ module.exports.checkMasterAcception = node => {
 module.exports.updateClientInfo = node => {
   return async (req, res, next) => {
     try {
-      const source = req.body.source; 
-
-      if(
-        !utils.isValidAddress(source) || 
-        !utils.isIpEqual(await utils.getHostIp(utils.splitAddress(source)[0]), req.clientIp)
-      ) {
-        return next();
-      }
-
-      await node.db.successServerAddress(source);
+      await node.db.successServerAddress(req.headers['original-address']);
       next();
     }
     catch(err) {
@@ -51,50 +48,39 @@ module.exports.updateClientInfo = node => {
 module.exports.networkAccess = (node, checks = {}) => {
   return async (req, res, next) => {    
     try {
-      checks = _.merge({ secretKey: true, hostname: false, version: false }, checks);
-
-      if(checks.hostname) {
-        const hostname = req.headers['original-hostname'] || '';
-      
-        if(!hostname || (!utils.isIpEqual(await utils.getHostIp(hostname), req.clientIp))) {
-          throw new errors.AccessError('Wrong hostname');
-        }
-
-        await node.hostnameFilter(hostname);
-      } 
+      checks = _.merge({ secretKey: true, address: false, version: false }, checks);
 
       if(checks.secretKey) {
         if((req.headers['network-secret-key'] || '') != node.options.network.secretKey) {
           throw new errors.AccessError('Wrong network secret key');
         }
-      }  
-      
+      }
+
       if(checks.version) {
         const version = node.getVersion();
 
         if(req.headers['node-version'] != version) {
-          throw new errors.AccessError(`Client version is different: "${req.headers['node-version']}" and "${version}"`);
+          throw new errors.AccessError(`Client version is different: "${req.headers['node-version']}" instead of "${version}"`);
         }
       }
 
+      let address = req.clientIp + ':1';
+
+      if(checks.address) {
+        address = req.headers['original-address'];
+      
+        if(!utils.isValidAddress(address) || (!utils.isIpEqual(await utils.getAddressIp(address), req.clientIp))) {
+          throw new errors.AccessError(`Wrong address "${address}"`);
+        }
+      }
+
+      await node.addressFilter(address);
       await node.networkAccess(req);
       next();
     }
     catch(err) {
       next(err);
     }
-  }
-};
-
-/**
- * Control request's limit for a client by endpoint
- */
-module.exports.requestQueueClientByEndpoint = (node) => {
-  return (req, res, next) => {
-    return this.requestQueue(node, req => `clientByEndpoint=${req.clientIp}=${req.path.split('?')[0]}`, { 
-      limit: node.options.request.clientByEndpointConcurrency,
-      fnCheck: () => !node.__isFsBlocked
-    })(req, res, next);
   }
 };
 

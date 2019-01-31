@@ -3,7 +3,9 @@ const os = require('os');
 const v8 = require('v8');
 const urlib = require('url');
 const _ = require('lodash');
-const request = require('request');
+const fetch = require('node-fetch');
+const FormData = require('form-data');
+const https = require('https');
 const DatabaseLoki = require('./db/transports/loki')();
 const ServerExpress = require('./server/transports/express')();
 const LoggerConsole = require('./logger/transports/console')();
@@ -41,7 +43,6 @@ module.exports = () => {
       this.options = _.merge({
         hostname: '',      
         request: {
-          clientByEndpointConcurrency: 3,
           timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'
@@ -402,7 +403,7 @@ module.exports = () => {
      */
     async register() {
       this.initializationFilter();
-      
+
       if(await this.db.getBacklink()) {
         return;
       }
@@ -695,7 +696,7 @@ module.exports = () => {
         await this.db.addCandidate(candidate.address, 'getAvailablity');
       }
       
-      if(!candidate || !(await this.checkHostnameIsAllowed(utils.splitAddress(candidate.address)[0]))) {
+      if(!candidate || !(await this.isAddressAllowed(utils.splitAddress(candidate.address)))) {
         return this.address;
       }
 
@@ -755,11 +756,11 @@ module.exports = () => {
     }
 
     /**
-     * Check hostname address is allowed
+     * Check the address is allowed
      */
-    async checkHostnameIsAllowed() {
+    async isAddressAllowed() {
       try {
-        await this.hostnameFilter(...arguments);
+        await this.addressFilter(...arguments);
         return true;
       }
       catch(err) {
@@ -772,11 +773,20 @@ module.exports = () => {
     }
 
     /**
-     * Filter hostname
+     * Filter address
      * 
-     * @param {string} hostname 
+     * @param {string} address 
      */
-    async hostnameFilter(hostname) {
+    async addressFilter(address) {
+      if(!utils.isValidAddress(address)) {
+        throw new errors.AccessError(`Address "${address}" is invalid`);
+      }
+
+      if(address == this.address) {
+        return;
+      }
+
+      let hostname = utils.splitAddress(address)[0];
       let ip;
       let ipv6;
 
@@ -784,25 +794,46 @@ module.exports = () => {
         ip = await utils.getHostIp(hostname);
       }
       catch(err) {
-        throw new errors.AccessError(`Hostname ${hostname} is invalid`);
-      }           
-
-      if(!utils.isValidHostname(ip)) {
-        throw new errors.AccessError(`Hostname ${ip} is invalid`);
+        throw new errors.AccessError(`Hostname "${hostname}" is invalid`);
+      }  
+      
+      if(!ip) {
+        throw new errors.AccessError(`Ip address for "${hostname}" is invalid`);
       }
 
       const white = this.options.network.whitelist || [];
       const black = this.options.network.blacklist || [];
       ipv6 = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
 
-      if(white.length && white.indexOf(ip) == -1 && white.indexOf(hostname) == -1 && white.indexOf(ipv6) == -1) {
-        throw new errors.AccessError(`Hostname ${ip} is denied`);
+      const checkListItem = (item) => {
+        if(utils.isIpv6(item)) {
+          item = utils.getFullIpv6(item);
+        }
+
+        return (item == address || item == hostname || item == ip || item == ipv6);
       }
 
-      if(black.length && (black.indexOf(ip) != -1 || black.indexOf(hostname) != -1 || black.indexOf(ipv6) != -1)) {
-        throw new errors.AccessError(`Hostname ${ip} is in blacklist`);
+      if(white.length) {
+        let exists = false;
+        
+        for(let i = 0; i < white.length; i++) {
+          if(checkListItem(white[i])) {
+            exists = true;
+            break;
+          }
+        }
+
+        if(!exists) {
+          throw new errors.AccessError(`Address "${address}" is denied`);
+        }        
       }
-    }    
+
+      for(let i = 0; i < black.length; i++) {
+        if(checkListItem(black[i])) {
+          throw new errors.AccessError(`Address "${address}" is in the blacklist`);
+        }
+      }
+    }
 
     /**
      * Make a request
@@ -822,45 +853,59 @@ module.exports = () => {
       }
 
       options = this.createDefaultRequestOptions(options);
-      await this.hostnameFilter(urlib.parse(options.url).hostname);      
+      const urlInfo = urlib.parse(options.url);
+      await this.addressFilter(`${urlInfo.hostname}:${urlInfo.port}`);
+      let body = options.formData || options.body || {};
+
+      if(options.formData) {
+        const form = new FormData();
+
+        for(let key in body) {
+          let val = body[key];
+
+          if(typeof val == 'object') {
+            form.append(key, val.value, val.options);
+          }
+          else {
+            form.append(key, val);
+          }
+        }
+
+        options.body = form;
+        delete options.formData;
+      }
+      else {
+        options.headers['content-type'] = 'application/json';
+        options.body = Object.keys(body).length? JSON.stringify(body): undefined;
+      }
       
-      return await new Promise((resolve, reject) => {
-        const start = Date.now();
+      const start = Date.now();        
 
-        const req = request(options, (err, res, body) => {
-          try {
-            this.logger.info(`Request from "${this.address}" to "${options.url}":`, prettyMs(Date.now() - start));
+      try {
+        const result = await fetch(options.url, options);
+        this.logger.info(`Request from "${this.address}" to "${options.url}":`, prettyMs(Date.now() - start));
+        const body = await result.json();
 
-            if(err) {
-              utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
-              err.requestOptions = options;
-              return reject(err);
-            }
+        if(result.ok) {
+          return body;
+        }
 
-            const result = options.getResponseInstance? res: body;
+        if(!body || typeof body != 'object') {
+          throw new Error(body || 'Unknown error');
+        }
 
-            if(res.statusCode < 400) {
-              return resolve(result);
-            }
-
-            if(!body || typeof body != 'object') {
-              return reject(new Error(body || 'Unknown error'));
-            }
-
-            if(!body.code) {
-              return reject(new Error(body.message));
-            }
-
-            err = new errors.WorkError(body.message, body.code);          
-            reject(err);
-          }
-          catch(err) {
-            reject(err);
-          }
-        });
-
-        options.getRequest && options.getRequest(req);
-      });
+        if(!body.code) {
+          throw new Error(body.message);
+        }
+        
+        throw new errors.WorkError(body.message, body.code);
+      }
+      catch(err) {
+        //eslint-disable-next-line no-ex-assign
+        utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
+        err.requestOptions = options;
+        throw err;
+      }
     }
 
     /**
@@ -1007,7 +1052,6 @@ module.exports = () => {
         body = options.body || {};
       } 
 
-      body.source = this.address;
       options[bodyType] = body;
       const start = Date.now();
 
@@ -1154,8 +1198,6 @@ module.exports = () => {
       this.options.request.timeoutSlippage = utils.getMs(this.options.request.timeoutSlippage);
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
-      this.options.network.whitelist = this.options.network.whitelist.map(ip => utils.isIpv6(ip)? utils.getFullIpv6(ip): ip);
-      this.options.network.blacklist = this.options.network.blacklist.map(ip => utils.isIpv6(ip)? utils.getFullIpv6(ip): ip);
     }
 
     /**
@@ -1277,7 +1319,7 @@ module.exports = () => {
         json: true,
         headers: {
           'network-secret-key': this.options.network.secretKey,
-          'original-hostname': this.hostname,
+          'original-address': this.address,
           'node-version': this.getVersion()
         }
       };
@@ -1287,7 +1329,8 @@ module.exports = () => {
       }
 
       if(typeof this.options.server.https == 'object' && this.options.server.https.ca) {
-        defaults.ca = this.options.server.https.ca;
+        options.agent = options.agent || new https.Agent();
+        options.agent.options.ca = this.options.server.https.ca;
       }
 
       return _.merge({}, defaults, options);

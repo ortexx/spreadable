@@ -1,5 +1,8 @@
-const _ = require('lodash');
-const request = require('request');
+const merge = require('lodash/merge');
+const fetch = require('node-fetch');
+const FormData = require('form-data');
+const https = require('https');
+const qs = require('querystring');
 const utils = require('./utils');
 const errors = require('./errors');
 const prettyMs = require('pretty-ms');
@@ -23,7 +26,7 @@ module.exports = () => {
         throw new Error('You must pass the node address in "ip:port" format');
       }
 
-      this.options = _.merge({
+      this.options = merge({
         request: {
           clientTimeout: '8s'
         },
@@ -42,7 +45,7 @@ module.exports = () => {
       this.prepareOptions();
       this.LoggerTransport = this.constructor.LoggerTransport;
       this.TaskTransport = this.constructor.TaskTransport;
-      this.address = options.address;  
+      this.address = options.address;
       this.__initialized = false;
     }
 
@@ -66,7 +69,7 @@ module.exports = () => {
      */
     async deinit() {
       this.initializationFilter();
-      await this.deinitServices();      
+      await this.deinitServices();
       this.__initialized = false;
     }
 
@@ -76,11 +79,11 @@ module.exports = () => {
      * @async
      */
     async prepareServices() {
-      this.logger = new this.LoggerTransport(this, _.merge({}, this.options.logger));
-      this.options.task && (this.task = new this.TaskTransport(this, _.merge({}, this.options.task)));
+      this.logger = new this.LoggerTransport(this, merge({}, this.options.logger));
+      this.options.task && (this.task = new this.TaskTransport(this, merge({}, this.options.task)));
 
       if(this.task) {
-        this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());     
+        this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
       }
       else {
         this.logger.warn('You have to enable tasks if you use the client in production');
@@ -112,7 +115,7 @@ module.exports = () => {
      */
     async changeWorker() {
       this.workAddress = (await this.request('get-available-node', {
-        useInitialAddress: true 
+        useInitialAddress: true
       })).address;
     }
 
@@ -125,55 +128,61 @@ module.exports = () => {
      * @returns {object}
      */
     async request(endpoint, options = {}) {
-      options = _.merge(this.createDefaultRequestOptions(), options);
-      let body = options.formData;
-      let bodyType = 'formData';
-
-      if(!body) {
-        bodyType = 'body';
-        body = options.body || {};
-      }
-
+      options = merge(this.createDefaultRequestOptions(), options);
+      let body = options.formData || options.body || {};
       body.timeout = options.timeout;
-      body.timestamp = Date.now(); 
-      options[bodyType] = body;
-      options.url = this.createRequestUrl(endpoint, { useInitialAddress: options.useInitialAddress });
+      body.timestamp = Date.now();
+
+      if(options.formData) {
+        const form = new FormData();
+
+        for(let key in body) {
+          let val = body[key];
+
+          if(typeof val == 'object') {
+            form.append(key, val.value, val.options);
+          }
+          else {
+            form.append(key, val);
+          }
+        }
+
+        options.body = form;
+        delete options.formData;
+      }
+      else {
+        options.headers['content-type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      } 
       
-      return await new Promise((resolve, reject) => {
-        const start = Date.now();        
+      options.url = this.createRequestUrl(endpoint, { useInitialAddress: options.useInitialAddress });
+      const start = Date.now();        
 
-        const req = request(options, (err, res, body) => {
-          try {
-            this.logger.info(`Request to "${options.url}":`, prettyMs(Date.now() - start));
-            
-            if(err) {
-              utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
-              err.requestOptions = options;
-              return reject(err);
-            }
+      try {
+        const result = await fetch(options.url, options);    
+        this.logger.info(`Request to "${options.url}":`, prettyMs(Date.now() - start));    
+        const body = await result.json();
 
-            if(res.statusCode < 400) {
-              return resolve(body);
-            }
+        if(result.ok) {
+          return body;
+        }
 
-            if(!body || typeof body != 'object') {
-              return reject(new Error(body || 'Unknown error'));
-            }
+        if(!body || typeof body != 'object') {
+          throw new Error(body || 'Unknown error');
+        }
 
-            if(!body.code) {
-              return reject(new Error(body.message));
-            }
-            
-            err = new errors.WorkError(body.message, body.code);
-            reject(err);
-          }
-          catch(err) {
-            reject(err);
-          }
-        });
-
-        options.getRequest && options.getRequest(req);
-      });
+        if(!body.code) {
+          throw new Error(body.message);
+        }
+        
+        throw new errors.WorkError(body.message, body.code);
+      }
+      catch(err) {
+        //eslint-disable-next-line no-ex-assign
+        utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
+        err.requestOptions = options;
+        throw err;
+      }
     }
 
     /**
@@ -183,8 +192,11 @@ module.exports = () => {
      * @param {object} options 
      */
     createRequestUrl(endpoint, options = {}) {
+      const query = options.query? qs.stringify(options.query): null;
       const address = options.useInitialAddress? this.address: this.workAddress;
-      return `${this.options.https? 'https': 'http'}://${address}/client/${endpoint}`;
+      let url = `${this.options.https? 'https': 'http'}://${address}/client/${endpoint}`;
+      query && (url += '?' + query);
+      return url;
     }
 
     /**
@@ -197,9 +209,8 @@ module.exports = () => {
       const defaults = {
         method: 'POST',
         timeout: this.options.request.clientTimeout,
-        json: true,
         headers: {
-          'network-secret-key': this.options.secretKey
+          'network-secret-key': this.options.secretKey          
         }
       };
 
@@ -208,10 +219,11 @@ module.exports = () => {
       }
 
       if(typeof this.options.https == 'object' && this.options.https.ca) {
-        defaults.ca = this.options.https.ca;
+        options.agent = options.agent || new https.Agent();
+        options.agent.options.ca = this.options.https.ca;
       }
 
-      return _.merge({}, defaults, options);
+      return merge({}, defaults, options);
     }
 
     /**
@@ -236,6 +248,21 @@ module.exports = () => {
     initializationFilter() {
       if(!this.isInitialized()) {
         throw new Error('Client must be initialized at first');
+      }
+    }
+
+    /**
+     * Check the environment
+     */
+    envFilter(isBrowser, name) {
+      const isBrowserEnv = utils.isBrowserEnv();
+
+      if(isBrowser && !isBrowserEnv) {
+        throw new Error(`You can't use "${name}" method in the nodejs environment`);
+      }
+
+      if(!isBrowser && isBrowserEnv) {
+        throw new Error(`You can't use "${name}" method in the browser environment`);
       }
     }
   }

@@ -1,4 +1,4 @@
-const _ = require('lodash');
+const merge = require('lodash/merge');
 const utils = require('../../../utils');
 
 module.exports = () => {
@@ -13,7 +13,7 @@ module.exports = () => {
     constructor(node, options = {}) {
       this.node = node;
 
-      this.options = _.merge({
+      this.options = merge({
         showCompletionLogs: true,
         showFailLogs: true
       }, options);
@@ -74,7 +74,7 @@ module.exports = () => {
      * Add the task
      */
     async add(name, interval, fn, options) {
-      this.tasks[name] = _.merge({ interval: utils.getMs(interval), fn, name }, options);
+      this.tasks[name] = merge({ interval: utils.getMs(interval), fn, name }, options);
     }
 
     /**

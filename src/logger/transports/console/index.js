@@ -1,5 +1,6 @@
 const Logger = require('../logger')();
 const chalk = require('chalk');
+const utils = require('../../../utils');
 
 module.exports = (Parent) => {
   /**
@@ -22,7 +23,7 @@ module.exports = (Parent) => {
     async log(level, ...args) {
       if(this.isLevelActive(level)) {   
         //eslint-disable-next-line no-console   
-        console[level].apply(console[level], args.map(arg => chalk[this.colors[level]](arg)));
+        console[level].apply(console[level], utils.isBrowserEnv()? args: args.map(arg => chalk[this.colors[level]](arg)));
       }
     }
   }

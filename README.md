@@ -23,7 +23,6 @@ const Node = require('spreadable').Node;
 })();
 ```
 
-
 ```javascript
 // Client
 const Client = require('spreadable').Client;
@@ -82,6 +81,50 @@ const Client = require('spreadable').Client;
   }
 })();
 ```
+
+## How to use the client in a browser
+
+### 1. Use the prepared file as html script
+You can download __spreadable/dist/spreadable.client.min.js__ and import it as script.
+
+```html
+<script type="text/javascript" src="spreadable.client.min.js"></script>
+<script type="text/javascript">
+  (async () => {  
+    try {
+      const client = new ClientSpreadable({
+        address: 'localhost:4000'
+      });
+      await client.init();
+    }
+    catch(err) {
+      console.error(err.stack);
+    }
+  })();
+</script>
+```
+
+### 2. Import the prepared file
+You can import / require __spreadable/dist/spreadable.client.min.js__ if you use a building system.
+
+```javascript
+import Client from 'spreadable/dist/spreadable.client.min.js';
+
+(async () => {
+  try {
+    const client = new Client({
+      address: 'localhost:4001'
+    });
+    await client.init();
+  }
+  catch(err) {
+    console.error(err.stack);
+  }
+})();
+```
+
+### 3. Build it by yourself
+You can use webpack or something else to build the client for the browser with entry point __spreadable/src/browser/client/index.js__. Then you import / require it in your application and use as usually.
 
 ## How the network works
 For the network working, all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it, or the old one will leave, including the masters. After a while, another server will take over this role.

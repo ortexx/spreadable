@@ -5,6 +5,7 @@ module.exports = [
  { name: 'clientIp', fn: controllers.clientIp }, 
  { name: 'timeout', fn: controllers.timeout }, 
  { name: 'bodyParser', fn: controllers.bodyParser },
+ { name: 'cors', fn: midds.cors },
  { name: 'api', url: '/api', fn: node => node.server.getApiRouter() },
  { name: 'client', url: '/client', fn: node => node.server.getClientRouter() },
  { name: 'ping', mehtod: 'get', url: '/ping', fn: controllers.ping },
