@@ -84,8 +84,8 @@ const Client = require('spreadable').Client;
 
 ## How to use the client in a browser
 
-### 1. Use the prepared file as html script
-You can download __spreadable/dist/spreadable.client.min.js__ and import it as script.
+### 1. Use the prepared file as an html script
+You can download __spreadable/dist/spreadable.client.min.js__ and import it as a script.
 
 ```html
 <script type="text/javascript" src="spreadable.client.min.js"></script>
@@ -130,7 +130,7 @@ You can use webpack or something else to build the client for the browser with e
 For the network working, all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it, or the old one will leave, including the masters. After a while, another server will take over this role.
 
 ## How nodes distinguish each other
-The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as option manually. If the node address changes, then it is simply re-registering on the network.
+The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as an option manually. If the node address changes, then it is simply re-registering on the network.
 
 ## What are the limitations
 To implement various features, it is often required to go through the entire network to find the necessary information. The protocol is allowed to do this for a sequence of 2 http requests for the requesting host. In this case, several requests can be made in parallel in an amount up to the square root of the network size at a time on a single node. Therefore, with a larger network size, each node must be configured to be able to work with a large number of tcp connections simultaneously. It is difficult to calculate the exact constraints, since there are a lot of different factors, starting with how each particular node will behave, as it ends the number of clients using the network. But for example, take a network of 10,000 nodes. For maximum network performance, each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network. Also, the load on the master nodes will be greater than the slave.
