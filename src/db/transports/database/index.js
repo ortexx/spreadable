@@ -21,8 +21,8 @@ module.exports = () => {
       this.__initialized = true;
       this.node.logger.info(`Database has been initialized`);      
     }
-
-     /** 
+    
+    /** 
      * Denitialize the database
      * 
      * @async
@@ -40,6 +40,28 @@ module.exports = () => {
     async destroy() {
       await this.deinit();
       this.node.logger.info(`Database has been destroyed`);
+    }
+
+    /**
+     * Set the data
+     * 
+     * @async
+     * @param {string} name
+     * @param {*} value
+     */
+    async setData() {
+      throw new Error('Method "setData" is required for database transport');
+    }
+
+    /**
+     * Get the data
+     * 
+     * @async
+     * @param {string} name
+     * @returns {*}
+     */
+    async getData() {
+      throw new Error('Method "getData" is required for database transport');
     }
 
     /**
@@ -98,7 +120,6 @@ module.exports = () => {
      * 
      * @async
      * @param {string} address
-     * @param {boolean} [onlyAccepted]
      * @returns {object}
      */
     async getMaster() {
@@ -109,7 +130,6 @@ module.exports = () => {
      * Get masters
      * 
      * @async
-     * @param {boolean} [onlyAccepted]
      * @returns {object[]}
      */
     async getMasters() {
@@ -130,7 +150,6 @@ module.exports = () => {
      * Get masters count
      * 
      * @async
-     * @param {boolean} [onlyAccepted]
      * @returns {integer}
      */
     async getMastersCount() {
@@ -145,16 +164,6 @@ module.exports = () => {
      */
     async getSlavesCount() {
       throw new Error('Method "getSlavesCount" is required for database transport');
-    }    
-
-    /**
-     * Get the network size
-     * 
-     * @async
-     * @returns {integer}
-     */
-    async getNetworkSize() {
-      throw new Error('Method "getNetworkSize" is required for database transport');
     }
     
     /**
@@ -232,6 +241,16 @@ module.exports = () => {
     async removeSlaves() {
       throw new Error('Method "removeSlaves" is required for database transport');
     }
+    
+    /**
+     * Shift the slaves
+     * 
+     * @async
+     * @param {integer} [limit=1]
+     */
+    async shiftSlaves() {
+      throw new Error('Method "shiftSlaves" is required for database transport');
+    }
 
     /**
      * Remove the backlink
@@ -301,7 +320,7 @@ module.exports = () => {
         return false;
       }
 
-      server.delays += 1; 
+      server.delays += 1;
 
       if(server.delays > this.node.options.network.serverMaxDelays) {
         server.isBroken = true;
@@ -317,8 +336,8 @@ module.exports = () => {
      * @param {string} action
      * @returns {object[]}
      */
-    async getSuspiciousCandidates() {
-      throw new Error('Method "getSuspiciousCandidates" is required for database transport');
+    async getBehaviorCandidates() {
+      throw new Error('Method "getBehaviorCandidates" is required for database transport');
     }
 
     /**
@@ -328,8 +347,8 @@ module.exports = () => {
      * @param {string} address
      * @param {string} action
      */
-    async addCandidate() {
-      throw new Error('Method "addCandidate" is required for database transport');
+    async addBehaviorCandidate() {
+      throw new Error('Method "addBehaviorCandidate" is required for database transport');
     }
 
     /**
@@ -337,8 +356,147 @@ module.exports = () => {
      * 
      * @async
      */
-    async normalizeCandidates() {
-      throw new Error('Method "normalizeCandidates" is required for database transport');
+    async normalizeBehaviorCandidates() {
+      throw new Error('Method "normalizeBehaviorCandidates" is required for database transport');
+    }
+
+    /**
+     * Add the delay behavior
+     * 
+     * @async
+     * @param {string} action
+     * @param {string} address
+     */
+    async addBehaviorDelay() {
+      throw new Error('Method "addBehaviorDelay" is required for database transport');
+    }
+
+    /**
+     * Get the delay behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     * @returns {object}
+     */
+    async getBehaviorDelay() {
+      throw new Error('Method "getBehaviorDelay" is required for database transport');
+    }
+
+    /**
+     * Remove the delay behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     */
+    async removeBehaviorDelay() {
+      throw new Error('Method "removeBehaviorDelay" is required for database transport');
+    }
+
+    /**
+     * Clear the delay behaviors
+     * 
+     * @async
+     * @param {string} action
+     */
+    async clearBehaviorDelays() {
+      throw new Error('Method "clearBehaviorDelays" is required for database transport');
+    }
+
+    /**
+     * Get the fail behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     * @returns {object}
+     */
+    async getBehaviorFail() {
+      throw new Error('Method "getBehaviorFail" is required for database transport');
+    }
+
+    /**
+     * Add the fail behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     * @param {number} [step=1]
+     */
+    async addBehaviorFail() {
+      throw new Error('Method "addBehaviorFail" is required for database transport');
+    }
+
+    /**
+     * Subtract the fail behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     * @param {number} [step=1]
+     */
+    async subBehaviorFail() {
+      throw new Error('Method "subBehaviorFail" is required for database transport');
+    }
+
+    /**
+     * Normalize the behavior fails
+     * 
+     * @async
+     */
+    async normalizeBehaviorFails() {
+      throw new Error('Method "normalizeBehaviorFails" is required for database transport');
+    }
+
+    /**
+     * Get the banlist
+     * 
+     * @async
+     * @returns {object[]}
+     */
+    async getBanlist() {
+      throw new Error('Method "getBanlist" is required for database transport');
+    }
+
+    /**
+     * Get the banlist address
+     * 
+     * @async
+     * @param {string} address
+     * @returns {object}
+     */
+    async getBanlistAddress() {
+      throw new Error('Method "getBanlistAddress" is required for database transport');
+    }
+
+    /**
+     * Add the banlist address
+     * 
+     * @async
+     * @param {string} address
+     */
+    async addBanlistAddress() {
+      throw new Error('Method "addBanlistAddress" is required for database transport');
+    }
+
+    /**
+     * Remove the banlist address
+     * 
+     * @async
+     * @param {string} address
+     */
+    async removeBanlistAddress() {
+      throw new Error('Method "removeBanlistAddress" is required for database transport');
+    }
+
+    /**
+     * Normalize the banlist
+     * 
+     * @async
+     */
+    async normalizeBanlist() {
+      throw new Error('Method "normalizeBanlist" is required for database transport');
     }
   }
 };

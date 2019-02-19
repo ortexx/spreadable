@@ -19,10 +19,10 @@ module.exports.timeout = () => {
 /**
  * Set body parser for json handling
  */
-module.exports.bodyParser = () => {
+module.exports.bodyParser = node => {
   return [ 
-    bodyParser.urlencoded({ extended: false }), 
-    bodyParser.json() 
+    bodyParser.urlencoded({ extended: false, limit: node.options.server.maxBodySize }), 
+    bodyParser.json({ limit: node.options.server.maxBodySize }) 
   ];
 };
 

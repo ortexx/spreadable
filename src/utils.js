@@ -1,13 +1,94 @@
 const validateIP = require('validate-ip-node');
 const bytes = require('bytes');
 const ms = require('ms');
-const dns = require('dns');
+const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
 const ip6addr = require('ip6addr'); 
 
 const utils = {
   hostValidationRegex: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/
 };
+
+/**
+ * Validate the schema
+ * 
+ * @param {object|array|string} schema
+ * @param {*} data
+ */
+utils.validateSchema = function (schema, data) {
+  if(Array.isArray(schema) || typeof schema != 'object') {
+    schema = { type: schema };
+  }
+
+  const humanData = JSON.stringify(data, null, 2);
+  const humanSchema = JSON.stringify(schema, null, 2);
+  const schemaType = Array.isArray(schema.type)? schema.type: [schema.type];
+  const dataType = Array.isArray(data)? 'array': typeof data;
+
+  if(schemaType.indexOf(dataType) == -1) {
+    throw new Error(`Wrong data type "${dataType}" instead of "${schemaType}" ${humanData} for ${humanSchema}`);
+  }
+
+  if(dataType == 'array') {
+    if(schema.minLength && data.length < schema.minLength) {
+      throw new Error(`Wrong array min length ${humanData} for ${humanSchema}`);
+    }
+
+    if(schema.maxLength && data.length > schema.maxLength) {
+      throw new Error(`Wrong array max length ${humanData} for ${humanSchema}`);
+    }
+
+    if(schema.items) {
+      data.forEach(item => this.validateSchema(schema.items, item));
+    }
+  }
+  else if(dataType == 'object') {
+    const props = schema.props || {};  
+    const required = schema.required? (Array.isArray(schema.required)? schema.required: [schema.required]): null;
+    
+    if(schema.strict) {
+      const schemaKeys =  Object.keys(props).sort();
+      const dataKeys =  Object.keys(data).sort();
+
+      if(schemaKeys.toString() != dataKeys.toString()) {
+        throw new Error(`Wrong object structure ${humanData} for ${humanSchema}`);
+      }     
+    }
+
+    for(let prop in props) {
+      if(!data.hasOwnProperty(prop)) {
+        if(required && required.indexOf(prop) != -1) {
+          throw new Error(`Property "${prop}" is required ${humanData} for ${humanSchema}`);
+        }
+
+        continue;
+      }
+
+      this.validateSchema(props[prop], data[prop]);
+    }
+  }
+
+  if(!schema.hasOwnProperty('value')) {
+    return;
+  }
+
+  let valid;
+
+  if(typeof schema.value == 'function') {
+    valid = schema.value(data);
+  }
+  else if(schema.value instanceof RegExp) {
+    valid = String(data).match(schema.value);
+  }
+  else {
+    const value = Array.isArray(schema.value)? schema.value: [schema.value];
+    valid = value.indexOf(data) != -1;
+  }  
+
+  if(!valid) {
+    throw new Error(`Validation is failed for ${JSON.stringify(data)}`);
+  }
+}
 
 /**
  * Check it is the browser environment
@@ -106,8 +187,12 @@ utils.getHostIp = async function (hostname) {
     return '127.0.0.1';
   }
 
+  if(this.isValidIp(hostname)) {
+    return hostname;
+  }
+
   return await new Promise((resolve, reject) => {
-    dns.lookup(hostname, (err, ip) => {      
+    lookup(hostname, (err, ip) => {      
       if(err) {
         if(err.code == 'ENOTFOUND') {
           return resolve(null);

@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 const loki = require('lokijs');
+const utils = require('../../../utils');
 const onExit = require('signal-exit');
 
 module.exports = (Parent) => {
@@ -120,11 +121,14 @@ module.exports = (Parent) => {
     initCollections() {
       this.initCollectionData();
       this.initCollectionServers();
-      this.initCollectionCandidates();
+      this.initCollectionBanlist();
+      this.initCollectionBehaviorCandidates();
+      this.initCollectionBehaviorDelays();
+      this.initCollectionBehaviorFails();   
     }
 
     /**
-     * Initialize data collection
+     * Initialize the data collection
      */
     initCollectionData() {
       this.col.data = this.loki.getCollection("data");
@@ -134,10 +138,21 @@ module.exports = (Parent) => {
           unique: ['name']
         });
       }
+
+      const masterRequestTime = this.col.data.findOne({ name: 'masterStatusTime' });
+      const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
+
+      if(!masterRequestTime) {
+        this.col.data.insert({ name: 'masterStatusTime', value: null });
+      }
+
+      if(!registrationTime) {
+        this.col.data.insert({ name: 'registrationTime', value: null });
+      }
     }
 
     /**
-     * Initialize servers collection
+     * Initialize the servers collection
      */
     initCollectionServers() {
       this.col.servers = this.loki.getCollection("servers");
@@ -150,20 +165,59 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Initialize candidates collection
+     * Initialize the banlist collection
      */
-    initCollectionCandidates() {
-      this.col.candidates = this.loki.getCollection("candidates");
+    initCollectionBanlist() {
+      this.col.banlist = this.loki.getCollection("banlist");
 
-      if (this.col.candidates === null) {
-        this.col.candidates = this.loki.addCollection('candidates', {
+      if (this.col.banlist === null) {
+        this.col.banlist = this.loki.addCollection('banlist', { 
+          unique: ['address']
+        });
+      }
+    }
+
+    /**
+     * Initialize the candidates behavior collection
+     */
+    initCollectionBehaviorCandidates() {
+      this.col.behaviorCandidates = this.loki.getCollection("behaviorCandidates");
+
+      if (this.col.behaviorCandidates === null) {
+        this.col.behaviorCandidates = this.loki.addCollection('behaviorCandidates', {
           indices: ['address', 'action']
         });
       }
     }
 
     /**
-     * Create server collection fields
+     * Initialize the delays behavior collection
+     */
+    initCollectionBehaviorDelays() {
+      this.col.behaviorDelays = this.loki.getCollection("behaviorDelays");
+
+      if (this.col.behaviorDelays === null) {
+        this.col.behaviorDelays = this.loki.addCollection('behaviorDelays', {
+          indices: ['address', 'action']
+        });
+      }
+    }
+
+    /**
+     * Initialize the fails behavior collection
+     */
+    initCollectionBehaviorFails() {
+      this.col.behaviorFails = this.loki.getCollection("behaviorFails");
+
+      if (this.col.behaviorFails === null) {
+        this.col.behaviorFails = this.loki.addCollection('behaviorFails', {
+          indices: ['address', 'action']
+        });
+      }
+    }    
+
+    /**
+     * Create the server collection fields
      * 
      * @param {object} [obj]
      * @returns {object}
@@ -176,13 +230,11 @@ module.exports = (Parent) => {
         createdAt: now,
         updatedAt: now,
         fails: 0,
-        delays: 0,
         isSlave: false,
         isBacklink: false,
         isMaster: false,
-        isAccepted: true,
         isBroken: false,
-        chain: []   
+        chain: []
       }, obj);
 
       if(!fields.createdAt) {
@@ -193,21 +245,85 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Create candidate collection fields
+     * Create the banlist collection fields
      * 
      * @param {object} [obj]
      * @returns {object}
      */
-    createCandidateFields(obj = {}) {
+    createBanlistFields(obj = {}) {
+      const now = Date.now();
+
+      return  _.merge({
+        createdAt: now,
+        updatedAt: now
+      }, obj);
+    }
+
+    /**
+     * Create the candidates behavior collection fields
+     * 
+     * @param {object} [obj]
+     * @returns {object}
+     */
+    createBehaviorCandidateFields(obj = {}) {
       const now = Date.now();
 
       return  _.merge({
         createdAt: now,
         updatedAt: now,
-        suspicion: 0,
-        exculpation: 0
+        suspicion: 1,
+        excuse: 0
       }, obj);
-    }    
+    }
+    
+    /**
+     * Create the delays behavior fields
+     * 
+     * @param {object} [obj]
+     * @returns {object}
+     */
+    createBehaviorDelaysFields(obj = {}) {
+      const now = Date.now();
+
+      return  _.merge({
+        createdAt: now,
+        updatedAt: now
+      }, obj);
+    }
+
+     /**
+     * Create the failed behavior collection fields
+     * 
+     * @param {object} [obj]
+     * @returns {object}
+     */
+    createBehaviorFailsFields(obj = {}) {
+      const now = Date.now();
+
+      return  _.merge({
+        createdAt: now,
+        updatedAt: now,
+        suspicion: 1,
+        balance: 0
+      }, obj);
+    }
+
+    /**
+     * @see Database.propotype.setData
+     */
+    async setData(name, value) {
+      const row = this.col.data.findOne({ name });
+      row.value = typeof value == 'function'? value(row): value;
+      this.col.data.update(row);
+    }
+
+   /**
+     * @see Database.propotype.getData
+     */
+    async getData(name) {
+      const row = this.col.data.findOne({ name });
+      return row.value;
+    }
 
     /**
      * @see Database.propotype.isMaster
@@ -247,19 +363,15 @@ module.exports = (Parent) => {
     /**
      * @see Database.propotype.getMaster
      */
-    async getMaster(address, onlyAccepted = true) {
-      const filter = { address, isMaster: true, isBroken: false };
-      onlyAccepted && (filter.isAccepted = true);
-      return this.col.servers.findOne(filter);
+    async getMaster(address) {
+      return this.col.servers.findOne({ address, isMaster: true, isBroken: false });
     }
 
     /**
      * @see Database.propotype.getMasters
      */
-    async getMasters(onlyAccepted = true) {
-      const filter = { isMaster: true, isBroken: false };
-      onlyAccepted && (filter.isAccepted = true);
-      return this.col.servers.chain().find(filter).data();
+    async getMasters() {
+      return this.col.servers.chain().find({ isMaster: true, isBroken: false }).data();
     }
 
     /**
@@ -272,10 +384,14 @@ module.exports = (Parent) => {
     /**
      * @see Database.propotype.getMastersCount
      */
-    async getMastersCount(onlyAccepted = true) {
-      const filter = { isMaster: true, isBroken: false };
-      onlyAccepted && (filter.isAccepted = true);
-      return this.col.servers.chain().find(filter).count();
+    async getMastersCount() {
+      return this.col.servers
+        .chain()
+        .find({ 
+          isMaster: true, 
+          isBroken: false
+        })
+        .count();
     }
 
     /**
@@ -283,41 +399,26 @@ module.exports = (Parent) => {
      */
     async getSlavesCount() {
       return this.col.servers.chain().find({ isSlave: true, isBroken: false }).count();
-    }    
-
-    /**
-     * @see Database.propotype.getNetworkSize
-     */
-    async getNetworkSize() {
-      const count = this.col.servers
-        .chain()
-        .find({ isMaster: true, isBroken: false })
-        .mapReduce(obj => obj, arr => arr.reduce((v, obj) => v + obj.size, 0));
-
-      return count || 1;
     }
     
     /**
      * @see Database.propotype.addMaster
      */
-    async addMaster(address, size, isAccepted = true, updatedAt = Date.now()) {
+    async addMaster(address, size) {
       let server = this.col.servers.findOne({ address });
 
       if(server) {
         server.isMaster = true;
-        server.size = size;
-        server.updatedAt = updatedAt;
-        server.isAccepted = isAccepted;
+        server.updatedAt = Date.now();
+        size !== undefined && (server.size = size);
         return this.col.servers.update(server);
       }
       
       return this.col.servers.insert(this.createServerFields({
         address,
         size,
-        isAccepted,
-        updatedAt,
-        isMaster: true        
-      })); 
+        isMaster: true
+      }));
     }
 
     /**
@@ -377,7 +478,7 @@ module.exports = (Parent) => {
      * @see Database.propotype.removeMaster
      */
     async removeMaster(address) {
-      let server = this.col.servers.findOne({ address });
+      let server = this.col.servers.findOne({ address, isMaster: true });
 
       if(!server) {
         return;
@@ -386,11 +487,21 @@ module.exports = (Parent) => {
       if(server.isSlave || server.isBacklink) {
         server.isMaster = false;
         server.size = 0;
-        server.isAccepted = true;
         return this.col.servers.update(server);
       }
 
       this.col.servers.remove(server);
+    }
+
+    /**
+     * @see Database.propotype.removeMasters
+     */
+    async removeMasters() {
+      const servers = this.col.servers.find({ isMaster: true });
+
+      for(let i = 0; i < servers.length; i++) {
+        await this.removeMaster(servers[i].address);
+      }
     }
 
     async removeServer(address) {
@@ -433,6 +544,22 @@ module.exports = (Parent) => {
     }
 
     /**
+     * @see Database.propotype.shiftSlaves
+     */
+    async shiftSlaves(limit = 1) {
+      const servers = this.col.servers
+        .chain()
+        .find({ isSlave: true })
+        .simplesort('createdAt', true)
+        .limit(limit)
+        .data();
+
+      for(let i = 0; i < servers.length; i++) {        
+        await this.removeSlave(servers[i].address);
+      }
+    }
+
+    /**
      * @see Database.propotype.removeBacklink
      */
     async removeBacklink() {
@@ -467,11 +594,7 @@ module.exports = (Parent) => {
         .chain()
         .find({ 
           isBroken: true,
-          $and: [{
-            fails: { $lte: this.node.options.network.serverMaxFails }
-          }, {
-            delays: { $lte: this.node.options.network.serverMaxDelays }
-          }]          
+          fails: { $lte: this.node.options.network.serverMaxFails }         
         })
         .update((obj) => {
           obj.isBroken = false;
@@ -482,11 +605,7 @@ module.exports = (Parent) => {
         .chain()
         .find({
           isBroken: false,
-          $or: [{
-            fails: { $gt: this.node.options.network.serverMaxFails }
-          }, {
-            delays: { $gt: this.node.options.network.serverMaxDelays }
-          }]
+          fails: { $gt: this.node.options.network.serverMaxFails }
         })
         .update((obj) => {
           obj.isBroken = true;
@@ -546,44 +665,12 @@ module.exports = (Parent) => {
 
       this.col.servers.update(server);
     }
-
+    
     /**
-     * @see Database.propotype.decreaseServerDelays
+     * @see Database.propotype.getBehaviorCandidates
      */
-    async decreaseServerDelays(address) {
-      let server = this.col.servers.findOne({ address });
-
-      if(server) {
-        server.delays = server.delays >= 1? server.delays - 1: 0;
-        server.delays == 0 && (server.isBroken = false);
-        this.col.servers.update(server);
-      }
-    }
-
-    /**
-     * @see Database.propotype.increaseServerDelays
-     */
-    async increaseServerDelays(address) {
-      let server = this.col.servers.findOne({ address });
-
-      if(!server) {
-        return false;
-      }
-
-      server.delays += 1; 
-
-      if(server.delays > this.node.options.network.serverMaxDelays) {
-        server.isBroken = true;
-      }
-
-      this.col.servers.update(server);
-    }
-
-    /**
-     * @see Database.propotype.getSuspiciousCandidates
-     */
-    async getSuspiciousCandidates(action) {
-      return this.col.candidates
+    async getBehaviorCandidates(action) {
+      return this.col.behaviorCandidates
         .chain()
         .find({ 
           action, 
@@ -595,49 +682,49 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.addCandidate
+     * @see Database.propotype.addBehaviorCandidate
      */
-    async addCandidate(address, action) {
-      const data = this.col.candidates.chain().find({ action }).simplesort('updatedAt', true).limit(1).data();
+    async addBehaviorCandidate(address, action) {
+      const data = this.col.behaviorCandidates.chain().find({ action }).simplesort('updatedAt', true).limit(1).data();
       const last = data.length? data[0]: null;  
       
       if(last && last.address != address) {
-        const step = await this.node.getCandidateExculpationStep();
+        const step = await this.node.getCandidateExcuseStep();
         
-        this.col.candidates
+        this.col.behaviorCandidates
           .chain()
           .find({ 
             address: { $ne: address },
-            exculpation: { $lt: await this.node.getCandidateMaxSuspicionLevel() }
+            excuse: { $lt: await this.node.getCandidateMaxSuspicionLevel() }
           })
           .update((obj) => {
-            obj.exculpation += step;
+            obj.excuse += step;
             return obj;
           });
       }
 
-      this.col.candidates
+      this.col.behaviorCandidates
         .chain()
-        .where((obj) => obj.exculpation >= obj.suspicion)
+        .where((obj) => obj.excuse >= obj.suspicion)
         .remove()
 
-      const candidate = this.col.candidates.findOne({ address, action });
+      const candidate = this.col.behaviorCandidates.findOne({ address, action });
      
       if(candidate) {
         candidate.suspicion += 1;
-        return this.col.candidates.update(candidate);
+        return this.col.behaviorCandidates.update(candidate);
       }
 
-      return this.col.candidates.insert(this.createCandidateFields({ action, address, suspicion: 1 }));
+      return this.col.behaviorCandidates.insert(this.createBehaviorCandidateFields({ action, address }));
     }
 
     /**
-     * @see Database.propotype.normalizeCandidates
+     * @see Database.propotype.normalizeBehaviorCandidates
      */
-    async normalizeCandidates() {
+    async normalizeBehaviorCandidates() {
       const suspicion = await this.node.getCandidateSuspicionLevel();
       
-      this.col.candidates
+      this.col.behaviorCandidates
         .chain()
         .find({
           suspicion: { $gt: suspicion }
@@ -647,10 +734,193 @@ module.exports = (Parent) => {
           return obj;
         })
 
-      this.col.candidates
+      this.col.behaviorCandidates
         .chain()
-        .where((obj) => obj.exculpation >= obj.suspicion)
+        .where((obj) => obj.excuse >= obj.suspicion)
         .remove()
+    }
+
+    /**
+     * @see Database.propotype.addBehaviorDelay
+     */
+    async addBehaviorDelay(action, address) {
+      const behavior = this.col.behaviorDelays.findOne({ address, action });
+
+      if(behavior) {
+        behavior.updatedAt = Date.now();
+        return this.col.behaviorDelays.update(behavior);
+      }
+
+      return this.col.behaviorDelays.insert(this.createBehaviorDelaysFields({ address, action }));
+    }
+
+    /**
+     * @see Database.propotype.getBehaviorDelay
+     */
+    async getBehaviorDelay(action, address) {
+      return this.col.behaviorDelays.findOne({ address, action });
+    }
+
+    /**
+     * @see Database.propotype.removeBehaviorDelay
+     */
+    async removeBehaviorDelay(action, address) {
+      const behavior = this.col.behaviorDelays.findOne({ address, action });
+
+      if(behavior) {
+        this.col.behaviorDelays.remove(behavior);
+      }
+    }
+
+    /**
+     * @see Database.propotype.clearBehaviorDelays
+     */
+    async clearBehaviorDelays(action) {
+      this.col.behaviorDelays.chain().find({ action }).remove();
+    }
+
+    /**
+     * @see Database.propotype.getBehaviorFail
+     */
+    async getBehaviorFail(action, address) {
+      return this.col.behaviorFails.findOne({ address, action });
+    }
+
+    /**
+     * @see Database.propotype.addBehaviorFail
+     */
+    async addBehaviorFail(action, address, step = 1) {
+      const behavior = this.col.behaviorFails.findOne({ address, action });
+
+      if(behavior) {
+        typeof step == 'function' && (step = step(behavior));
+        behavior.suspicion += step;
+        behavior.balance += 1;
+        behavior.updatedAt = Date.now();
+        return this.col.behaviorFails.update(behavior);
+      }
+
+      return this.col.behaviorFails.insert(this.createBehaviorFailsFields({ address, action }));
+    }
+
+    /**
+     * @see Database.propotype.subBehaviorFail
+     */
+    async subBehaviorFail(action, address, step = 1) {
+      const behavior = this.col.behaviorFails.findOne({ address, action });
+
+      if(!behavior) {
+        return;
+      }
+
+      typeof step == 'function' && (step = step(behavior));
+      behavior.suspicion -= step;
+      behavior.balance > 0 && (behavior.balance -= 1);
+
+      if(behavior.suspicion <= 0) {
+        return this.col.behaviorFails.remove(behavior);
+      }
+
+      behavior.updatedAt = Date.now();
+      this.col.behaviorFails.update(behavior);
+    }
+
+    /**
+     * @see Database.propotype.normalizeBehaviorFails
+     */
+    async normalizeBehaviorFails() {
+      this.col.banlist
+        .chain()
+        .find({ 
+          updatedAt: {
+            $lt: Date.now() - this.node.options.behavior.failLifetime 
+          } 
+        })
+        .remove();
+
+      if(this.node.options.network.isTrusted) {
+        return;
+      }
+
+      const data = this.col.behaviorFails
+        .chain()
+        .find({ 
+          suspicion: {
+            $gt: this.node.options.behavior.failSuspicionLevel 
+          }
+        })
+        .data();
+
+      const banned = [];
+
+      for(let i = 0; i < data.length; i++) {
+        const behavior = data[i];        
+        await this.addBanlistAddress(behavior.address);
+        banned.push(behavior.address);
+      }
+
+      this.col.behaviorFails
+      .chain()
+      .find({
+        address: {
+          $in: banned
+        }
+      })
+      .remove();
+    }
+
+    /**
+     * @see Database.propotype.getBanlist
+     */
+    async getBanlist() {
+      return this.col.banlist.find();
+    }
+
+    /**
+     * @see Database.propotype.getBanlistAddress
+     */
+    async getBanlistAddress(address) {
+      return this.col.banlist.findOne({ address });
+    }
+
+    /**
+     * @see Database.propotype.addBanlistAddress
+     */
+    async addBanlistAddress(address) {
+      const ip = utils.getAddressIp(address);
+      const server = this.col.banlist.findOne({ address });
+      
+      if(server) {
+        server.updatedAt = Date.now();
+        return this.col.banlist.update(server);
+      }
+
+      return this.col.banlist.insert(this.createBanlistFields({ address, ip }));
+    }
+
+    /**
+     * @see Database.propotype.removeBanlistAddress
+     */
+    async removeBanlistAddress(address) {
+      const server = this.col.banlist.findOne({ address });
+      
+      if(server) {
+        return this.col.banlist.remove(server);
+      }
+    }
+
+    /**
+     * @see Database.propotype.normalizeBanlist
+     */
+    async normalizeBanlist() {
+      this.col.banlist
+        .chain()
+        .find({ 
+          updatedAt: { 
+            $lt: Date.now() - this.node.options.network.banLifetime 
+          } 
+        })
+        .remove();
     }
   }
 };

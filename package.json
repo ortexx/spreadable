@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Decentralized distributed network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -24,6 +24,7 @@
   },
   "keywords": [
     "spreadable",
+    "protocol",
     "network",
     "distributed",
     "decentralized",
@@ -55,15 +56,14 @@
     "cron": "^1.6.0",
     "express": "^4.16.4",
     "external-ip": "^2.0.3",
-    "fetch": "^1.1.0",
     "form-data": "^2.3.3",
     "fs-extra": "^7.0.1",
     "hasha": "^3.0.0",
     "ip6addr": "^0.2.2",
     "lodash": "^4.17.11",
     "lokijs": "^1.5.5",
+    "lookup-dns-cache": "^2.1.0",
     "ms": "^2.1.1",
-    "node-cron": "^2.0.3",
     "node-fetch": "^2.3.0",
     "optimist": "^0.6.1",
     "pretty-ms": "^4.0.0",

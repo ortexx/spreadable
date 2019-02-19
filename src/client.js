@@ -59,7 +59,7 @@ module.exports = () => {
       await this.initServices();
       this.workAddress = this.address;
       await this.changeWorker();
-      this.__initialized = true;
+      this.__initialized = Date.now();
     }
 
     /**
@@ -68,7 +68,6 @@ module.exports = () => {
      * @aync
      */
     async deinit() {
-      this.initializationFilter();
       await this.deinitServices();
       this.__initialized = false;
     }
@@ -239,16 +238,7 @@ module.exports = () => {
      * @returns {boolean}
      */
     isInitialized() {
-      return this.__initialized;
-    }
-
-    /**
-     * Check the client is initialized
-     */
-    initializationFilter() {
-      if(!this.isInitialized()) {
-        throw new Error('Client must be initialized at first');
-      }
+      return !!this.__initialized;
     }
 
     /**

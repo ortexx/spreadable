@@ -14,7 +14,8 @@ module.exports = (options = {}) => {
     "chalk": true,
     "ip6address": true,
     "tcp-port-used": true,
-    "validate-ip-node": true
+    "validate-ip-node": true,
+    "lookup-dns-cache": true
   }, options.mock);
   
   const include = [path.resolve(__dirname, 'src/browser/client')].concat(options.include || []);

@@ -7,20 +7,6 @@ module.exports = [
   { name: 'checkMasterAcception', fn: midds.checkMasterAcception },
 
   /**
-   * Get a registartion candidade
-   * 
-   * @api {post} /api/master/register
-   * @apiParam {string} target - address as "ip:port"
-   * @apiSuccess {object}
-   */
-  { 
-    name: 'register', 
-    method: 'post',
-    url: '/register',
-    fn: controllers.register
-  },
-
-  /**
    * Get an available node from the network
    * 
    * @api {post} /api/master/get-available-node
@@ -29,7 +15,20 @@ module.exports = [
   { 
     name: 'getAvailableNode', 
     method: 'post', 
-    url: '/get-available-node', 
+    url: '/get-available-node',
     fn: controllers.getAvailableNode
+  },
+
+  /**
+   * Test master
+   * 
+   * @api {post} /api/master/walk
+   * @apiSuccess {object} - { success: ... }
+   */
+  { 
+    name: 'walk',
+    method: 'post',
+    url: '/walk',
+    fn: controllers.walk
   }
 ];

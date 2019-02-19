@@ -15,10 +15,13 @@ module.exports.cors = () => cors();
 module.exports.checkMasterAcception = node => {
   return async (req, res, next) => {
     try {
-      if(!(await node.isMaster()) && !req.body.ignoreAcception) {
+      const size = await node.db.getSlavesCount();
+
+      if(!size && !req.body.ignoreAcception) {
         throw new errors.WorkError('Master is not accepted', 'ERR_SPREADABLE_MASTER_NOT_ACCEPTED');
       }
-    
+
+      res.setHeader('spreadable-node-size', size);
       next();
     }
     catch(err) {
@@ -82,6 +85,13 @@ module.exports.networkAccess = (node, checks = {}) => {
       next(err);
     }
   }
+};
+
+/**
+ * Control registrations limit
+ */
+module.exports.requestQueueRegistration = node => {  
+  return this.requestQueue(node, 'registration', { limit: 1 });
 };
 
 /**
