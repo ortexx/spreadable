@@ -7,20 +7,7 @@ module.exports = [
   { name: 'checkMasterAcception', fn: midds.checkMasterAcception },
 
   /**
-   * Get an available node from the network
-   * 
-   * @api {post} /api/master/get-available-node
-   * @apiSuccess {object} - { candidates: ... }
-   */
-  { 
-    name: 'getAvailableNode', 
-    method: 'post', 
-    url: '/get-available-node',
-    fn: controllers.getAvailableNode
-  },
-
-  /**
-   * Test master
+   * Test the master
    * 
    * @api {post} /api/master/walk
    * @apiSuccess {object} - { success: ... }

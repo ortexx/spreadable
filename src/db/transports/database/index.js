@@ -1,45 +1,18 @@
-module.exports = () => {
+const Service = require('../../../service')();
+
+module.exports = (Parent) => {
   /**
    * Database transport interface
    */
-  return class Database {
+  return class Database extends (Parent || Service) {
     /**
      * @param {Node} node 
      * @param {object} options 
      */
     constructor(node, options = {}) {
+      super(...arguments);
       this.node = node;
       this.options = options;
-    }
-
-    /** 
-     * Initialize the database
-     * 
-     * @async
-     */
-    async init() {
-      this.__initialized = true;
-      this.node.logger.info(`Database has been initialized`);      
-    }
-    
-    /** 
-     * Denitialize the database
-     * 
-     * @async
-     */
-    async deinit() {
-      this.__initialized = false;
-      this.node.logger.info(`Database has been deinitialized`);
-    }
-
-    /**
-     * Destroy the database
-     * 
-     * @async
-     */
-    async destroy() {
-      await this.deinit();
-      this.node.logger.info(`Database has been destroyed`);
     }
 
     /**
@@ -106,7 +79,7 @@ module.exports = () => {
     }
 
     /**
-     * Get slaves
+     * Get all slaves
      * 
      * @async
      * @returns {object[]}
@@ -127,7 +100,7 @@ module.exports = () => {
     }
 
     /**
-     * Get masters
+     * Get all masters
      * 
      * @async
      * @returns {object[]}
@@ -147,7 +120,7 @@ module.exports = () => {
     }
 
     /**
-     * Get masters count
+     * Get the masters count
      * 
      * @async
      * @returns {integer}
@@ -157,7 +130,7 @@ module.exports = () => {
     }
 
     /**
-     * Get slaves count
+     * Get the slaves count
      * 
      * @async
      * @returns {integer}
@@ -185,6 +158,7 @@ module.exports = () => {
      * 
      * @async
      * @param {string} address
+     * @param {string} availability
      * @returns {object}
      */
     async addSlave() {
@@ -272,7 +246,7 @@ module.exports = () => {
     }
 
     /**
-     * Mark the server successed
+     * Mark the server as successed
      * 
      * @async
      * @param {string} address
@@ -282,51 +256,13 @@ module.exports = () => {
     }
 
     /**
-     * Mark the server failed
+     * Mark the server as failed
      * 
      * @async
      * @param {string} address
      */
     async failedServerAddress() {
       throw new Error('Method "failedServerAddress" is required for database transport');
-    }
-
-    /**
-     * Decrease the server delays
-     * 
-     * @async
-     * @param {string} address
-     */
-    async decreaseServerDelays(address) {
-      let server = this.col.servers.findOne({ address });
-
-      if(server) {
-        server.delays = server.delays >= 1? server.delays - 1: 0;
-        server.delays == 0 && (server.isBroken = false);
-        this.col.servers.update(server);
-      }
-    }
-
-    /**
-     * Increase the server delays
-     * 
-     * @async
-     * @param {string} address
-     */
-    async increaseServerDelays(address) {
-      let server = this.col.servers.findOne({ address });
-
-      if(!server) {
-        return false;
-      }
-
-      server.delays += 1;
-
-      if(server.delays > this.node.options.network.serverMaxDelays) {
-        server.isBroken = true;
-      }
-
-      this.col.servers.update(server);
     }
 
     /**
@@ -344,15 +280,15 @@ module.exports = () => {
      * Add the candidade
      * 
      * @async
-     * @param {string} address
      * @param {string} action
+     * @param {string} address 
      */
     async addBehaviorCandidate() {
       throw new Error('Method "addBehaviorCandidate" is required for database transport');
     }
 
     /**
-     * Normalize candidates
+     * Normalize the candidates
      * 
      * @async
      */
@@ -450,16 +386,6 @@ module.exports = () => {
     }
 
     /**
-     * Get the banlist
-     * 
-     * @async
-     * @returns {object[]}
-     */
-    async getBanlist() {
-      throw new Error('Method "getBanlist" is required for database transport');
-    }
-
-    /**
      * Get the banlist address
      * 
      * @async
@@ -468,6 +394,17 @@ module.exports = () => {
      */
     async getBanlistAddress() {
       throw new Error('Method "getBanlistAddress" is required for database transport');
+    }
+
+    /**
+     * Check the ip is in the banlist
+     * 
+     * @async
+     * @param {string} ip - ipv6 address
+     * @returns {boolean}
+     */
+    async checkBanlistIp(ip) {
+      return !!this.col.banlist.findOne({ ip });
     }
 
     /**
@@ -497,6 +434,40 @@ module.exports = () => {
      */
     async normalizeBanlist() {
       throw new Error('Method "normalizeBanlist" is required for database transport');
+    }
+
+    /**
+     * Get the cache
+     * 
+     * @async
+     * @param {string} type
+     * @param {string} key
+     */
+    async getCache() {
+      throw new Error('Method "getCache" is required for database transport');
+    }
+  
+    /**
+    * Set the cache
+    * 
+    * @async
+    * @param {string} type
+    * @param {string} key
+    * @param {string} link
+    */
+    async setCache() {
+      throw new Error('Method "setCache" is required for database transport');
+    }
+
+    /**
+     * Get the cache
+     * 
+     * @async
+     * @param {string} type
+     * @param {string} key
+     */
+    async removeCache() {
+      throw new Error('Method "removeCache" is required for database transport');
     }
   }
 };

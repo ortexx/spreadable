@@ -47,7 +47,7 @@ module.exports = (options = {}) => {
     output: {
       path: options.distPath || path.join(process.cwd(), '/dist'),
       filename: '[name].js',
-      library: options.library || ('Client' + pack.name[0].toUpperCase() + pack.name.slice(1)),
+      library: options.library || ('Client' + pack.name[0].toUpperCase() + pack.name.slice(1)),      
       libraryTarget: 'umd'
     },
     optimization: {
@@ -64,7 +64,7 @@ module.exports = (options = {}) => {
         {
           test: /\.js$/,
           loader: 'babel-loader',
-          include,          
+          include,
           query: {
             presets: ['env'],
             plugins: ['transform-runtime']

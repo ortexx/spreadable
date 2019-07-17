@@ -1,16 +1,17 @@
 const merge = require('lodash/merge');
-const utils = require('../../../utils');
+const Service = require('../../../service')();
 
-module.exports = () => {
+module.exports = (Parent) => {
   /**
-   * The main tasks transport
+   * Tasks transport
    */
-  return class Task {
+  return class Task extends (Parent || Service) {
     /**
      * @param {Node} node 
      * @param {object} options
      */
     constructor(node, options = {}) {
+      super(...arguments);
       this.node = node;
 
       this.options = merge({
@@ -18,9 +19,52 @@ module.exports = () => {
         showFailLogs: true
       }, options);
 
-      this.blocked = {};
       this.tasks = {};
-    }    
+    } 
+    
+    /**
+     * Add the task
+     */
+    async add(name, interval, fn, options) {
+      const task = merge({ 
+        interval,
+        fn, 
+        name,
+      }, options);
+
+      task.isStopped === undefined && (task.isStopped = true);
+      this.tasks[name] = task;
+      
+      if(!task.isStopped) {
+        await this.stop(task);
+        await this.start(task);
+      }
+
+      return task;
+    }
+
+    /**
+     * Get the task
+     * 
+     * @returns {object} 
+     */
+    async get(name) {
+     return this.tasks[name] || null;
+    }
+
+    /**
+     * Remove the task
+     */
+    async remove(name) {
+      const task = this.tasks[name];
+
+      if(!task) {
+        return;
+      }
+
+      !task.isStopped && await this.stop(task);
+      delete this.tasks[name];
+    }
 
     /**
      * Initialize the tasks
@@ -29,8 +73,7 @@ module.exports = () => {
      */
     async init() {
       this.startAll(); 
-      this.__initialized = true;
-      this.node.logger.info(`Tasks have been initialized`);   
+      await super.init.apply(this, arguments);
     }
 
     /**
@@ -40,41 +83,7 @@ module.exports = () => {
      */
     async deinit() {
       this.stopAll();
-      this.__initialized = false;
-      this.node.logger.info(`Tasks have been deinitialized`);   
-    }
-
-    /**
-     * Destroy the tasks
-     * 
-     * @async
-     */
-    async destroy() {
-      await this.deinit();
-      this.node.logger.info(`Tasks have been destroyed`);
-    }
-
-    /**
-     * Block the function
-     * 
-     * @param {string} name - task name 
-     * @param {function} fn 
-     */
-    async blockFn(name, fn) {
-      if(this.blocked[name]) {
-        return;
-      }
-
-      this.blocked[name] = fn;
-      await fn();
-      delete this.blocked[name];
-    }
-
-    /**
-     * Add the task
-     */
-    async add(name, interval, fn, options) {
-      this.tasks[name] = merge({ interval: utils.getMs(interval), fn, name }, options);
+      await super.deinit.apply(this, arguments);
     }
 
     /**
@@ -93,7 +102,37 @@ module.exports = () => {
      */
     async stopAll() {
       for(let key in this.tasks) {
-        await this.stop(this.tasks[key])
+        await this.stop(this.tasks[key]);
+      }
+    }
+
+    /**
+     * Run the task callback
+     * 
+     * @async
+     * @param {object} task
+     * @param {number} task.interval
+     * @param {function} task.fn
+     */
+    async run(task) {
+      if(task.isStopped) {
+        this.options.showFailLogs && this.node.logger.warn(`Task "${task.name}" should be started at first`);
+        return;
+      }
+
+      if(task.isRun) {
+        this.options.showFailLogs && this.node.logger.warn(`Task "${task.name}" has blocking operations`);
+        return;
+      }
+
+      try {
+        task.isRun = true;
+        await task.fn();
+        task.isRun = false;
+        this.options.showCompletionLogs && this.node.logger.info(`Task "${task.name}" has been completed`);
+      }
+      catch(err) {
+        this.options.showFailLogs && this.node.logger.error(`Task "${task.name}",`, err.stack);
       }
     }
 
@@ -103,26 +142,18 @@ module.exports = () => {
      * @async
      * @param {object} task
      * @param {number} task.interval
-     * @param {boolean} task.block 
      * @param {function} task.fn
      */
     async start(task) {
-      try {
-        task.isStopped = false;
-        task.block? await this.blockFn(task.name, task.fn): await task.fn();        
-        this.options.showCompletionLogs && this.node.logger.info(`Task "${task.name}" has been completed`);
-      }
-      catch(err) {
-        this.options.showFailLogs && this.node.logger.error(`Task "${task.name}",`, err.stack);
-      }
+      task.isStopped = false;
     }
 
     /**
-    * Stop the task
-    * 
-    * @async
-    * @param {object} task
-    */
+     * Stop the task
+     * 
+     * @async
+     * @param {object} task
+     */
     async stop(task) {
       task.isStopped = true;
     }

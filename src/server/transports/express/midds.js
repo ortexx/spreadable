@@ -16,12 +16,12 @@ module.exports.checkMasterAcception = node => {
   return async (req, res, next) => {
     try {
       const size = await node.db.getSlavesCount();
-
+      
       if(!size && !req.body.ignoreAcception) {
         throw new errors.WorkError('Master is not accepted', 'ERR_SPREADABLE_MASTER_NOT_ACCEPTED');
       }
 
-      res.setHeader('spreadable-node-size', size);
+      res.setHeader('spreadable-master-size', size);
       next();
     }
     catch(err) {
@@ -36,7 +36,7 @@ module.exports.checkMasterAcception = node => {
 module.exports.updateClientInfo = node => {
   return async (req, res, next) => {
     try {
-      await node.db.successServerAddress(req.headers['original-address']);
+      await node.db.successServerAddress(req.clientAddress);
       next();
     }
     catch(err) {
@@ -70,7 +70,7 @@ module.exports.networkAccess = (node, checks = {}) => {
       let address = req.clientIp + ':1';
 
       if(checks.address) {
-        address = req.headers['original-address'];
+        address = req.clientAddress;
       
         if(!utils.isValidAddress(address) || (!utils.isIpEqual(await utils.getAddressIp(address), req.clientIp))) {
           throw new errors.AccessError(`Wrong address "${address}"`);
@@ -85,13 +85,6 @@ module.exports.networkAccess = (node, checks = {}) => {
       next(err);
     }
   }
-};
-
-/**
- * Control registrations limit
- */
-module.exports.requestQueueRegistration = node => {  
-  return this.requestQueue(node, 'registration', { limit: 1 });
 };
 
 /**

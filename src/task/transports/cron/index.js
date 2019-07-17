@@ -10,9 +10,8 @@ module.exports = (Parent) => {
      * @see Task.prototype.start
      */
     async start(task) {
-      const start = super.start;
-      const self = this;
-      task.cronTask = new CronJob(task.interval, () => start.call(self, task));
+      await super.start(task);
+      task.cronTask = new CronJob(task.interval, () => this.run(task));
       task.cronTask.start();
     }
 

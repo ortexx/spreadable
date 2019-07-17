@@ -5,29 +5,33 @@ const https = require('https');
 const qs = require('querystring');
 const utils = require('./utils');
 const errors = require('./errors');
-const prettyMs = require('pretty-ms');
+const ms = require('ms');
 const LoggerConsole = require('./logger/transports/console')();
 const TaskInterval = require('./task/transports/interval')();
+const Service = require('./service')();
 
-module.exports = () => {
+module.exports = (Parent) => {
   /**
    * Class to manage client requests to the network
    */
-  return class Client {
+  return class Client extends (Parent || Service) {
     static get LoggerTransport () { return LoggerConsole }
     static get TaskTransport () { return TaskInterval }
 
     /**
      * @param {object} options
-     * @param {string} options.address
+     * @param {string|string[]} options.address
      */
     constructor(options = {}) {
+      super(...arguments);
+
       if(!options.address) {
         throw new Error('You must pass the node address in "ip:port" format');
       }
 
       this.options = merge({
         request: {
+          pingTimeout: '1s',
           clientTimeout: '8s'
         },
         secretKey: '',
@@ -41,51 +45,57 @@ module.exports = () => {
       }, options);
 
       !this.options.logger && (this.options.logger = { level: false });
-
-      this.prepareOptions();
       this.LoggerTransport = this.constructor.LoggerTransport;
       this.TaskTransport = this.constructor.TaskTransport;
       this.address = options.address;
-      this.__initialized = false;
+      this.prepareOptions();
     }
 
     /**
      * Initialize the client
      * 
-     * @aync
+     * @async
      */
     async init() {
       await this.prepareServices();
       await this.initServices();
-      this.workAddress = this.address;
+      const addresses = Array.isArray(this.address)? this.address: [this.address];
+      const availableAddress = await this.getAvailableAddress(addresses);
+      
+      if(!availableAddress) {
+        throw new Error('Provided addresses are not available');
+      }
+
+      this.workerAddress = availableAddress;
       await this.changeWorker();
-      this.__initialized = Date.now();
+      super.init.apply(this, arguments);
     }
 
     /**
      * Deinitialize the client
      * 
-     * @aync
+     * @async
      */
     async deinit() {
       await this.deinitServices();
-      this.__initialized = false;
+      super.deinit.apply(this, arguments);
     }
 
-     /**
-     * Prepare the sevices
+    /**
+     * Prepare the services
      * 
      * @async
      */
     async prepareServices() {
-      this.logger = new this.LoggerTransport(this, merge({}, this.options.logger));
-      this.options.task && (this.task = new this.TaskTransport(this, merge({}, this.options.task)));
+      this.logger = new this.LoggerTransport(this, this.options.logger);
+      this.options.task && (this.task = new this.TaskTransport(this, this.options.task));
 
-      if(this.task) {
-        this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
+      if(!this.task) {
+        return;        
       }
-      else {
-        this.logger.warn('You have to enable tasks if you use the client in production');
+
+      if(this.options.task.workerChangeInterval) {
+        await this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
       }
     }
 
@@ -110,16 +120,65 @@ module.exports = () => {
     }
 
     /**
-     * Change the worker address
+     * Get an available address from the list
+     * 
+     * @async
+     * @param {string[]} addresses
+     * @returns {string}
      */
-    async changeWorker() {
-      this.workAddress = (await this.request('get-available-node', {
-        useInitialAddress: true
-      })).address;
+    async getAvailableAddress(addresses) {
+      let availableAddress;
+
+      for(let i = 0; i < addresses.length; i++) {
+        const address = addresses[i];
+        
+        try {
+          await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({ 
+            method: 'GET',
+            timeout: this.options.request.pingTimeout
+          }));
+          availableAddress = address;
+          break;
+        }
+        catch(err) {
+          this.logger.warn(err.stack);
+        }
+      }
+
+      return availableAddress;
     }
 
     /**
-     * Make a request to api
+     * Change the worker address
+     * 
+     * @async
+     */
+    async changeWorker() {
+      const lastAddress = this.workerAddress;
+
+      const address = (await this.request('get-available-node', {
+        useInitialAddress: true
+      })).address;
+
+      if(address == lastAddress) {
+        return;
+      }
+
+      try {
+        await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({ 
+          method: 'GET',
+          timeout: this.options.request.pingTimeout
+        }));
+        this.workerAddress = address;
+      }
+      catch(err) {
+        this.logger.warn(err.stack);
+        this.workerAddress = lastAddress;
+      }
+    }
+
+    /**
+     * Make a request to the api
      * 
      * @async
      * @param {string} endpoint
@@ -155,11 +214,11 @@ module.exports = () => {
       } 
       
       options.url = this.createRequestUrl(endpoint, { useInitialAddress: options.useInitialAddress });
-      const start = Date.now();        
+      const start = Date.now();
 
-      try {
+      try {        
         const result = await fetch(options.url, options);    
-        this.logger.info(`Request to "${options.url}":`, prettyMs(Date.now() - start));    
+        this.logger.info(`Request to "${options.url}":`, ms(Date.now() - start));    
         const body = await result.json();
 
         if(result.ok) {
@@ -185,15 +244,15 @@ module.exports = () => {
     }
 
     /**
-     * Create api request url
+     * Create a api request url
      * 
      * @param {string} endpoint 
      * @param {object} options 
      */
     createRequestUrl(endpoint, options = {}) {
       const query = options.query? qs.stringify(options.query): null;
-      const address = options.useInitialAddress? this.address: this.workAddress;
-      let url = `${this.options.https? 'https': 'http'}://${address}/client/${endpoint}`;
+      const address = options.useInitialAddress? this.address: this.workerAddress;
+      let url = `${this.getRequestProtocol()}://${address}/client/${endpoint}`;
       query && (url += '?' + query);
       return url;
     }
@@ -226,6 +285,16 @@ module.exports = () => {
     }
 
     /**
+     * Create a request timer
+     * 
+     * @param {number} timeout 
+     * @returns {function}
+     */
+    createRequestTimer(timeout) {
+      return utils.getRequestTimer(timeout, { min: this.options.request.pingTimeout });
+    }
+
+    /**
      * Prepare the options
      */
     prepareOptions() {    
@@ -233,12 +302,12 @@ module.exports = () => {
     }
 
     /**
-     * Check the client is initialized
+     * Get a request protocol
      * 
-     * @returns {boolean}
+     * @returns {string}
      */
-    isInitialized() {
-      return !!this.__initialized;
+    getRequestProtocol() {
+      return this.options.https? 'https': 'http';
     }
 
     /**

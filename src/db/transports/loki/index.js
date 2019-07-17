@@ -12,21 +12,20 @@ module.exports = (Parent) => {
    */
   return class DatabaseLoki extends (Parent || Database) {
     constructor(node, options = {}) {
-
       options = _.merge({
-        filename: path.join(process.cwd(), node.constructor.name, `loki-${node.port}.db`),
+        filename: path.join(process.cwd(), node.constructor.codename, `loki-${node.port}.db`),
         autosaveInterval: 3000
-      }, options)
+      }, options);
 
       super(node, options);
       this.col = {};
     }
 
     /**
-     * @see Database.propotype.init
+     * @see Database.prototype.init
      */
-    async init() { 
-      await fs.ensureDir(path.dirname(this.options.filename));
+    async init() {
+      await fs.ensureFile(this.options.filename);
 
       await new Promise((resolve, reject) => {     
         this.loki = new loki(this.options.filename, _.merge(this.options, {
@@ -49,28 +48,26 @@ module.exports = (Parent) => {
         }
       });
 
-      await super.init();
+      super.init.apply(this, arguments);
     }
 
     /**
-     * @see Database.propotype.deinit
+     * @see Database.prototype.deinit
      */
     async deinit() {
-      await this.saveDatabase();
       this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
-      delete this.__onExitListenerRemoveFn;
+
+      if(this.isDestroying()) {
+        this.loki.autosaveDisable();
+        await this.deleteDatabase();          
+      }
+      else {
+        await this.saveDatabase(); 
+        this.loki && this.loki.close();
+      }
+
       delete this.loki;
-      await super.deinit();
-    }
-  
-    /**
-     * @see Database.propotype.destroy
-     */
-    async destroy() {
-      this.loki.autosaveDisable();
-      await this.deleteDatabase();
-      delete this.loki;
-      await super.destroy();
+      await super.deinit.apply(this, arguments);
     }
 
     /**
@@ -118,13 +115,27 @@ module.exports = (Parent) => {
     /**
      * Initialize all collections
      */
-    initCollections() {
+    initCollections() {      
+      this.initCollectionCache();
       this.initCollectionData();
       this.initCollectionServers();
       this.initCollectionBanlist();
       this.initCollectionBehaviorCandidates();
       this.initCollectionBehaviorDelays();
       this.initCollectionBehaviorFails();   
+    }
+
+    /**
+     * Initialize cache collection
+     */
+    initCollectionCache() {
+      this.col.cache = this.loki.getCollection("cache");
+
+      if (this.col.cache === null) {
+        this.col.cache = this.loki.addCollection('cache', {
+          indices: ['type']
+        });
+      }
     }
 
     /**
@@ -141,6 +152,8 @@ module.exports = (Parent) => {
 
       const masterRequestTime = this.col.data.findOne({ name: 'masterStatusTime' });
       const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
+      const checkedMasterStructures = this.col.data.findOne({ name: 'checkedMasterStructures' });
+      const members = this.col.data.findOne({ name: 'members' });
 
       if(!masterRequestTime) {
         this.col.data.insert({ name: 'masterStatusTime', value: null });
@@ -148,6 +161,14 @@ module.exports = (Parent) => {
 
       if(!registrationTime) {
         this.col.data.insert({ name: 'registrationTime', value: null });
+      }
+
+      if(!checkedMasterStructures) {
+        this.col.data.insert({ name: 'checkedMasterStructures', value: [] });
+      }
+
+      if(!members) {
+        this.col.data.insert({ name: 'members', value: [] });
       }
     }
 
@@ -230,6 +251,7 @@ module.exports = (Parent) => {
         createdAt: now,
         updatedAt: now,
         fails: 0,
+        availability: 0,
         isSlave: false,
         isBacklink: false,
         isMaster: false,
@@ -304,21 +326,22 @@ module.exports = (Parent) => {
         createdAt: now,
         updatedAt: now,
         suspicion: 1,
-        balance: 0
+        balance: 1
       }, obj);
     }
 
     /**
-     * @see Database.propotype.setData
+     * @see Database.prototype.setData
      */
     async setData(name, value) {
-      const row = this.col.data.findOne({ name });
+      let row = this.col.data.findOne({ name });
+      !row && (row = this.col.data.insert({ name }));
       row.value = typeof value == 'function'? value(row): value;
       this.col.data.update(row);
     }
 
-   /**
-     * @see Database.propotype.getData
+    /**
+     * @see Database.prototype.getData
      */
     async getData(name) {
       const row = this.col.data.findOne({ name });
@@ -326,63 +349,63 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.isMaster
+     * @see Database.prototype.isMaster
      */
     async isMaster() {
       return !!(this.col.servers.chain().find({ isSlave: true, isBroken: false }).count());
     }  
     
     /**
-     * @see Database.propotype.getServer
+     * @see Database.prototype.getServer
      */
     async getServer(address) {
       return this.col.servers.findOne({ address });
     }
 
     /**
-     * @see Database.propotype.getServers
+     * @see Database.prototype.getServers
      */
     async getServers() {
       return this.col.servers.find();
     }
 
     /**
-     * @see Database.propotype.hasSlave
+     * @see Database.prototype.hasSlave
      */
     async hasSlave(address) {
       return !!(this.col.servers.chain().find({ isSlave: true, isBroken: false, address }).count());
     }
 
     /**
-     * @see Database.propotype.getSlaves
+     * @see Database.prototype.getSlaves
      */
     async getSlaves() {
       return this.col.servers.chain().find({ isSlave: true, isBroken: false }).data();
     }
 
     /**
-     * @see Database.propotype.getMaster
+     * @see Database.prototype.getMaster
      */
     async getMaster(address) {
       return this.col.servers.findOne({ address, isMaster: true, isBroken: false });
     }
 
     /**
-     * @see Database.propotype.getMasters
+     * @see Database.prototype.getMasters
      */
     async getMasters() {
       return this.col.servers.chain().find({ isMaster: true, isBroken: false }).data();
     }
 
     /**
-     * @see Database.propotype.getBacklink
+     * @see Database.prototype.getBacklink
      */
     async getBacklink() {
       return this.col.servers.findOne({ isBacklink: true, isBroken: false });
     }
 
     /**
-     * @see Database.propotype.getMastersCount
+     * @see Database.prototype.getMastersCount
      */
     async getMastersCount() {
       return this.col.servers
@@ -395,14 +418,14 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.getSlavesCount
+     * @see Database.prototype.getSlavesCount
      */
     async getSlavesCount() {
       return this.col.servers.chain().find({ isSlave: true, isBroken: false }).count();
     }
     
     /**
-     * @see Database.propotype.addMaster
+     * @see Database.prototype.addMaster
      */
     async addMaster(address, size) {
       let server = this.col.servers.findOne({ address });
@@ -422,13 +445,14 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.addSlave
+     * @see Database.prototype.addSlave
      */
-    async addSlave(address) {
+    async addSlave(address, availability) {
       let server = this.col.servers.findOne({ address });
 
       if(server) {
         server.isSlave = true;
+        availability !== undefined && (server.availability = availability);
         return this.col.servers.update(server);
       }
 
@@ -448,7 +472,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.addBacklink
+     * @see Database.prototype.addBacklink
      */
     async addBacklink(address, chain) {
       let server = this.col.servers.findOne({ address });
@@ -475,7 +499,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.removeMaster
+     * @see Database.prototype.removeMaster
      */
     async removeMaster(address) {
       let server = this.col.servers.findOne({ address, isMaster: true });
@@ -494,7 +518,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.removeMasters
+     * @see Database.prototype.removeMasters
      */
     async removeMasters() {
       const servers = this.col.servers.find({ isMaster: true });
@@ -509,7 +533,7 @@ module.exports = (Parent) => {
     }
     
     /**
-     * @see Database.propotype.removeSlave
+     * @see Database.prototype.removeSlave
      */
     async removeSlave(address) {
       let server = this.col.servers.findOne({ address });
@@ -520,6 +544,7 @@ module.exports = (Parent) => {
 
       if(server.isMaster || server.isBacklink) {
         server.isSlave = false;
+        server.availability = 0;
         return this.col.servers.update(server);
       }
 
@@ -533,7 +558,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.removeSlaves
+     * @see Database.prototype.removeSlaves
      */
     async removeSlaves() {
       const servers = this.col.servers.find({ isSlave: true });
@@ -544,7 +569,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.shiftSlaves
+     * @see Database.prototype.shiftSlaves
      */
     async shiftSlaves(limit = 1) {
       const servers = this.col.servers
@@ -560,7 +585,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.removeBacklink
+     * @see Database.prototype.removeBacklink
      */
     async removeBacklink() {
       let server = this.col.servers.findOne({ isBacklink: true });
@@ -587,7 +612,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.normalizeServers
+     * @see Database.prototype.normalizeServers
      */
     async normalizeServers() {
       this.col.servers
@@ -621,12 +646,8 @@ module.exports = (Parent) => {
           }, {
             isBacklink: true,
             address: this.node.address
-          }, { 
-            fails: {
-              $gt: this.node.options.network.serverMaxFails
-            }
           }, {
-            isSlave: false, 
+            isSlave: false,
             isBacklink: false,
             isMaster: false
           }]          
@@ -635,7 +656,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.successServerAddress
+     * @see Database.prototype.successServerAddress
      */
     async successServerAddress(address) {
       let server = this.col.servers.findOne({ address });
@@ -648,7 +669,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.failedServerAddress
+     * @see Database.prototype.failedServerAddress
      */
     async failedServerAddress(address) {
       let server = this.col.servers.findOne({ address });
@@ -667,12 +688,12 @@ module.exports = (Parent) => {
     }
     
     /**
-     * @see Database.propotype.getBehaviorCandidates
+     * @see Database.prototype.getBehaviorCandidates
      */
     async getBehaviorCandidates(action) {
       return this.col.behaviorCandidates
         .chain()
-        .find({ 
+        .find({
           action, 
           suspicion: {
             $gte: await this.node.getCandidateSuspicionLevel() 
@@ -682,9 +703,9 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.addBehaviorCandidate
+     * @see Database.prototype.addBehaviorCandidate
      */
-    async addBehaviorCandidate(address, action) {
+    async addBehaviorCandidate(action, address) {
       const data = this.col.behaviorCandidates.chain().find({ action }).simplesort('updatedAt', true).limit(1).data();
       const last = data.length? data[0]: null;  
       
@@ -719,7 +740,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.normalizeBehaviorCandidates
+     * @see Database.prototype.normalizeBehaviorCandidates
      */
     async normalizeBehaviorCandidates() {
       const suspicion = await this.node.getCandidateSuspicionLevel();
@@ -741,7 +762,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.addBehaviorDelay
+     * @see Database.prototype.addBehaviorDelay
      */
     async addBehaviorDelay(action, address) {
       const behavior = this.col.behaviorDelays.findOne({ address, action });
@@ -755,14 +776,14 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.getBehaviorDelay
+     * @see Database.prototype.getBehaviorDelay
      */
     async getBehaviorDelay(action, address) {
       return this.col.behaviorDelays.findOne({ address, action });
     }
 
     /**
-     * @see Database.propotype.removeBehaviorDelay
+     * @see Database.prototype.removeBehaviorDelay
      */
     async removeBehaviorDelay(action, address) {
       const behavior = this.col.behaviorDelays.findOne({ address, action });
@@ -773,38 +794,38 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.clearBehaviorDelays
+     * @see Database.prototype.clearBehaviorDelays
      */
     async clearBehaviorDelays(action) {
       this.col.behaviorDelays.chain().find({ action }).remove();
     }
 
     /**
-     * @see Database.propotype.getBehaviorFail
+     * @see Database.prototype.getBehaviorFail
      */
     async getBehaviorFail(action, address) {
       return this.col.behaviorFails.findOne({ address, action });
     }
 
     /**
-     * @see Database.propotype.addBehaviorFail
+     * @see Database.prototype.addBehaviorFail
      */
     async addBehaviorFail(action, address, step = 1) {
       const behavior = this.col.behaviorFails.findOne({ address, action });
+      typeof step == 'function' && (step = step(behavior));
 
       if(behavior) {
-        typeof step == 'function' && (step = step(behavior));
         behavior.suspicion += step;
         behavior.balance += 1;
         behavior.updatedAt = Date.now();
         return this.col.behaviorFails.update(behavior);
       }
 
-      return this.col.behaviorFails.insert(this.createBehaviorFailsFields({ address, action }));
+      return this.col.behaviorFails.insert(this.createBehaviorFailsFields({ address, action, suspicion: step }));
     }
 
     /**
-     * @see Database.propotype.subBehaviorFail
+     * @see Database.prototype.subBehaviorFail
      */
     async subBehaviorFail(action, address, step = 1) {
       const behavior = this.col.behaviorFails.findOne({ address, action });
@@ -815,7 +836,7 @@ module.exports = (Parent) => {
 
       typeof step == 'function' && (step = step(behavior));
       behavior.suspicion -= step;
-      behavior.balance > 0 && (behavior.balance -= 1);
+      behavior.balance > 1 && (behavior.balance -= 1);
 
       if(behavior.suspicion <= 0) {
         return this.col.behaviorFails.remove(behavior);
@@ -826,10 +847,10 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.normalizeBehaviorFails
+     * @see Database.prototype.normalizeBehaviorFails
      */
     async normalizeBehaviorFails() {
-      this.col.banlist
+      this.col.behaviorFails
         .chain()
         .find({ 
           updatedAt: {
@@ -844,7 +865,7 @@ module.exports = (Parent) => {
 
       const data = this.col.behaviorFails
         .chain()
-        .find({ 
+        .find({
           suspicion: {
             $gt: this.node.options.behavior.failSuspicionLevel 
           }
@@ -854,52 +875,54 @@ module.exports = (Parent) => {
       const banned = [];
 
       for(let i = 0; i < data.length; i++) {
-        const behavior = data[i];        
+        const behavior = data[i];
         await this.addBanlistAddress(behavior.address);
         banned.push(behavior.address);
       }
 
       this.col.behaviorFails
-      .chain()
-      .find({
-        address: {
-          $in: banned
-        }
-      })
-      .remove();
+        .chain()
+        .find({
+          address: {
+            $in: banned
+          }
+        })
+        .remove();
     }
 
     /**
-     * @see Database.propotype.getBanlist
-     */
-    async getBanlist() {
-      return this.col.banlist.find();
-    }
-
-    /**
-     * @see Database.propotype.getBanlistAddress
+     * @see Database.prototype.getBanlistAddress
      */
     async getBanlistAddress(address) {
       return this.col.banlist.findOne({ address });
     }
 
     /**
-     * @see Database.propotype.addBanlistAddress
+     * @see Database.prototype.checkBanlistIp
+     */
+    async checkBanlistIp(ip) {
+      return !!this.col.banlist.findOne({ ip });
+    }
+
+    /**
+     * @see Database.prototype.addBanlistAddress
      */
     async addBanlistAddress(address) {
-      const ip = utils.getAddressIp(address);
+      let ip = await utils.getAddressIp(address);
+      ip = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
       const server = this.col.banlist.findOne({ address });
       
       if(server) {
         server.updatedAt = Date.now();
+        server.ip = ip;
         return this.col.banlist.update(server);
       }
-
+      
       return this.col.banlist.insert(this.createBanlistFields({ address, ip }));
     }
 
     /**
-     * @see Database.propotype.removeBanlistAddress
+     * @see Database.prototype.removeBanlistAddress
      */
     async removeBanlistAddress(address) {
       const server = this.col.banlist.findOne({ address });
@@ -910,7 +933,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.propotype.normalizeBanlist
+     * @see Database.prototype.normalizeBanlist
      */
     async normalizeBanlist() {
       this.col.banlist
@@ -921,6 +944,45 @@ module.exports = (Parent) => {
           } 
         })
         .remove();
+    }
+
+    /**
+     * @see Database.prototype.getCache
+     */
+    async getCache(type, key) {
+      const cache = this.col.cache.findOne({ type, key });
+
+      if(cache) {
+        cache.accessedAt = Date.now();
+        return this.col.cache.update(cache);
+      }
+
+      return cache;
+    }
+  
+    /**
+     * @see Database.prototype.setCache
+     */
+    async setCache(type, key, value, options = {}) {
+      let cache = this.col.cache.findOne({ type, key });
+
+      if(cache) {
+        cache.value = value;
+        cache.accessedAt = Date.now();
+        return this.col.cache.update(cache);
+      }
+
+      cache = this.col.cache.insert({ type, key, value, accessedAt: Date.now() });
+      options.limit && this.col.cache.chain().find().simplesort('accessedAt', true).offset(options.limit).remove();
+      return cache;
+    }
+
+    /**
+     * @see Database.prototype.removeCache
+     */
+    async removeCache(type, key) {
+      const cache = this.col.cache.findOne({ type, key });
+      cache && this.col.cache.remove(cache);
     }
   }
 };

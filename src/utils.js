@@ -91,7 +91,7 @@ utils.validateSchema = function (schema, data) {
 }
 
 /**
- * Check it is the browser environment
+ * Check it is the browser environment here
  * 
  * @returns {boolean}
  */
@@ -100,7 +100,7 @@ utils.isBrowserEnv = function () {
 }
 
 /**
- * Get a random element from an array
+ * Get a random element from the array
  * 
  * @param {array} arr
  * @returns {*}
@@ -110,7 +110,7 @@ utils.getRandomElement = function (arr) {
 };
 
 /**
- * Convert string to milliseconds
+ * Convert the string to milliseconds
  * 
  * @param {string|integer} val
  * @returns {integer}
@@ -124,7 +124,7 @@ utils.getMs = function (val) {
 };
 
 /**
- * Convert string to bytes
+ * Convert the string to bytes
  * 
  * @param {string|integer} val
  * @returns {integer|string}
@@ -138,7 +138,7 @@ utils.getBytes = function (val) {
 };
 
 /**
- * Get cpu usage percent
+ * Get the cpu usage percent
  * 
  * @async
  * @param {object} options
@@ -159,8 +159,8 @@ utils.getCpuUsage = async function(options = {}) {
       }
       catch(err) {
         reject(err);
-      }      
-    }, options.timeout);
+      }
+    }, options.timeout || 1000);
   });
 };
 
@@ -176,7 +176,7 @@ utils.isPortUsed = async function (port) {
 };
 
 /**
- * Get ip address by hostname
+ * Get an ip address of the hostname
  * 
  * @async
  * @param {string} hostname
@@ -217,29 +217,34 @@ utils.getAddressIp = async function (address) {
 }
 
 /**
- * Make multiple requests with the common timeout
+ * Create a requests timer
  * 
  * @async
  * @param {number} timeout 
  * @param {function} fn 
  */
-utils.getRequestTimer = function (timeout) {
+utils.getRequestTimer = function (timeout, options = {}) {
   let last = Date.now(); 
 
   return fixArr => {
-    if(timeout !== undefined) {
-      const now = Date.now();
-      timeout -= now - last;
-      last = now;
+    if(timeout === undefined) {
+      return;
+    }
 
-      if(fixArr && !Array.isArray(fixArr)) {
-        fixArr = [fixArr];
-      }
+    const now = Date.now();
+    timeout -= now - last;
+    last = now;
 
-      if(fixArr) {
-        const dev = fixArr.reduce((a, b) => a + b) / timeout;
-        return dev > 1? (fixArr[0] / dev): fixArr[0];
-      }
+    if(fixArr && !Array.isArray(fixArr)) {
+      fixArr = [fixArr];
+    }
+
+    if(fixArr) {      
+      let dev = fixArr.reduce((a, b) => a + b) / timeout;  
+      let res = dev > 1? (fixArr[0] / dev): fixArr[0];
+      let min = options.min > timeout? timeout: options.min
+      min && res < min && (res = min);
+      return res > 0? res: 0;
     }
 
     return timeout;
@@ -247,7 +252,7 @@ utils.getRequestTimer = function (timeout) {
 };
 
 /**
- * Return request client ip address;
+ * Get the client remote ip address
  * 
  * @param {http.ClientRequest} req 
  * @returns {string}
@@ -264,27 +269,7 @@ utils.getRemoteIp = function (req) {
 };
 
 /**
- * Check the port is valid
- * 
- * @param {string} port
- * @returns {boolean}
- */
-utils.isValidPort = function (port) {
-  return +port > 0 &&  +port <= 65535;
-};
-
-/**
- * Check the  ip is valid
- * 
- * @param {string} ip
- * @returns {boolean}
- */
-utils.isValidIp = function (ip) {
-  return validateIP(ip);
-};
-
-/**
- * Get ip v6 in full format
+ * Get the ip address (v6) in the full format
  * 
  * @param {string} ip
  * @returns {string}
@@ -294,13 +279,13 @@ utils.getFullIpv6 = function (ip) {
 };
 
 /**
- * Check the ip is v6
+ * Check the ip address is v6
  * 
  * @param {string} ip
  * @returns {boolean}
  */
 utils.isIpv6 = function (ip) {
-  return validateIP(ip) && ip.match(':');
+  return !!(typeof ip == 'string' && ip.match(':') && validateIP(ip));
 };
 
 /**
@@ -314,7 +299,18 @@ utils.ipv4Tov6 = function (ip) {
 };
 
 /**
- * Create an address from hostname and port
+ * Check the two ip addresses are equal
+ * 
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+utils.isIpEqual = function (a, b) {
+  return ip6addr.compare(ip6addr.parse(a), ip6addr.parse(b)) == 0;
+};
+
+/**
+ * Create an address from the hostname and port
  * 
  * @param {string} hostname
  * @param {integer} port
@@ -329,14 +325,23 @@ utils.createAddress = function (hostname, port) {
 };
 
 /**
- * Check two ip addresses are equal
+ * Check the port is valid
  * 
- * @param {string} a
- * @param {string} b
+ * @param {string} port
  * @returns {boolean}
  */
-utils.isIpEqual = function (a, b) {
-  return ip6addr.compare(ip6addr.parse(a), ip6addr.parse(b)) == 0;
+utils.isValidPort = function (port) {
+  return +port > 0 && +port <= 65535;
+};
+
+/**
+ * Check the ip address is valid
+ * 
+ * @param {string} ip
+ * @returns {boolean}
+ */
+utils.isValidIp = function (ip) {
+  return validateIP(ip);
 };
 
 /**
@@ -371,7 +376,7 @@ utils.isValidAddress = function (address) {
 };
 
 /**
- * Split the address to hostname and port
+ * Split the address to a hostname and port
  * 
  * @param {string} address
  * @returns {string[]}
@@ -393,7 +398,7 @@ utils.splitAddress = function (address) {
 };
 
 /**
- * Create the request timed out error
+ * Create a request timeout error
  * 
  * @returns {Error}
  */
@@ -404,7 +409,7 @@ utils.createRequestTimeoutError = function () {
 };
 
 /**
- * Check the error is request timed out
+ * Check the error is the request timeout error
  * 
  * @param {Error} err
  * @returns {boolean}

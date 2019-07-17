@@ -1,6 +1,5 @@
 
 const controllers = require('./controllers');
-const midds = require('../../midds');
 
 module.exports = [
   /**
@@ -8,12 +7,13 @@ module.exports = [
    * 
    * @api {post} /api/node/register
    * @apiParam {string} target
+   * @apiSuccess {object} - { size, chain: [...] }
    */
   { 
     name: 'register', 
     method: 'post', 
-    url: '/register', 
-    fn: [midds.requestQueueRegistration, controllers.register]
+    url: '/register',
+    fn: controllers.register
   },
 
   /**
@@ -64,7 +64,7 @@ module.exports = [
   { 
     name: 'getInterviewSummary', 
     method: 'post', 
-    url: '/get-interview-summary', 
+    url: '/get-interview-summary',
     fn: controllers.getInterviewSummary
   },
 

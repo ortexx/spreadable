@@ -12,9 +12,9 @@ module.exports = [
    * @api {post} /client/get-available-node
    */
   {
-    name: 'getAvailableNode', 
-    method: 'post', 
-    url: '/get-available-node', 
+    name: 'getAvailableNode',
+    method: 'post',
+    url: '/get-available-node',
     fn: controllers.getAvailableNode
   }
 ];

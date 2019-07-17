@@ -10,17 +10,19 @@ const DatabaseLoki = require('./db/transports/loki')();
 const ServerExpress = require('./server/transports/express')();
 const LoggerConsole = require('./logger/transports/console')();
 const TaskInterval = require('./task/transports/interval')();
-const prettyMs = require('pretty-ms');
+const Service = require('./service')();
+const ms = require('ms');
 const utils = require('./utils');
+const schema = require('./schema');
 const errors = require('./errors');
 const pack = require('../package');
 
-module.exports = () => { 
+module.exports = (Parent) => { 
   /**
-   * Class to manage the node
+   * The node class
    */
-  return class Node {
-    static get name () { return 'spreadable' }
+  return class Node extends (Parent || Service) {
+    static get codename () { return 'spreadable' }
     static get DatabaseTransport () { return DatabaseLoki }
     static get ServerTransport () { return ServerExpress }
     static get LoggerTransport () { return LoggerConsole }
@@ -32,6 +34,8 @@ module.exports = () => {
      * @param {object} options.initialNetworkAddress
      */
     constructor(options = {}) {
+      super(...arguments);
+
       if(!options.port) {
         throw new Error('You must pass the necessary port');
       }
@@ -48,6 +52,8 @@ module.exports = () => {
           pingTimeout: '1s'
         },
         network: {
+          autoSync: true,
+          syncInterval: '10s',
           isTrusted: false,
           secretKey: '',
           serverMaxFails: 5,
@@ -68,26 +74,25 @@ module.exports = () => {
           level: 'info'
         },
         task: {      
-          calculateCpuUsageInterval: '1s',
-          syncInterval: '10s',
+          calculateCpuUsageInterval: '1s'
         }
       }, options);
 
       !this.options.logger && (this.options.logger = { level: false }); 
-      this.prepareOptions();
       this.port = this.options.port;
       this.publicPort = this.options.publicPort || this.port;
       this.initialNetworkAddress = this.options.initialNetworkAddress;
       this.DatabaseTransport = this.constructor.DatabaseTransport;
       this.ServerTransport = this.constructor.ServerTransport;
       this.LoggerTransport = this.constructor.LoggerTransport;  
-      this.TaskTransport = this.constructor.TaskTransport;
-      this.CacheTransport = this.constructor.CacheTransport;
+      this.TaskTransport = this.constructor.TaskTransport;     
       this.__cpuUsageInterval = 900,
       this.__maxCandidates = 500;
       this.__initialized = false;
+      this.__syncInterval = null;
       this.__cpuUsage = 0;
       this.__requestQueue = {};
+      this.prepareOptions();
     }    
 
     /**
@@ -109,26 +114,29 @@ module.exports = () => {
       }
 
       await this.prepareServices();
-      await this.initServices();
+      await this.initServices();     
+      await super.init.apply(this, arguments);
+      
+      if(!this.options.server) {
+        return;
+      }
+      
       await this.checkNodeAddress(this.address);
-      this.__initialized = Date.now();
-      await this.sync();
+
+      if(this.options.network.autoSync) {
+        this.__syncInterval = setInterval(this.sync.bind(this), this.options.network.syncInterval);
+      }
     }
 
     /**
-     * Deinit the node
+     * Deinitialize the node
      * 
      * @async
      */
-    async deinit() { 
-      if(!this.isInitialized()) {
-        return;
-      }
-
-      await this.deinitServices();
-      this.__initialized = false;
-      //eslint-disable-next-line no-console  
-      console.info(`Node has been deinitialized`);
+    async deinit() {
+      this.__syncInterval && clearInterval(this.__syncInterval);
+      !this.isDestroying() && await this.deinitServices();
+      await super.deinit.apply(this, arguments);
     }
 
     /**
@@ -138,28 +146,26 @@ module.exports = () => {
      */
     async destroy() { 
       await this.destroyServices();
-      this.__initialized = false;
-      //eslint-disable-next-line no-console  
-      console.info(`Node has been destroyed`);
+      await super.destroy.apply(this, arguments);
     }
 
     /**
-     * Prepare the sevices
+     * Prepare the services
      * 
      * @async
      */
     async prepareServices() {
-      this.logger = new this.LoggerTransport(this, _.merge({}, this.options.logger));      
-      this.db = new this.DatabaseTransport(this, _.merge({}, this.options.db ));
-      this.server = new this.ServerTransport(this, _.merge({}, this.options.server, { port: this.port }));    
-      this.options.task && (this.task = new this.TaskTransport(this, _.merge({}, this.options.task)));
-
-      if(this.task) {
-        this.task.add('calculateCpuUsage', this.options.task.calculateCpuUsageInterval, () => this.calculateCpuUsage());
-        this.task.add('sync', this.options.task.syncInterval, () => this.sync());        
+      this.logger = new this.LoggerTransport(this, this.options.logger);
+      this.db = new this.DatabaseTransport(this, this.options.db);
+      this.options.server && (this.server = new this.ServerTransport(this, this.options.server));    
+      this.options.task && (this.task = new this.TaskTransport(this, this.options.task));
+      
+      if(!this.task) {
+        return;
       }
-      else {
-        this.logger.warn('You have to enable tasks if you use the node in production');
+
+      if(this.options.task.calculateCpuUsageInterval) {
+        await this.task.add('calculateCpuUsage', this.options.task.calculateCpuUsageInterval, () => this.calculateCpuUsage());
       }
     }
 
@@ -169,9 +175,9 @@ module.exports = () => {
      * @async
      */
     async initServices() {
-      this.logger && await this.logger.init();      
-      await this.db.init();
-      await this.server.init(); 
+      this.logger && await this.logger.init();   
+      this.db && await this.db.init();
+      this.server && await this.server.init();
       this.task && await this.task.init();
     }
 
@@ -216,7 +222,7 @@ module.exports = () => {
     }
 
     /**
-     * Get an external ip of the host
+     * Get an external ip address of the host
      * 
      * @async
      * @returns {string}
@@ -231,7 +237,7 @@ module.exports = () => {
     }
 
     /**
-     * Get local ip of the host
+     * Get a local ip address of the host
      * 
      * @async
      * @returns {string}
@@ -253,7 +259,7 @@ module.exports = () => {
     }
 
     /**
-     * Check the node is master
+     * Check the node is a master
      * 
      * @async
      * @returns {boolean}
@@ -263,7 +269,7 @@ module.exports = () => {
     }
 
     /**
-     * Calculate cpu usage
+     * Calculate the cpu usage
      * 
      * @async
      */
@@ -272,9 +278,9 @@ module.exports = () => {
     }
     
     /**
-     * Synchronize the node with slave nodes
+     * Synchronize the node with the slave nodes
      * 
-     * @aync
+     * @async
      */
     async syncDown() {
       const slaves = await this.db.getSlaves();  
@@ -292,12 +298,14 @@ module.exports = () => {
         const backlink = result.backlink;
         const address = result.address;
         const slaves = result.slaves;
+        const availability = result.availability;
 
         if(!backlink || backlink.address != this.address) {
           await this.db.removeSlave(address);
           await this.db.addBehaviorFail('slaveBacklink', address);
         }
         else {
+          await this.db.addSlave(address, availability);
           await this.db.subBehaviorFail('slaveBacklink', address);
         }
 
@@ -311,9 +319,9 @@ module.exports = () => {
     }    
 
     /**
-     * Synchronize the node with master nodes
+     * Synchronize the node with the master nodes
      * 
-     * @aync
+     * @async
      */
     async syncUp() {
       const backlink = await this.db.getBacklink();
@@ -334,10 +342,10 @@ module.exports = () => {
 
       const slaves = result.slaves;
       const masters = result.masters;
-      const grandlink = result.backlink;
+      const grandlink = result.backlink;      
 
       if(!slaves.find(s => s.address == this.address)) {
-        await this.db.removeBacklink(backlink.address);
+        await this.db.removeBacklink();
         await this.db.addBehaviorFail('backlinkSlaves', backlink.address);
         return [];
       }
@@ -345,35 +353,14 @@ module.exports = () => {
         await this.db.subBehaviorFail('backlinkSlaves', backlink.address);
       }
 
-      if(!this.options.network.isTrusted) {
-        const results = await this.provideGroupStructure(slaves, { includeErrors: true });
-        let suspicious = 0;
-
-        for(let i = 0; i < results.length; i++) {
-          const result = results[i];
-
-          if(result instanceof Error || !result.backlink || result.backlink.address != backlink.address) {
-            suspicious++;
-            continue;
-          }
-        }
-        
-        if(suspicious) {
-          const val = suspicious / slaves.length;
-          const fn = behavior => behavior? val * (Math.sqrt(behavior.balance) || 1): val;
-          await this.db.addBehaviorFail('backlinkSlavesBacklink', backlink.address, fn);
-        }
-        else {
-          const fn = behavior => behavior? 1 / (Math.sqrt(behavior.balance) || 1): 1;
-          await this.db.subBehaviorFail('backlinkSlavesBacklink', backlink.address, fn);
-        }
-      }      
-
       const chain = this.createBacklinkChain(backlink.address, grandlink? grandlink.chain: []);
       await this.db.addBacklink(backlink.address, chain);
 
       if(await this.isMaster()) {
         masters.forEach(m => m.source = backlink.address);
+      }
+      else {
+        await this.db.setData('members', result.members);
       }
 
       return masters;
@@ -382,11 +369,13 @@ module.exports = () => {
     /**
      * Synchronize the node with the network
      * 
-     * @aync
+     * @async
      */
     async sync() {
+      const startTime = Date.now();
       await this.cleanUpServers();
-      const size = await this.db.getSlavesCount();
+      const slaves = await this.db.getSlaves();
+      const size = slaves.length;
       size? await this.db.addMaster(this.address, size): await this.db.removeMaster(this.address);      
       const mastersUp = await this.syncUp();
       const mastersDown = await this.syncDown();
@@ -395,7 +384,10 @@ module.exports = () => {
       if(size) {
         const masters = await this.db.getMasters();
         masters.forEach(m => m.source = this.address);
-        await this.updateMastersInfo([].concat(masters, actualMasters))
+        const structures = await this.updateMastersInfo([].concat(masters, actualMasters));
+        const members = slaves.concat(structures.reduce((p, c) => p.concat(c.slaves), []));
+        await this.db.setData('members', members.map(m => _.pick(m, ['address', 'availability'])));
+        await this.checkMasterStructures(structures);
       }
       else {
         await this.db.removeMasters();
@@ -413,10 +405,10 @@ module.exports = () => {
         await this.normalizeMastersStatus();
       }
       
+      await this.normalizeMembers();
       await this.normalizeMastersCount();
       await this.normalizeSlavesCount();
-      await this.normalizeBacklinkChain();
-      await this.normalizeRegistration();
+      await this.normalizeInitialAddress();
       
       try {
         await this.register();
@@ -434,8 +426,98 @@ module.exports = () => {
       await this.db.normalizeBanlist();
       await this.db.normalizeBehaviorCandidates();
       await this.db.normalizeServers();
-    }    
+      this.logger.info(`Sync takes ${ms(Date.now() - startTime)}`);
+    }
+
+    /**
+     * Check the masters structure
+     * 
+     * @async
+     * @param {object[]} structures
+     */
+    async checkMasterStructures(structures) {
+      if(this.options.network.isTrusted || !await this.isMaster()) {
+        return;
+      }
+
+      const checked = await this.db.getData('checkedMasterStructures');
+      const current = structures.filter(s => checked.indexOf(s.address) == -1 && s.address != this.address)[0];
+
+      if(!current) {
+        await this.db.setData('checkedMasterStructures', []);
+        return;
+      }
+
+      checked.push(current.address);
+      await this.checkServerStructure(current);
+      await this.db.setData('checkedMasterStructures', checked);
+    }
   
+    /**
+     * Check the server structure
+     * 
+     * @async
+     * @param {object} server
+     * @param {object[]} server.masters
+     * @param {object[]} server.slaves
+     */
+    async checkServerStructure(server) {
+      await this.checkServerStructureSlaves(server.address, server.slaves);
+      await this.checkServerStructureNetworkSize(server.address, server.masters, server.slaves);      
+    }
+
+    /**
+     * Check the server slaves
+     * 
+     * @async
+     * @param {string} address 
+     * @param {object[]} slaves
+     */
+    async checkServerStructureSlaves(address, slaves) {
+      const results = await this.provideGroupStructure(slaves, { includeErrors: true });
+      let suspicious = 0;
+
+      for(let i = 0; i < results.length; i++) {
+        const result = results[i];
+
+        if(result instanceof Error || !result.backlink || result.backlink.address != address) {
+          suspicious++;
+          continue;
+        }
+      }
+      
+      if(suspicious) {
+        const val = suspicious / slaves.length;
+        const fn = behavior => behavior? val * Math.sqrt(behavior.balance): val;
+        await this.db.addBehaviorFail('serverSlavesBacklink', address, fn);
+      }
+      else {
+        const fn = behavior => behavior? 1 / Math.sqrt(behavior.balance): 1;
+        await this.db.subBehaviorFail('serverSlavesBacklink', address, fn);
+      }
+    }
+
+    /**
+     * Check the server network size
+     * 
+     * @async
+     * @param {string} address 
+     * @param {object[]} masters
+     * @param {object[]} slaves
+     */
+    async checkServerStructureNetworkSize(address, masters, slaves) {
+      const networkSize = await this.getNetworkSize(masters);
+      const coef = await this.getNetworkOptimum(networkSize);
+      const master = masters.find(m => m.address == address);
+
+      if((master && master.size != slaves.length) || slaves.length > coef) {
+        await this.db.addBehaviorFail('serverNetworkSize', address);
+        return;
+      }
+
+      await this.db.subBehaviorFail('serverNetworkSize', address);
+    }
+
     /**
      * Register the node in the network
      * 
@@ -446,14 +528,18 @@ module.exports = () => {
         return;
       }
 
+      let timeout = this.getRequestServerTimeout() * 3;
+      
       let result = await this.requestNode(this.initialNetworkAddress, 'provide-registration', {
         body: {
-          target: this.address
+          target: this.address,
+          timeout,
+          timestamp: Date.now()
         },
-        timeout: this.getRequestMastersTimeout() + this.getRequestServerTimeout(),
-        responseSchema: this.server.getProvideRegistrationResponseSchema()
-      });        
-
+        timeout,
+        responseSchema: schema.getProvideRegistrationResponse()
+      });
+      
       const results = result.results;
       const networkSize = result.networkSize;
       const syncLifetime = result.syncLifetime;
@@ -509,8 +595,9 @@ module.exports = () => {
 
       for(let i = 0; i < results.length; i++) {
         const res = results[i];
+        const coef = await this.getNetworkOptimum(res.networkSize);
         candidates.push(utils.getRandomElement(res.candidates));
-        res.candidates.length < await this.getNetworkOptimum(res.networkSize) && freeMasters.push(res);
+        res.candidates.length < coef && freeMasters.push(res);
       }
       
       if(freeMasters.length > coef) {
@@ -526,26 +613,24 @@ module.exports = () => {
       }
 
       try {
+        timeout = this.getRequestServerTimeout() * 2;
+
         result = await this.requestNode(winner.address, 'register', {
           body: {
-            target: this.address
+            target: this.address,
+            timeout,
+            timestamp: Date.now()
           },
-          responseSchema: this.server.getRegistrationResponseSchema()
+          responseSchema: schema.getRegisterResponse(),
+          timeout
         });
         this.db.subBehaviorFail('registration', winner.address);
       }
       catch(err) {
         this.db.addBehaviorFail('registration', winner.address);
-
-        if(err instanceof errors.WorkError) {
-          throw err;
-        }
-        else {
-          this.logger.warn(err.stack);
-          throw new errors.WorkError(`Registrator "${winner.address}" is not available`, 'ERR_SPREADABLE_MASTER_NOT_AVAILABLE');
-        }
+        throw err;
       }
-
+      
       await this.db.setData('registrationTime', Date.now());
       await this.db.addBacklink(winner.address, result.chain);
       await this.db.addMaster(winner.address, result.size);
@@ -561,7 +646,7 @@ module.exports = () => {
      */
     async interview(summary) {
       if(!summary || typeof summary != 'object') {
-        throw new errors.WorkError('Not found an interview summary', 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
+        throw new errors.WorkError('Not found the interview summary', 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
       }
 
       if(!utils.isValidHostname(utils.splitAddress(summary.address)[0])) {
@@ -589,10 +674,10 @@ module.exports = () => {
      * @returns {object}
      */
     async getStatusInfo(pretty = false) {
-      const availability = await this.getAvailability(); 
+      const availability = await this.getAvailability();
       
       return { 
-        availability: pretty? availability.toFixed(2): availability, 
+        availability: pretty? availability.toFixed(2): availability,
         isMaster: await this.isMaster(),
         isNormalized: await this.isNormalized(),
         isRegistered: await this.isRegistered(),
@@ -601,13 +686,13 @@ module.exports = () => {
     }
 
     /**
-     * Get servers status lifetime
+     * Get the sync lifetime
      * 
      * @async
      * @returns {number}
      */
     async getSyncLifetime() {
-      const delay = utils.getMs(this.options.task.syncInterval);
+      const delay = utils.getMs(this.options.network.syncInterval);
       return delay * this.options.network.serverMaxFails * await this.getNetworkOptimum();
     }
 
@@ -640,7 +725,8 @@ module.exports = () => {
     async updateMastersInfo(masters) {    
       const obj = {};
       const suspicious = {};
-      const sources = {};      
+      const sources = {};
+      const structures = [];
       
       for(let i = 0; i < masters.length; i++) {        
         const master = masters[i];
@@ -675,12 +761,17 @@ module.exports = () => {
 
       const results = await this.provideGroupStructure(arr, { includeErrors: true });
 
-      for(let i = results.length - 1; i >= 0; i--) {   
+      for(let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
         const sources = arr[i].sources;
         const address = arr[i].address;
-        const size = result instanceof Error? 0: result.slaves.length;
-            
+        let size = 0;
+
+        if(!(result instanceof Error)) {
+          size = result.slaves.length;
+          size && structures.push(result);
+        }
+        
         if(!size) {
           await this.db.removeMaster(address);
           sources.forEach(s => ((suspicious[s.address] = (suspicious[s.address] || 0) + 1)));
@@ -696,14 +787,16 @@ module.exports = () => {
 
         if(suspicious[source] && source != this.address) {
           const val = suspicious[source] / mastersCount;
-          const fn = behavior => behavior? val * (Math.sqrt(behavior.balance) || 1): val;
+          const fn = behavior => behavior? val * Math.sqrt(behavior.balance): val;
           await this.db.addBehaviorFail('provideMasters', source, fn);
         }
         else {
-          const fn = behavior => behavior? 1 / (Math.sqrt(behavior.balance) || 1): 1;
+          const fn = behavior => behavior? 1 / Math.sqrt(behavior.balance): 1;
           await this.db.subBehaviorFail('provideMasters', source, fn);
         }
       }
+
+      return structures;
     }
 
     /**
@@ -715,7 +808,7 @@ module.exports = () => {
       const lifetime = await this.getSyncLifetime();
       const servers = await this.db.getServers();
 
-      if(Date.now() - lifetime <= this.__initialized) {
+      if(Date.now() - lifetime < this.__initialized) {
         return;
       }
 
@@ -731,8 +824,13 @@ module.exports = () => {
           continue;
         }
 
-        if(server.isMaster) {
+        if(server.isMaster) {          
           server.updatedAt < Date.now() - lifetime && await this.db.removeMaster(server.address); 
+          continue;
+        }
+        
+        if(server.isMaster && server.address == this.address && !await this.isMaster()) {
+          await this.db.removeMaster(server.address);
         }
       }
     }
@@ -752,24 +850,6 @@ module.exports = () => {
       
       if(!time || Date.now() - lifetime > time) {
         await this.requestMasters('walk');
-      }
-    }
-
-    /**
-     * Normalize the node registration
-     * 
-     * @async
-     */
-    async normalizeRegistration() {
-      if(this.options.network.isTrusted || !await this.db.getBacklink()) {
-        return;
-      }
-
-      const lifetime = await this.getRegistrationLifetime();
-      const time = await this.db.getData('registrationTime');
-
-      if(!time || Date.now() - lifetime > time) {
-        await this.db.removeBacklink();
       }
     }
 
@@ -805,9 +885,42 @@ module.exports = () => {
       if(count > size) {
         await this.db.shiftSlaves(count - size);
       }
+    }     
+
+    /**
+     * Normalize the network members
+     * 
+     * @async
+     */
+    async normalizeMembers() {   
+      const members = await this.db.getData('members');
+
+      if(members.map(m => m.address).indexOf(this.address) == -1) {
+        members.push({ address: this.address, availability: await this.getAvailability() });
+        await this.db.setData('members', members);
+      }
     }
 
-     /**
+    /**
+     * Normalize the node initial address
+     * 
+     * @async
+     */
+    async normalizeInitialAddress() {   
+      const lifetime = await this.getSyncLifetime();
+
+      if(Date.now() - lifetime < this.__initialized) {
+        return;
+      }   
+
+      const members = await this.db.getData('members');
+
+      if(members.map(m => m.address).indexOf(this.initialNetworkAddress) == -1) {
+        await this.db.removeBacklink();
+      }
+    }
+
+    /**
      * Get the node backlink's chain
      * 
      * @async
@@ -824,36 +937,18 @@ module.exports = () => {
     }
 
     /**
-     * Normalize the node backlink chain
+     * Get a random node address from the network
      * 
      * @async
-     */
-    async normalizeBacklinkChain() {
-      const backlinkChain = await this.getBacklinkChain();
-
-      if(backlinkChain.length > 1 && backlinkChain.indexOf(this.initialNetworkAddress) == -1) {
-        await this.db.removeBacklink();
-      }
-    }
-
-    /**
-     * Get random node address from the network
-     * 
-     * @async
-     * @param {object} [options]
      * @returns {string} 
      */
-    async getAvailableNode(options = {}) {
-      const results = await this.requestMasters('get-available-node', { 
-        timeout: options.timeout,
-        responseSchema: this.server.getAvailabilityMasterResponseSchema()
-      });      
+    async getAvailableNode() {    
       const filterOptions = await this.getAvailabilityCandidateFilterOptions();
-      const candidates = await this.filterCandidatesMatrix(results.map(r => r.candidates), filterOptions);
+      const candidates = await this.filterCandidates(await this.db.getData('members'), filterOptions);
       const candidate = candidates[0];
       
       if(candidate) {
-        await this.db.addBehaviorCandidate(candidate.address, 'getAvailablity');
+        await this.db.addBehaviorCandidate('getAvailablity', candidate.address);
       }
       
       if(!candidate) {
@@ -863,6 +958,18 @@ module.exports = () => {
       return candidate.address;
     }
 
+    /**
+     * Get an availability filter options
+     * 
+     * @returns {object}
+     */
+    async getAvailabilityCandidateFilterOptions() {
+      return {
+        fnCompare: await this.createCandidatesComparisonFunction('getAvailablity', (a, b) => b.availability - a.availability),
+        limit: 1
+      }
+    }
+    
     /**
      * Prepare candidates suspicion info
      * 
@@ -881,20 +988,7 @@ module.exports = () => {
     }
 
     /**
-     * Get availability filter options
-     * 
-     * @returns {object} - { [fnCompare], [schema], [limit] }
-     */
-    async getAvailabilityCandidateFilterOptions() {
-      return {
-        fnCompare: await this.createCandidatesComparisonFunction('getAvailablity', (a, b) => b.availability - a.availability),
-        schema: this.server.getAvailabilitySlaveResponseSchema(),
-        limit: 1
-      }
-    }
-
-     /**
-     * Prepare candidates suspicion info
+     * Create a candidates comparison function
      * 
      * @async
      * @param {function} fn 
@@ -917,6 +1011,8 @@ module.exports = () => {
 
     /**
      * Check the address is allowed
+     * 
+     * @async
      */
     async isAddressAllowed() {
       try {
@@ -933,7 +1029,7 @@ module.exports = () => {
     }
 
     /**
-     * Filter address
+     * Filter the address
      * 
      * @param {string} address 
      */
@@ -944,10 +1040,6 @@ module.exports = () => {
 
       if(address == this.address) {
         return;
-      }
-
-      if(await this.db.getBanlistAddress(address)) {
-        throw new errors.AccessError(`Address "${address}" is in the banlist`);
       }
 
       let hostname = utils.splitAddress(address)[0];
@@ -968,6 +1060,10 @@ module.exports = () => {
       const white = this.options.network.whitelist || [];
       const black = this.options.network.blacklist || [];
       ipv6 = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
+
+      if(await this.db.checkBanlistIp(ipv6)) {
+        throw new errors.AccessError(`Ip "${ip}" is in the banlist`);
+      }
 
       const checkListItem = (item) => {
         if(utils.isIpv6(item)) {
@@ -1000,7 +1096,7 @@ module.exports = () => {
     }
 
     /**
-     * Get the structure provider
+     * Get a structure provider
      * 
      * @async
      * @returns {string}
@@ -1009,7 +1105,7 @@ module.exports = () => {
       const providers = (await this.db.getMasters()).filter(m => !m.fails && m.address != this.address).map(m => m.address);
       providers.indexOf(this.initialNetworkAddress) == -1 && providers.push(this.initialNetworkAddress);
       const syncTime = await this.getSyncLifetime();
-      const delay = utils.getMs(this.options.task.syncInterval);
+      const delay = utils.getMs(this.options.network.syncInterval);
       const chance = 1 / (syncTime / delay / (this.options.behavior.failSuspicionLevel + 1));
       return providers.length && Math.random() <= chance? utils.getRandomElement(providers): this.address;
     }
@@ -1024,42 +1120,61 @@ module.exports = () => {
      */
     async provideStructure(target, options = {}) {
       const provider = options.provider || await this.getStructureProvider();
+      const timer = this.createRequestTimer(options.timeout);
+      const serverTimeout = this.getRequestServerTimeout();
       
-      if(provider == this.address) {
-        return await this.requestNode(target, 'structure', { 
-          responseSchema: this.server.getStructureResponseSchema()
+      if(provider == this.address) {        
+        return await this.requestNode(target, 'structure', {
+          responseSchema: schema.getStructureResponse(),
+          timeout: timer(serverTimeout)
         }); 
       }
 
       try {
+        const timeout = timer([serverTimeout * 2, serverTimeout]);
+
         return await this.requestNode(provider, 'provide-structure', {
-          body: { target },
-          responseSchema: this.server.getProvideStructureResponseSchema()
+          body: { 
+            target, 
+            timeout,
+            timestamp: Date.now()
+          },
+          responseSchema: schema.getProvideStructureResponse(),
+          timeout
         });
       }
-      catch(err)  {        
+      catch(err) {   
+        const timeout = timer(serverTimeout);
+
         if(provider == this.address) {
           throw err;
         }
 
         this.logger.warn(err.stack);
-        return await this.provideStructure(target, { provider: this.address });
+        return await this.provideStructure(target, { provider: this.address, timeout });
       }    
     }
 
     /**
-     * Provide the node structure group
+     * Provide the node's group structure 
      * 
      * @async
      * @param {array} targets
      * @returns {object[]}
      */
     async provideGroupStructure(targets, options = {}) {
+      if(!targets.length) {
+        return [];
+      }
+
       const provider = options.provider || await this.getStructureProvider();
+      const timer = this.createRequestTimer(options.timeout);
+      const serverTimeout = this.getRequestServerTimeout();
       
       if(provider == this.address) {
         return await this.requestGroup(targets, 'structure', { 
-          responseSchema: this.server.getStructureResponseSchema(),
+          responseSchema: schema.getStructureResponse(),
+          timeout: timer(serverTimeout),
           includeErrors: options.includeErrors
         });
       }
@@ -1067,9 +1182,16 @@ module.exports = () => {
       let result;
 
       try {
+        const timeout = timer([serverTimeout * 2, serverTimeout]);
+
         result = await this.requestNode(provider, 'provide-group-structure', {
-          body: { targets: targets.map(t => t.address) },
-          responseSchema: this.server.getProvideGroupStructureResponseSchema()
+          body: { 
+            targets: targets.map(t => t.address), 
+            timeout, 
+            timestamp: Date.now() 
+          },
+          responseSchema: schema.getProvideGroupStructureResponse(),
+          timeout
         });
       }
       catch(err) {
@@ -1077,8 +1199,9 @@ module.exports = () => {
           throw err;
         }
 
+        const timeout = timer(serverTimeout);
         this.logger.warn(err.stack);
-        return await this.provideGroupStructure(targets, { provider: this.address });
+        return await this.provideGroupStructure(targets, { provider: this.address, timeout });
       }
 
       let results = result.results.map(item => {
@@ -1094,7 +1217,7 @@ module.exports = () => {
         }
 
         try {
-          utils.validateSchema(this.server.getStructureResponseSchema(), item);
+          utils.validateSchema(schema.getStructureResponse(), item);
           return item;
         }
         catch(err) {
@@ -1121,7 +1244,7 @@ module.exports = () => {
         options = url;        
       } 
       else {
-        options.url = `${this.options.server.https? 'https': 'http'}://${url}`;
+        options.url = `${this.getRequestProtocol()}://${url}`;
       }
 
       options = this.createDefaultRequestOptions(options);
@@ -1155,7 +1278,7 @@ module.exports = () => {
 
       try {
         const result = await fetch(options.url, options);
-        this.logger.info(`Request from "${this.address}" to "${options.url}":`, prettyMs(Date.now() - start));
+        this.logger.info(`Request from "${this.address}" to "${options.url}":`, ms(Date.now() - start));
 
         if(result.ok) {
           return options.getFullResponse? result: await result.json();
@@ -1182,7 +1305,7 @@ module.exports = () => {
     }
 
     /**
-     * Request to masters
+     * Request to the masters
      * 
      * @async
      * @param {string} action
@@ -1205,9 +1328,9 @@ module.exports = () => {
       let suspicious = 0;
       
       if(timeout < preferredTimeout) {
-        this.logger.warn(`Request masters actual timeout "${timeout}" less than preferred "${preferredTimeout}"`);
+        this.logger.warn(`Request masters actual timeout "${timeout}" less than preferred "${preferredTimeout}"`);        
       }
-      
+
       if(timeout <= 0) {
         return requests;
       }
@@ -1229,14 +1352,14 @@ module.exports = () => {
             responseSchema: options.responseSchema
           })
           .then(async result => {
-            const size = +result.headers.get("spreadable-node-size");
+            const size = +result.headers.get("spreadable-master-size");
 
             if(size != server.size) {              
               await this.db.addMaster(server.address, size);
               !slavesCount && suspicious++;
             }
 
-            resolve(result.__json);
+            resolve(await result.json());
           })
           .catch(async err => {    
             try {
@@ -1260,11 +1383,11 @@ module.exports = () => {
       
       if(backlink && suspicious) {          
         const val = suspicious / masters.length;        
-        const fn = behavior => behavior? val * (Math.sqrt(behavior.balance) || 1): val;
+        const fn = behavior => behavior? val * Math.sqrt(behavior.balance): val;
         await this.db.addBehaviorFail('requestBacklinkMasters', backlink.address, fn);
       }
       else if(backlink) {
-        const fn = behavior => behavior? 1 / (Math.sqrt(behavior.balance) || 1): 1;
+        const fn = behavior => behavior? 1 / Math.sqrt(behavior.balance): 1;
         await this.db.subBehaviorFail('requestBacklinkMasters', backlink.address, fn);
       }
       
@@ -1272,7 +1395,7 @@ module.exports = () => {
     }
 
     /**
-     * Request to slaves
+     * Request to the slaves
      * 
      * @async
      * @param {string} action
@@ -1321,7 +1444,7 @@ module.exports = () => {
       return results;
     }
 
-       /**
+    /**
      * Request to the master
      * 
      * @async
@@ -1425,7 +1548,7 @@ module.exports = () => {
         let body = result;
 
         if(options.getFullResponse) {
-          body = result.__json = await result.json();
+          body = await result.clone().json();
         }
 
         if(body && typeof body == 'object' && !Array.isArray(body)) {
@@ -1464,7 +1587,7 @@ module.exports = () => {
     }
 
     /**
-     * Check http request's client access and get his rights
+     * Check the request client access
      * 
      * @async
      * @param {http.ClientRequest} req
@@ -1520,7 +1643,7 @@ module.exports = () => {
     /**
      * Get the network size
      * 
-     * @aync
+     * @async
      * @param {object[]} [list]
      * @returns {integer}
      */
@@ -1530,9 +1653,33 @@ module.exports = () => {
     }
 
     /**
+     * Get the value given the network size
+     * 
+     * @async
+     * @param {object} value 
+     * @returns {number}
+     */
+    async getValueGivenNetworkSize(value) {
+      const networkSize = await this.getNetworkSize();
+
+      if(value == 'auto') {
+        value = Math.ceil(Math.sqrt(networkSize));
+      }
+      else if(typeof value == 'string') {
+        value = Math.ceil(networkSize * parseFloat(value) / 100); 
+      }
+
+      if(value > networkSize) {
+        value = networkSize;
+      }
+
+      return value;
+    }
+
+    /**
      * Get the network size
      * 
-     * @aync
+     * @async
      * @param {integer} [size]
      * @returns {integer}
      */
@@ -1541,9 +1688,9 @@ module.exports = () => {
     }
 
     /**
-     * Get candidate suspicion level
+     * Get a candidate suspicion level
      * 
-     * @aync
+     * @async
      * @returns {integer}
      */
     async getCandidateSuspicionLevel() {
@@ -1553,14 +1700,24 @@ module.exports = () => {
     }
 
     /**
-     * Get candidate suspicion level
+     * Get a candidate excuse level
      * 
-     * @aync
+     * @async
      * @returns {integer}
      */
     async getCandidateExcuseStep() {
       const level = await this.getCandidateSuspicionLevel();
       return (1 / level) * Math.sqrt(level);
+    }
+
+    /**
+     * Get a candidate max suspicion level
+     * 
+     * @async
+     * @returns {integer}
+     */
+    async getCandidateMaxSuspicionLevel() {
+      return Math.cbrt(Math.pow(await this.getNetworkSize() - 1, 2));
     }
 
     /**
@@ -1586,13 +1743,19 @@ module.exports = () => {
      * @param {object} [options]
      * @param {integer} [options.limit]
      * @param {object} [options.schema]
+     * @param {function} [options.fnFilter]
      * @param {function} [options.fnCompare]
+     * @returns {object[]}
      */
     async filterCandidates(arr, options = {}) {
-      const limit = options.limit > this.__maxCandidates? this.__maxCandidates: options.limit;
+      const limit = options.limit > this.__maxCandidates || !options.limit? this.__maxCandidates: options.limit;
       const schema = options.schema;
       const fnCompare = options.fnCompare;
       arr = arr.slice();
+
+      if(options.fnFilter) {
+        arr = arr.filter(options.fnFilter);
+      }
       
       for(let i = arr.length - 1; i >= 0; i--) {
         if(!await this.isAddressAllowed(arr[i].address)) {
@@ -1618,29 +1781,9 @@ module.exports = () => {
     }
 
     /**
-     * Get candidate max suspicion level
-     * 
-     * @aync
-     * @returns {integer}
-     */
-    async getCandidateMaxSuspicionLevel() {
-      return Math.cbrt(Math.pow(await this.getNetworkSize() - 1, 2));
-    }
-
-    /**
-     * Get the registration lifetime
-     * 
-     * @aync
-     * @returns {integer}
-     */
-    async getRegistrationLifetime() {
-      return await this.getSyncLifetime() * 2;
-    }
-
-    /**
      * Get the masters status lifetime
      * 
-     * @aync
+     * @async
      * @returns {integer}
      */
     async getMasterStatusLifetime() {
@@ -1655,6 +1798,7 @@ module.exports = () => {
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
       this.options.network.banLifetime = utils.getMs(this.options.network.banLifetime);
+      this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
       this.options.behavior.failLifetime = utils.getMs(this.options.behavior.failLifetime);
     } 
     
@@ -1693,13 +1837,13 @@ module.exports = () => {
     createRequestSlavesOptions(body, options = {}) {
       return _.merge({
         body,
-        timeout: this.createRequestTimeout(body),
+        timeout: options.timeout || this.createRequestTimeout(body),
         slaveTimeout: body.slaveTimeout
       }, options);
     }
 
     /**
-     * Get request server timeout
+     * Get a request server timeout
      * 
      * @returns {integer}
      */
@@ -1708,7 +1852,7 @@ module.exports = () => {
     }
 
     /**
-     * Get request masters timeout
+     * Get a request masters timeout
      * 
      * @param {object} [options]
      * @param {number} [options.masterTimeout]
@@ -1720,8 +1864,8 @@ module.exports = () => {
       return masterTimeout + this.getRequestSlavesTimeout(options);
     }
 
-     /**
-     * Get request slaves timeout
+    /**
+     * Get a request slaves timeout
      * 
      * @param {object} [options]
      * @param {number} [options.slaveTimeout]
@@ -1737,8 +1881,13 @@ module.exports = () => {
      * @param {object} data 
      * @param {number} data.timeout 
      * @param {number} data.timestamp
+     * @param {number} defaultTimeout
      */
-    createRequestTimeout(data) {
+    createRequestTimeout(data, defaultTimeout) {
+      if(!data || typeof data != 'object' || !data.timeout) {
+        return defaultTimeout || this.getRequestServerTimeout();
+      }
+
       return (data.timeout - (Date.now() - data.timestamp)) - this.options.request.timeoutSlippage;
     }
 
@@ -1751,7 +1900,6 @@ module.exports = () => {
     createDefaultRequestOptions(options = {}) {
       const defaults = {
         method: 'POST',
-        json: true,
         headers: {
           'network-secret-key': this.options.network.secretKey,
           'original-address': this.address,
@@ -1768,25 +1916,35 @@ module.exports = () => {
         options.agent.options.ca = this.options.server.https.ca;
       }
 
-      return _.merge({}, defaults, options);
+      return _.merge(defaults, options);
     }
 
     /**
-     * Get node version
+     * Create a request timer
+     * 
+     * @param {number} timeout 
+     * @returns {function}
+     */
+    createRequestTimer(timeout) { 
+      return utils.getRequestTimer(timeout, { min: this.options.request.pingTimeout });
+    }
+
+    /**
+     * Get a request protocol
+     * 
+     * @returns {string}
+     */
+    getRequestProtocol() {
+      return this.options.server.https? 'https': 'http';
+    }
+
+    /**
+     * Get the node version
      * 
      * @returns {string}
      */
     getVersion() {
-      return this.constructor.name + pack.version.split('.')[0];
-    }
-
-    /**
-     * Check the node is initialized
-     * 
-     * @returns {boolean}
-     */
-    isInitialized() {
-      return !!this.__initialized;
-    }
+      return `${this.constructor.codename}-${pack.version.split('.')[0]}`;
+    }    
   }
 };

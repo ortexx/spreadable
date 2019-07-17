@@ -4,7 +4,7 @@ const utils = require('../../../utils');
 
 module.exports = (Parent) => {
   /**
-   * logger transport interface
+   * Console logger transport
    */
   return class LoggerConsole extends (Parent || Logger) {
     constructor() {
@@ -22,8 +22,11 @@ module.exports = (Parent) => {
      */
     async log(level, ...args) {
       if(this.isLevelActive(level)) {   
-        //eslint-disable-next-line no-console   
-        console[level].apply(console[level], utils.isBrowserEnv()? args: args.map(arg => chalk[this.colors[level]](arg)));
+        //eslint-disable-next-line no-console
+        console[level].apply(console[level], utils.isBrowserEnv()? args: args.map(arg => {
+          arg && typeof arg == 'object' && (arg = JSON.stringify(arg));
+          return chalk[this.colors[level]](arg)
+        }));
       }
     }
   }

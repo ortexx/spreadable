@@ -3,10 +3,14 @@ const errors = require('../../../errors');
 const utils = require('../../../utils');
 
 /**
- * Set http request client ip
+ * Set http request client info
  */
-module.exports.clientIp = () => {
-  return (req, res, next) => (req.clientIp = utils.getRemoteIp(req), next());
+module.exports.clientInfo = () => {
+  return (req, res, next) => {
+    req.clientIp = utils.getRemoteIp(req);
+    req.clientAddress = req.headers['original-address'];
+    next();
+  };
 };
 
 /**
@@ -40,6 +44,20 @@ module.exports.status = node => {
   return async (req, res, next) => {
     try {
       res.send(await node.getStatusInfo(req.query.pretty !== undefined));
+    }
+    catch(err) {
+      next(err);
+    }
+  };
+};
+
+/**
+ * Get the network members
+ */
+module.exports.members = node => {
+  return async (req, res, next) => {
+    try {
+      res.send(await node.db.getData('members'));
     }
     catch(err) {
       next(err);

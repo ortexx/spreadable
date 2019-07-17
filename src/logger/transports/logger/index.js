@@ -1,16 +1,20 @@
-module.exports = () => {
+const Service = require('../../../service')();
+
+module.exports = (Parent) => {
   /**
-   * logger transport interface
+   * Logger transport interface
    */
-  return class Logger {
+  return class Logger extends (Parent || Service) {
     /**
      * @param {Node} node 
      * @param {object} options 
      */
     constructor(node, options = {}) {
+      super(...arguments);
       this.node = node;
       this.options = options;    
       this.levels = ['info', 'warn', 'error'];
+      this.defaultLevel = 'info';
     }
 
     /** 
@@ -19,9 +23,8 @@ module.exports = () => {
      * @async
      */
     async init() {
-      this.setLevel(this.options.level === undefined? 'info': this.options.level);
-      this.__initialized = true;
-      this.node.logger.info(`Logger has been initialized`);
+      this.setLevel(this.options.level === undefined? this.defaultLevel: this.options.level);
+      await super.init.apply(this, arguments);
     }
 
     /** 
@@ -31,20 +34,7 @@ module.exports = () => {
      */
     async deinit() {
       this.setLevel(false);
-      this.__initialized = false;
-      //eslint-disable-next-line no-console  
-      console.info(`Logger has been deinitialized`);
-    }   
-
-    /**
-     * Destroy the logger
-     * 
-     * @async
-     */
-    async destroy() {
-      await this.deinit();
-      //eslint-disable-next-line no-console  
-      console.info(`Logger has been destroyed`);
+      await super.deinit.apply(this, arguments);
     }
     
     /**
@@ -67,7 +57,7 @@ module.exports = () => {
     }
 
     /**
-     * Log warning
+     * Log a warning
      * 
      * @async
      */
@@ -76,7 +66,7 @@ module.exports = () => {
     }
 
     /**
-     * Log error
+     * Log an error
      * 
      * @async
      */
@@ -85,7 +75,7 @@ module.exports = () => {
     }
 
     /**
-     * Check log level is active
+     * Check the log level is active
      * 
      * @param {string} level
      */

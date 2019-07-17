@@ -1,4 +1,5 @@
 const Task = require('../task')();
+const utils = require('../../../utils');
 
 module.exports = (Parent) => {
   /**
@@ -6,16 +7,18 @@ module.exports = (Parent) => {
    */
   return class TaskInterval extends (Parent || Task) {
     /**
+     * @see Task.prototype.add
+     */
+    async add(name, interval, fn, options) {
+      return super.add(name, utils.getMs(interval), fn, options);
+    }
+    
+    /**
      * @see Task.prototype.start
      */
     async start(task) {
-      const start= super.start;
-      const self = this;
-
-      const obj = setInterval(() => {
-        start.call(self, task);
-      }, task.interval)
-
+      await super.start(task);
+      const obj = setInterval(() => this.run(task), task.interval);
       task.intervalObject = obj;
     }
 
