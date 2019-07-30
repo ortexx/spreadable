@@ -13,7 +13,7 @@ module.exports = () => {
     }
 
     /**
-     * Denitialize the service
+     * Deinitialize the service
      * 
      * @async
      */

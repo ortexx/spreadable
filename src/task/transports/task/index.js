@@ -77,7 +77,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Denitialize the tasks
+     * Deinitialize the tasks
      * 
      * @async
      */

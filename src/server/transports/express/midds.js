@@ -67,7 +67,7 @@ module.exports.networkAccess = (node, checks = {}) => {
         }
       }
 
-      let address = req.clientIp + ':1';
+      let address = utils.createAddress(req.clientIp, 1);
 
       if(checks.address) {
         address = req.clientAddress;

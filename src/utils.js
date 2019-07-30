@@ -30,11 +30,14 @@ utils.validateSchema = function (schema, data) {
   }
 
   if(dataType == 'array') {
-    if(schema.minLength && data.length < schema.minLength) {
+    const minLength = typeof schema.minLength == 'function'? minLength(data): schema.minLength;
+    const maxLength = typeof schema.maxLength == 'function'? maxLength(data): schema.maxLength;
+
+    if(minLength && data.length < minLength) {
       throw new Error(`Wrong array min length ${humanData} for ${humanSchema}`);
     }
 
-    if(schema.maxLength && data.length > schema.maxLength) {
+    if(maxLength && data.length > maxLength) {
       throw new Error(`Wrong array max length ${humanData} for ${humanSchema}`);
     }
 
@@ -261,7 +264,8 @@ utils.getRemoteIp = function (req) {
   let ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
 
   if(ip.match(':')) {
-    ip = ip.replace(/^::1/, '127.0.0.1').replace(/^::ffff:/, '');
+    ip = ip.replace('::1', '127.0.0.1');
+    ip.match('.') && (ip = ip.replace(/^::ffff:/, ''));
     this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
   }
 

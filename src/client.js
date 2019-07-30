@@ -110,7 +110,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Denitialize the services
+     * Deinitialize the services
      * 
      * @async
      */

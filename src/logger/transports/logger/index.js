@@ -28,7 +28,7 @@ module.exports = (Parent) => {
     }
 
     /** 
-     * Denitialize the logger
+     * Deinitialize the logger
      * 
      * @async
      */
