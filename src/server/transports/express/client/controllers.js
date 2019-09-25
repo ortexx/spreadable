@@ -10,5 +10,5 @@ module.exports.getAvailableNode = node => {
     catch(err) {
       next(err);
     }
-  }
+  }  
 };

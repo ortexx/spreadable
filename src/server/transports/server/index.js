@@ -1,4 +1,5 @@
 const Service = require('../../../service')();
+const utils = require('../../../utils');
 const https = require('https');
 const http = require('http');
 
@@ -25,6 +26,10 @@ module.exports = (Parent) => {
      * @async
      */
     async init() {
+      if(await utils.isPortUsed(this.port)) {
+        throw new Error(`Port ${this.port} is already used`);
+      }
+
       await this.startServer();
       await super.init.apply(this, arguments);
     }

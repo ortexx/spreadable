@@ -25,7 +25,7 @@ module.exports = (Parent) => {
         //eslint-disable-next-line no-console
         console[level].apply(console[level], utils.isBrowserEnv()? args: args.map(arg => {
           arg && typeof arg == 'object' && (arg = JSON.stringify(arg));
-          return chalk[this.colors[level]](arg)
+          return chalk[this.colors[level]](arg);
         }));
       }
     }

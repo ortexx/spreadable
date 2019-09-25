@@ -94,25 +94,15 @@ schema.getStructureResponse = function () {
       },
       backlink: {
         type: 'object',
-        value: val => {
-          if(val === null) {
-            return true;
+        props: {
+          address,
+          chain: {
+            type: 'array',
+            items: address
           }
-  
-          utils.validateSchema({
-            type: 'object',
-            props: {
-              address,
-              chain: {
-                type: 'array',
-                items: address
-              }
-            },
-            strict: true
-          }, val);
-          
-          return true;   
-        }
+        },
+        canBeNull: true,
+        strict: true
       },
       members: this.getMembers(),
       availability: 'number'
@@ -134,7 +124,7 @@ schema.getProvideGroupStructureResponse = function () {
         type: 'array',
         items: {
           type: 'object',
-          value: v => v !== null
+          canBeNull: false
         }
       }
     },

@@ -47,9 +47,10 @@ module.exports = (Parent) => {
       this.options = _.merge({
         hostname: '',      
         request: {
+          clientEndpointConcurrency: 10,
           timeoutSlippage: 120,
           serverTimeout: '2s',
-          pingTimeout: '1s'
+          pingTimeout: '1s'   
         },
         network: {
           autoSync: true,
@@ -57,7 +58,6 @@ module.exports = (Parent) => {
           isTrusted: false,
           secretKey: '',
           serverMaxFails: 5,
-          banLifetime: '27d',
           whitelist: [],
           blacklist: []
         },
@@ -68,7 +68,8 @@ module.exports = (Parent) => {
         behavior: {
           candidateSuspicionLevel: 5,
           failSuspicionLevel: 10,
-          failLifetime: '1d'
+          failLifetime: '1d',          
+          banLifetime: '27d'
         },
         logger: {
           level: 'info'
@@ -92,6 +93,7 @@ module.exports = (Parent) => {
       this.__syncInterval = null;
       this.__cpuUsage = 0;
       this.__requestQueue = {};
+      this.__requestQueueInterval = 10;
       this.prepareOptions();
     }    
 
@@ -108,12 +110,9 @@ module.exports = (Parent) => {
       if(!this.ip) {
         throw new Error(`Hostname ${this.hostname} is not found`);
       }
-      
-      if(await utils.isPortUsed(this.port)) {
-        throw new Error(`Port ${this.port} is already used`);
-      }
 
       await this.prepareServices();
+      await this.prepareBehavior();
       await this.initServices();     
       await super.init.apply(this, arguments);
       
@@ -167,6 +166,10 @@ module.exports = (Parent) => {
       if(this.options.task.calculateCpuUsageInterval) {
         await this.task.add('calculateCpuUsage', this.options.task.calculateCpuUsageInterval, () => this.calculateCpuUsage());
       }
+    }
+
+    async prepareBehavior() {
+      await this.db.addBehaviorFailOptions('requestDelays', { ban: false });
     }
 
     /**
@@ -655,7 +658,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get an interview summary
+     * Get the interview summary
      * 
      * @async
      * @returns {object}
@@ -937,7 +940,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a random node address from the network
+     * Get the random node address from the network
      * 
      * @async
      * @returns {string} 
@@ -959,13 +962,13 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get an availability filter options
+     * Get the availability filter options
      * 
      * @returns {object}
      */
     async getAvailabilityCandidateFilterOptions() {
       return {
-        fnCompare: await this.createCandidatesComparisonFunction('getAvailablity', (a, b) => b.availability - a.availability),
+        fnCompare: await this.createSuspicionComparisonFunction('getAvailablity', (a, b) => b.availability - a.availability),
         limit: 1
       }
     }
@@ -988,24 +991,67 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Create a candidates comparison function
+     * Create a suspicion comparison function
      * 
      * @async
      * @param {function} fn 
      * @returns {function}
      */
-    async createCandidatesComparisonFunction(action, fn) {
+    async createSuspicionComparisonFunction(action, fn) {
       const obj = await this.prepareCandidateSuscpicionInfo(action);
 
       return (a, b) => {
         const suspicionLevelA = obj[a.address] || 0;
         const suspicionLevelB = obj[b.address] || 0;
 
-        if(suspicionLevelA == suspicionLevelB) {
+        if(fn && suspicionLevelA == suspicionLevelB) {
           return fn(a, b);
         }
         
         return suspicionLevelA - suspicionLevelB;
+      }
+    }
+
+    /**
+     * Create a suspicion comparison function
+     * 
+     * @async
+     * @param {function} [fn] 
+     * @returns {function}
+     */
+    async createSuscpicionComparisonFunction(action, fn) {
+      const obj = await this.prepareCandidateSuscpicionInfo(action);
+
+      return (a, b) => {
+        const suspicionLevelA = obj[a.address] || 0;
+        const suspicionLevelB = obj[b.address] || 0;
+
+        if(fn && suspicionLevelA == suspicionLevelB) {
+          return fn(a, b);
+        }
+        
+        return suspicionLevelA - suspicionLevelB;
+      }
+    }
+
+     /**
+     * Create an address comparison function
+     * 
+     * @async
+     * @param {function} [fn] 
+     * @returns {function}
+     */
+    async createAddressComparisonFunction(fn) {
+      return (a, b) => {
+        if(a == this.address && b != this.address) {
+          return -1;
+        }
+
+        if(b == this.address && a != this.address) {
+          return 1;
+        }
+
+        return fn? fn(a, b): 0;
       }
     }
 
@@ -1096,7 +1142,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a structure provider
+     * Get the structure provider
      * 
      * @async
      * @returns {string}
@@ -1278,7 +1324,7 @@ module.exports = (Parent) => {
 
       try {
         const result = await fetch(options.url, options);
-        this.logger.info(`Request from "${this.address}" to "${options.url}":`, ms(Date.now() - start));
+        this.logger.info(`Request from "${this.address}" to "${options.url}": ${ms(Date.now() - start)}`);
 
         if(result.ok) {
           return options.getFullResponse? result: await result.json();
@@ -1318,12 +1364,7 @@ module.exports = (Parent) => {
      */
     async requestMasters(action, options = {}) {
       const preferredTimeout = this.getRequestMastersTimeout(options);
-      const timeout = options.timeout || preferredTimeout;
-      const body = options.body || {};
-      const backlink =  await this.db.getBacklink();
-      const masters = await this.db.getMasters();
-      const slavesCount = await this.db.getSlavesCount();
-      const servers = masters.length? masters: [{ address: this.address, size: slavesCount }];
+      const timeout = options.timeout || preferredTimeout;     
       const requests = [];
       let suspicious = 0;
       
@@ -1334,6 +1375,12 @@ module.exports = (Parent) => {
       if(timeout <= 0) {
         return requests;
       }
+
+      const body = options.body || {};
+      const backlink =  await this.db.getBacklink();
+      const masters = await this.db.getMasters();
+      const slavesCount = await this.db.getSlavesCount();
+      const servers = masters.length? masters: [{ address: this.address, size: slavesCount }];
       
       for(let i = 0; i < servers.length; i++) {
         const server = servers[i];
@@ -1342,9 +1389,9 @@ module.exports = (Parent) => {
           this.requestMaster(server.address, action, {
             body: Object.assign({}, body, {
               ignoreAcception: !masters.length,
-              timeout,              
+              timeout, 
               timestamp: Date.now(),
-              slaveTimeout: options.slaveTimeout
+              slaveTimeout: this.getRequestSlaveTimeout(options)
             }),
             timeout,
             preferredTimeout,
@@ -1359,7 +1406,7 @@ module.exports = (Parent) => {
               !slavesCount && suspicious++;
             }
 
-            resolve(await result.json());
+            resolve(result.__json);
           })
           .catch(async err => {    
             try {
@@ -1368,6 +1415,7 @@ module.exports = (Parent) => {
                 !slavesCount && suspicious++;
               }
               
+              this.logger.warn(err.stack);
               resolve(err);
             }
             catch(err) {
@@ -1407,10 +1455,7 @@ module.exports = (Parent) => {
      */
     async requestSlaves(action, options = {}) {
       const preferredTimeout = this.getRequestSlavesTimeout(options);
-      const timeout = options.timeout || preferredTimeout;
-      const body = options.body || {};
-      const slaves = await this.db.getSlaves();
-      const servers = slaves.length? slaves.map(m => m.address): [this.address];
+      const timeout = options.timeout || preferredTimeout;      
       const requests = []; 
       
       if(timeout < preferredTimeout) {
@@ -1420,6 +1465,10 @@ module.exports = (Parent) => {
       if(timeout <= 0) {
         return requests;
       }
+
+      const body = options.body || {};
+      const slaves = await this.db.getSlaves();
+      const servers = slaves.length? slaves.map(m => m.address): [this.address];
       
       for(let i = 0; i < servers.length; i++) {
         const address = servers[i];
@@ -1435,10 +1484,13 @@ module.exports = (Parent) => {
             responseSchema: options.responseSchema
           })
           .then(resolve)
-          .catch(resolve);
+          .catch((err) => {
+            this.logger.warn(err.stack);
+            resolve(err);
+          });
         }));
       }
-        
+       
       let results = await Promise.all(requests);
       !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));     
       return results;
@@ -1454,6 +1506,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestMaster(address, action, options = {}) {
+      options.timeout = options.timeout || this.getRequestMasterTimeout(options);
       return await this.requestServer(address, `/api/master/${action}`, options);
     } 
 
@@ -1467,6 +1520,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestSlave(address, action, options = {}) {
+      options.timeout = options.timeout || this.getRequestSlaveTimeout(options);
       return await this.requestServer(address, `/api/slave/${action}`, options);
     }
 
@@ -1519,8 +1573,9 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestServer(address, url, options = {}) {
-      options.timeout = options.timeout || this.getRequestServerTimeout();
+      const timeout = options.timeout || this.getRequestServerTimeout();      
       const start = Date.now();
+      options.timeout = timeout;
 
       if(options.preferredTimeout) {
         const behavior = await this.db.getBehaviorFail('requestDelays', address);
@@ -1531,10 +1586,10 @@ module.exports = (Parent) => {
       }
 
       const handleDelays = async () => {
-        if(!options.preferredTimeout) {
+        if(!options.preferredTimeout || timeout < options.preferredTimeout) {
           return;
         }
-
+        
         if(Date.now() - start >= options.preferredTimeout) {
           await this.db.addBehaviorFail('requestDelays', address);
         }
@@ -1546,9 +1601,10 @@ module.exports = (Parent) => {
       try {
         let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), options);
         let body = result;
-
+        
         if(options.getFullResponse) {
-          body = await result.clone().json();
+          body = await result.json();
+          result.__json = body;
         }
 
         if(body && typeof body == 'object' && !Array.isArray(body)) {
@@ -1573,7 +1629,7 @@ module.exports = (Parent) => {
       }
       catch(err) {
         this.logger.warn(err.stack);
-        handleDelays();        
+        handleDelays();       
 
         if(err instanceof errors.WorkError) {
           await this.db.successServerAddress(address);
@@ -1583,6 +1639,46 @@ module.exports = (Parent) => {
         }
 
         throw err;
+      }
+    }
+
+    /**
+     * Duplicate data to the servers
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string[]} servers
+     * @param {object} [options]
+     * @param {object|function} [options.formData]
+     * @param {object|function} [options.body]
+     * @returns {object}
+     */
+    async duplicateData(action, servers, options = {}) {
+      options = _.merge({}, options);
+      const timer = this.createRequestTimer(options.timeout);
+      let result;
+
+      while(servers.length) {
+        const address = servers[0];
+
+        if(options.formData) {
+          typeof options.formData == 'function' && (options.formData = options.formData(address));
+          servers.slice(1).forEach((val, i) => options.formData[`dublicates[${i}]`] = val);
+        }
+        else {
+          typeof options.body == 'function' && (options.body = options.body(address));
+          options.body.duplicates = servers.slice(1);
+        }         
+
+        try {      
+          options.timeout = timer();
+          result = await this.requestNode(address, action, options);
+          return result;
+        }
+        catch(err) {
+          servers.shift();
+          this.logger.warn(err.stack);
+        }
       }
     }
 
@@ -1669,10 +1765,8 @@ module.exports = (Parent) => {
         value = Math.ceil(networkSize * parseFloat(value) / 100); 
       }
 
-      if(value > networkSize) {
-        value = networkSize;
-      }
-
+      value > networkSize && (value = networkSize);
+      value <= 0 && (value = 1);
       return value;
     }
 
@@ -1688,7 +1782,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a candidate suspicion level
+     * Get the candidate suspicion level
      * 
      * @async
      * @returns {integer}
@@ -1700,7 +1794,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a candidate excuse level
+     * Get the candidate excuse level
      * 
      * @async
      * @returns {integer}
@@ -1711,7 +1805,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a candidate max suspicion level
+     * Get the candidate max suspicion level
      * 
      * @async
      * @returns {integer}
@@ -1748,7 +1842,7 @@ module.exports = (Parent) => {
      * @returns {object[]}
      */
     async filterCandidates(arr, options = {}) {
-      const limit = options.limit > this.__maxCandidates || !options.limit? this.__maxCandidates: options.limit;
+      const limit = options.limit === undefined || options.limit > this.__maxCandidates? this.__maxCandidates: options.limit;
       const schema = options.schema;
       const fnCompare = options.fnCompare;
       arr = arr.slice();
@@ -1797,9 +1891,9 @@ module.exports = (Parent) => {
       this.options.request.timeoutSlippage = utils.getMs(this.options.request.timeoutSlippage);
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
-      this.options.network.banLifetime = utils.getMs(this.options.network.banLifetime);
       this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
-      this.options.behavior.failLifetime = utils.getMs(this.options.behavior.failLifetime);
+      this.options.behavior.failLifetime = utils.getMs(this.options.behavior.failLifetime);      
+      this.options.behavior.banLifetime = utils.getMs(this.options.behavior.banLifetime);
     } 
     
     /**
@@ -1838,12 +1932,12 @@ module.exports = (Parent) => {
       return _.merge({
         body,
         timeout: options.timeout || this.createRequestTimeout(body),
-        slaveTimeout: body.slaveTimeout
+        slaveTimeout: this.getRequestSlaveTimeout(body)
       }, options);
     }
 
     /**
-     * Get a request server timeout
+     * Get the request server timeout
      * 
      * @returns {integer}
      */
@@ -1852,28 +1946,46 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a request masters timeout
+     * Get the request masters timeout
+     * 
+     * @see Node.prorotype.getRequestMasterTimeout
+     */
+    getRequestMastersTimeout(options = {}) {    
+      return this.getRequestMasterTimeout(options);
+    }
+
+    /**
+     * Get the request masters timeout
      * 
      * @param {object} [options]
      * @param {number} [options.masterTimeout]
      * @param {number} [options.slaveTimeout]
      * @returns {integer}
      */
-    getRequestMastersTimeout(options = {}) {    
+    getRequestMasterTimeout(options = {}) {    
       const masterTimeout = options.masterTimeout || this.getRequestServerTimeout();      
       return masterTimeout + this.getRequestSlavesTimeout(options);
     }
 
     /**
-     * Get a request slaves timeout
+     * Get the request slaves timeout
+     * 
+     * @see Node.prorotype.getRequestSlaveTimeout
+     */
+    getRequestSlavesTimeout(options = {}) {
+      return this.getRequestSlaveTimeout(options);
+    }   
+    
+    /**
+     * Get the request slave timeout
      * 
      * @param {object} [options]
      * @param {number} [options.slaveTimeout]
      * @returns {integer}
      */
-    getRequestSlavesTimeout(options = {}) {
+    getRequestSlaveTimeout(options = {}) {
       return options.slaveTimeout || this.getRequestServerTimeout();
-    }    
+    } 
 
     /**
      * Create a request timeout
@@ -1930,7 +2042,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a request protocol
+     * Get the request protocol
      * 
      * @returns {string}
      */

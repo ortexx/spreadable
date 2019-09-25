@@ -4,6 +4,7 @@ const ms = require('ms');
 const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
 const ip6addr = require('ip6addr'); 
+const errors = require('./errors'); 
 
 const utils = {
   hostValidationRegex: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/
@@ -15,18 +16,19 @@ const utils = {
  * @param {object|array|string} schema
  * @param {*} data
  */
-utils.validateSchema = function (schema, data) {
+utils.validateSchema = function (schema, data) {  
   if(Array.isArray(schema) || typeof schema != 'object') {
     schema = { type: schema };
   }
 
-  const humanData = JSON.stringify(data, null, 2);
-  const humanSchema = JSON.stringify(schema, null, 2);
+  const getHumanData = () => JSON.stringify(data, null, 2);
+  const getHumanSchema = () => JSON.stringify(schema, null, 2);
   const schemaType = Array.isArray(schema.type)? schema.type: [schema.type];
   const dataType = Array.isArray(data)? 'array': typeof data;
 
   if(schemaType.indexOf(dataType) == -1) {
-    throw new Error(`Wrong data type "${dataType}" instead of "${schemaType}" ${humanData} for ${humanSchema}`);
+    const msg = `Wrong data type "${dataType}" instead of "${schemaType}" ${getHumanData()} for ${getHumanSchema()}`;
+    throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
   }
 
   if(dataType == 'array') {
@@ -34,11 +36,13 @@ utils.validateSchema = function (schema, data) {
     const maxLength = typeof schema.maxLength == 'function'? maxLength(data): schema.maxLength;
 
     if(minLength && data.length < minLength) {
-      throw new Error(`Wrong array min length ${humanData} for ${humanSchema}`);
+      const msg = `Wrong array min length ${getHumanData()} for ${getHumanSchema()}`;
+      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
     }
 
     if(maxLength && data.length > maxLength) {
-      throw new Error(`Wrong array max length ${humanData} for ${humanSchema}`);
+      const msg = `Wrong array max length ${getHumanData()} for ${getHumanSchema()}`;
+      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
     }
 
     if(schema.items) {
@@ -46,22 +50,49 @@ utils.validateSchema = function (schema, data) {
     }
   }
   else if(dataType == 'object') {
-    const props = schema.props || {};  
-    const required = schema.required? (Array.isArray(schema.required)? schema.required: [schema.required]): null;
+    const props = schema.props || {};
+    const required = schema.required;  
+
+    if(required && !Array.isArray(required)) {
+      throw new Error(`Option "required" for ${getHumanSchema()} must be an array`);
+    }
+
+    if(schema.canBeNull && data === null) {
+      return;
+    }
+
+    if(schema.canBeNull === false && data === null) {
+      const msg = `Data for ${getHumanSchema()} can't be null`;
+      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_NULL');
+    }
     
     if(schema.strict) {
-      const schemaKeys =  Object.keys(props).sort();
-      const dataKeys =  Object.keys(data).sort();
+      const schemaKeys = Object.keys(props).sort();
+      const dataKeys = Object.keys(data).sort();
 
       if(schemaKeys.toString() != dataKeys.toString()) {
-        throw new Error(`Wrong object structure ${humanData} for ${humanSchema}`);
+        const msg = `Wrong strict object structure ${getHumanData()} for ${getHumanSchema()}`;
+        throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_STRICT');
       }     
     }
 
+    if(schema.expected) {
+      for(let key in data) {
+        if(!props.hasOwnProperty(key)) {
+          const msg = `Wrong expected object structure ${getHumanData()} for ${getHumanSchema()}`;
+          throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_EXPECTED');
+        }   
+      }
+    }
+
+    const requiredKeys = {};
+    required && required.forEach(item => requiredKeys[item] = true);
+    
     for(let prop in props) {
-      if(!data.hasOwnProperty(prop)) {
-        if(required && required.indexOf(prop) != -1) {
-          throw new Error(`Property "${prop}" is required ${humanData} for ${humanSchema}`);
+      if(!data.hasOwnProperty(prop)) {        
+        if(required && requiredKeys[prop]) {
+          const msg = `Property "${prop}" is required in ${getHumanData()} for ${getHumanSchema()}`;
+          throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
         }
 
         continue;
@@ -89,7 +120,8 @@ utils.validateSchema = function (schema, data) {
   }  
 
   if(!valid) {
-    throw new Error(`Validation is failed for ${JSON.stringify(data)}`);
+    const msg = `Validation is failed for ${getHumanData()}`;
+    throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_VALUE');
   }
 }
 

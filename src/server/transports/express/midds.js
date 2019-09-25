@@ -3,16 +3,18 @@ const utils = require('../../../utils');
 const _ = require('lodash');
 const crypto = require('crypto');
 const cors = require('cors');
+const url = require('url');
+const midds = {};
 
 /**
  * Cors control
  */
-module.exports.cors = () => cors();
+midds.cors = () => cors();
 
 /**
  * Accept the node is master
  */
-module.exports.checkMasterAcception = node => {
+midds.checkMasterAcception = node => {
   return async (req, res, next) => {
     try {
       const size = await node.db.getSlavesCount();
@@ -33,7 +35,7 @@ module.exports.checkMasterAcception = node => {
 /**
  * Update client info
  */
-module.exports.updateClientInfo = node => {
+midds.updateClientInfo = node => {
   return async (req, res, next) => {
     try {
       await node.db.successServerAddress(req.clientAddress);
@@ -48,7 +50,7 @@ module.exports.updateClientInfo = node => {
 /**
  * Control the current request's client access
  */
-module.exports.networkAccess = (node, checks = {}) => {
+midds.networkAccess = (node, checks = {}) => {
   return async (req, res, next) => {    
     try {
       checks = _.merge({ secretKey: true, address: false, version: false }, checks);
@@ -88,13 +90,24 @@ module.exports.networkAccess = (node, checks = {}) => {
 };
 
 /**
- * Control file request's queue
+ * Control all parallel requests to the client endpoints
  */
-module.exports.requestQueue = (node, key, options) => {  
+midds.requestQueueClientEndpoint = (node) => {
+  return (req, res, next) => {
+    return midds.requestQueue(node, url.parse(req.originalUrl).pathname, { 
+      limit: node.options.request.clientEndpointConcurrency
+    })(req, res, next);
+  }
+};
+
+/**
+ * Control the parallel requests queue
+ */
+midds.requestQueue = (node, key, options) => {  
   return async (req, res, next) => { 
     try {   
       key = typeof key == 'function'? key(req): key;
-      const hash = crypto.createHash('md5').update(key).digest("hex");      
+      const hash = crypto.createHash('md5').update(key).digest("hex"); 
       const obj = node.__requestQueue;
 
       if(!hash) {
@@ -110,16 +123,19 @@ module.exports.requestQueue = (node, key, options) => {
         fnCheck: () => true
       }, options);
       
-      let interval;
-      const check = () => arr.indexOf(req) < options.limit && options.fnCheck(arr);
-      arr.push(req);
-
-      res.on('finish', function () {
+      const finish = () => {        
         interval && clearInterval(interval);
         const index = arr.indexOf(req);
         index != -1 && arr.splice(index, 1);
         !arr.length && delete obj[hash];
-      });
+      };
+
+      req.on('close', finish);
+      res.on('finish', finish);
+
+      let interval;
+      const check = () => arr.indexOf(req) < options.limit && options.fnCheck(arr);
+      arr.push(req);
 
       if(options.active) {
         if(check()) {
@@ -143,3 +159,5 @@ module.exports.requestQueue = (node, key, options) => {
     }
   }
 };
+
+module.exports = midds;

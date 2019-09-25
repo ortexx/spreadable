@@ -377,6 +377,29 @@ module.exports = (Parent) => {
     }
 
     /**
+     * Set the behavior fail options
+     * 
+     * @async
+     * @param {string} action
+     * @param {object} options
+     * @returns {object}
+     */
+    async addBehaviorFailOptions() {
+      throw new Error('Method "addBehaviorFailOptions" is required for database transport');
+    }
+
+    /**
+     * Get the behavior fail options
+     * 
+     * @async
+     * @param {string} action
+     * @returns {object}
+     */
+    async getBehaviorFailOptions() {
+      throw new Error('Method "getBehaviorFailOptions" is required for database transport');
+    }
+
+    /**
      * Normalize the behavior fails
      * 
      * @async
@@ -412,6 +435,7 @@ module.exports = (Parent) => {
      * 
      * @async
      * @param {string} address
+     * @param {number} lifetime
      */
     async addBanlistAddress() {
       throw new Error('Method "addBanlistAddress" is required for database transport');

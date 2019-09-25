@@ -3,6 +3,7 @@ const argv = require('optimist').argv;
 const path = require('path');
 const _ = require('lodash');
 const Spinner = require('cli-spinner').Spinner;
+const utils = require('./utils');
 
 module.exports = async (name, Node, actions) => {
   let node;
@@ -22,28 +23,30 @@ module.exports = async (name, Node, actions) => {
   });
 
   try {
-    let configPath = '';
-    let action = argv.a || argv.action;  
-    let config = argv.c || argv.config;
+    const action = argv.action || argv.a;
+    const log = argv.log === undefined? argv.l: argv.log;
+    const server = argv.server === undefined? argv.s: argv.server;  
+    let configPath = argv.configPath || argv.c;
+    let config;
     let spinner;
 
-    if(config) {
-      const dir = config + '';
-      configPath = path.isAbsolute(dir)? dir: path.join(process.cwd(), dir);
+    if(configPath) {
+      configPath = utils.getAbsolutePath(configPath);
     }
     else {
       configPath = path.join(process.cwd(), name + '.config');
     }
-
+    
     try {
       config = require(configPath);
     }
     catch(err) {
-      throw new Error(`Not found config file ${configPath}. Pass argument "c" with the config path or create "${name}.config.js(on)" file`);
+      throw new Error(`Not found the config file ${configPath}`);
     }
 
     config = _.merge(config, {
-      logger: argv.l === false? false: (config.logger || {})
+      logger: log === false? false: config.logger,
+      server: server === false? false: config.server
     });
   
     node = new Node(config);
@@ -53,7 +56,7 @@ module.exports = async (name, Node, actions) => {
       spinner.start();
     }
 
-    await node.init();  
+    await node.init();
     spinner && spinner.stop(true);
     //eslint-disable-next-line no-console
     console.log(chalk.cyan('Node has been initialized'));

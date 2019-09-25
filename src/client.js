@@ -145,7 +145,7 @@ module.exports = (Parent) => {
         }
       }
 
-      return availableAddress;
+      return availableAddress || null;
     }
 
     /**
@@ -171,7 +171,7 @@ module.exports = (Parent) => {
         }));
         this.workerAddress = address;
       }
-      catch(err) {
+      catch(err) {        
         this.logger.warn(err.stack);
         this.workerAddress = lastAddress;
       }
@@ -218,7 +218,7 @@ module.exports = (Parent) => {
 
       try {        
         const result = await fetch(options.url, options);    
-        this.logger.info(`Request to "${options.url}":`, ms(Date.now() - start));    
+        this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);    
         const body = await result.json();
 
         if(result.ok) {
@@ -302,7 +302,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get a request protocol
+     * Get the request protocol
      * 
      * @returns {string}
      */
@@ -313,9 +313,9 @@ module.exports = (Parent) => {
     /**
      * Check the environment
      */
-    envFilter(isBrowser, name) {
+    envTest(isBrowser, name) {
       const isBrowserEnv = utils.isBrowserEnv();
-
+      
       if(isBrowser && !isBrowserEnv) {
         throw new Error(`You can't use "${name}" method in the nodejs environment`);
       }

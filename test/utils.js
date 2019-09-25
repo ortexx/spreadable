@@ -170,6 +170,30 @@ describe('utils', () => {
         });
       });
 
+      it('should check expected props', () => { 
+        assert.throws(() => {
+          utils.validateSchema({
+            type: 'object',
+            props: {
+              x: 'number',
+              y: 'number'
+            },
+            expected: true
+          }, { x: 1, z: 1 }, 'check the wrong case');
+        });
+
+        assert.doesNotThrow(() => {
+          utils.validateSchema({
+            type: 'object',
+            props: {
+              x: 'number',
+              y: 'number'
+            },
+            expected: true
+          }, { x: 1 }, 'check the right case');
+        });
+      });
+
       it('should check required props', () => { 
         assert.throws(() => {
           utils.validateSchema({

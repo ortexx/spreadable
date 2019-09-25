@@ -19,6 +19,7 @@ module.exports = (Parent) => {
 
       super(node, options);
       this.col = {};
+      this.__behaviorFailOptions = {};
     }
 
     /**
@@ -133,6 +134,7 @@ module.exports = (Parent) => {
 
       if (this.col.cache === null) {
         this.col.cache = this.loki.addCollection('cache', {
+          disableMeta: true,
           indices: ['type']
         });
       }
@@ -146,6 +148,7 @@ module.exports = (Parent) => {
 
       if (this.col.data === null) {
         this.col.data = this.loki.addCollection('data', {
+          disableMeta: true,
           unique: ['name']
         });
       }
@@ -180,6 +183,7 @@ module.exports = (Parent) => {
 
       if (this.col.servers === null) {
         this.col.servers = this.loki.addCollection('servers', { 
+          disableMeta: true,
           unique: ['address']
         });
       }
@@ -193,6 +197,7 @@ module.exports = (Parent) => {
 
       if (this.col.banlist === null) {
         this.col.banlist = this.loki.addCollection('banlist', { 
+          disableMeta: true,
           unique: ['address']
         });
       }
@@ -206,6 +211,7 @@ module.exports = (Parent) => {
 
       if (this.col.behaviorCandidates === null) {
         this.col.behaviorCandidates = this.loki.addCollection('behaviorCandidates', {
+          disableMeta: true,
           indices: ['address', 'action']
         });
       }
@@ -219,6 +225,7 @@ module.exports = (Parent) => {
 
       if (this.col.behaviorDelays === null) {
         this.col.behaviorDelays = this.loki.addCollection('behaviorDelays', {
+          disableMeta: true,
           indices: ['address', 'action']
         });
       }
@@ -232,6 +239,7 @@ module.exports = (Parent) => {
 
       if (this.col.behaviorFails === null) {
         this.col.behaviorFails = this.loki.addCollection('behaviorFails', {
+          disableMeta: true,
           indices: ['address', 'action']
         });
       }
@@ -847,47 +855,49 @@ module.exports = (Parent) => {
     }
 
     /**
+     * @see Database.prototype.addBehaviorFailOptions
+     */
+    async addBehaviorFailOptions(action, options) {
+      return this.__behaviorFailOptions[action] = options;
+    }
+
+    /**
+     * @see Database.prototype.getBehaviorFailOptions
+     */
+    async getBehaviorFailOptions(action) {
+      return _.merge({
+        ban: true,
+        banLifetime: this.node.options.behavior.banLifetime,
+        failSuspicionLevel: this.node.options.behavior.failSuspicionLevel,
+        failLifetime: this.node.options.behavior.failLifetime
+      }, this.__behaviorFailOptions[action] || {});
+    }
+
+    /**
      * @see Database.prototype.normalizeBehaviorFails
      */
     async normalizeBehaviorFails() {
-      this.col.behaviorFails
-        .chain()
-        .find({ 
-          updatedAt: {
-            $lt: Date.now() - this.node.options.behavior.failLifetime 
-          } 
-        })
-        .remove();
-
-      if(this.node.options.network.isTrusted) {
-        return;
-      }
-
-      const data = this.col.behaviorFails
-        .chain()
-        .find({
-          suspicion: {
-            $gt: this.node.options.behavior.failSuspicionLevel 
-          }
-        })
-        .data();
-
-      const banned = [];
+      const data = this.col.behaviorFails.find();
+      const now = Date.now();
 
       for(let i = 0; i < data.length; i++) {
         const behavior = data[i];
-        await this.addBanlistAddress(behavior.address);
-        banned.push(behavior.address);
-      }
+        const options = await this.getBehaviorFailOptions(behavior.action);
+       
+        if(behavior.updatedAt < now - options.failLifetime) {
+          this.col.behaviorFails.remove(behavior);
+          continue;
+        }
 
-      this.col.behaviorFails
-        .chain()
-        .find({
-          address: {
-            $in: banned
-          }
-        })
-        .remove();
+        if(this.node.options.network.isTrusted) {
+          continue;
+        }
+
+        if(behavior.suspicion > options.failSuspicionLevel && options.ban) {
+          await this.addBanlistAddress(behavior.address, options.banLifetime);
+          this.col.behaviorFails.remove(behavior);
+        }
+      }
     }
 
     /**
@@ -907,18 +917,21 @@ module.exports = (Parent) => {
     /**
      * @see Database.prototype.addBanlistAddress
      */
-    async addBanlistAddress(address) {
+    async addBanlistAddress(address, lifetime) {
       let ip = await utils.getAddressIp(address);
       ip = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
       const server = this.col.banlist.findOne({ address });
+      const now = Date.now();
+      let resolvedAt = now + lifetime;
       
       if(server) {
-        server.updatedAt = Date.now();
+        server.updatedAt = now;
+        server.resolvedAt = resolvedAt;
         server.ip = ip;
         return this.col.banlist.update(server);
       }
       
-      return this.col.banlist.insert(this.createBanlistFields({ address, ip }));
+      return this.col.banlist.insert(this.createBanlistFields({ address, ip, resolvedAt }));
     }
 
     /**
@@ -938,10 +951,8 @@ module.exports = (Parent) => {
     async normalizeBanlist() {
       this.col.banlist
         .chain()
-        .find({ 
-          updatedAt: { 
-            $lt: Date.now() - this.node.options.network.banLifetime 
-          } 
+        .find({
+          resolvedAt: { $lt: Date.now() } 
         })
         .remove();
     }

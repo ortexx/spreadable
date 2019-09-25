@@ -8,8 +8,7 @@ const _ = require('lodash');
  */
 module.exports.register = node => {
   return async (req, res, next) => {
-    try {
-      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
+    try {      
       const target = req.body.target;
       
       if(
@@ -20,6 +19,7 @@ module.exports.register = node => {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       } 
 
+      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       const chain = await node.getBacklinkChain();
       let size = await node.db.getSlavesCount();
 
@@ -27,12 +27,11 @@ module.exports.register = node => {
         return res.send({ chain, size });
       }
 
-      const serverTimeout = node.getRequestServerTimeout();
       let result;
 
       try {
         result = await node.requestNode(target, 'get-interview-summary', {
-          timeout: timer([serverTimeout, serverTimeout / 2]),
+          timeout: timer(),
           responseSchema: schema.getInterviewSummaryResponse()
         });
       }
@@ -121,18 +120,17 @@ module.exports.provideStructure = node => {
  */
 module.exports.provideGroupStructure = node => {
   return async (req, res, next) => {
-    try {
-      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
+    try {      
       const targets = req.body.targets || [];  
       
       if(!Array.isArray(targets) || targets.find(t => !utils.isValidAddress(t))) {
         throw new errors.WorkError('"targets" field is invalid', 'ERR_SPREADABLE_INVALID_TARGETS_FIELD');
       }
       
-      const serverTimeout = node.getRequestServerTimeout();
+      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       const options = { 
         responseSchema: schema.getStructureResponse(),
-        timeout: timer([serverTimeout, serverTimeout / 2]),
+        timeout: timer(),
         includeErrors: true
       };
       let results = await node.requestGroup(targets.map(t => ({ address: t })), 'structure', options);      
@@ -145,7 +143,7 @@ module.exports.provideGroupStructure = node => {
         }
 
         return r;
-      })
+      });
 
       res.send({ results });
     }
@@ -160,24 +158,23 @@ module.exports.provideGroupStructure = node => {
  */
 module.exports.provideRegistration = node => {
   return async (req, res, next) => {
-    try {
-      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
+    try {      
       const target = req.body.target;   
 
       if(!utils.isValidAddress(target)) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       }
       
-      const serverTimeout = node.getRequestServerTimeout();
+      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       let masters = await node.db.getMasters();
       !masters.length && (masters = [{ address: node.address }]);      
       let results;
 
       try {
-        results = await node.provideGroupStructure(masters, { timeout: timer([serverTimeout, serverTimeout / 2]) });
+        results = await node.provideGroupStructure(masters, { timeout: timer() });
       }
       catch(err) {
-        node.logger.error(err.stack);
+        node.logger.warn(err.stack);
         throw new errors.WorkError('Provider failed', 'ERR_SPREADABLE_PROVIDER_FAIL');
       }
 

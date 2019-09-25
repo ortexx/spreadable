@@ -5,12 +5,15 @@ const fse = require('fs-extra');
 
 describe('DatabaseLoki', () => {
   let loki;
+  let lastNodeDb;
   
   describe('instance creation', function () {
     it('should create an instance', function () { 
       assert.doesNotThrow(() => loki = new DatabaseLoki(this.node, {
         filename: tools.getDbFilePath(this.node.port)
-      }));    
+      }));  
+      lastNodeDb = this.node.db;
+      this.node.db = loki;  
     });
   });
 
@@ -373,13 +376,13 @@ describe('DatabaseLoki', () => {
   describe('.addBanlistAddress()', function () { 
     it('should add the address', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address);
+      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
       assert.isOk(loki.col.banlist.count({ address }));        
     });
 
     it('should not create the same address', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address);
+      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
       assert.equal(loki.col.banlist.count({ address }), 1);        
     });
   });
@@ -419,12 +422,12 @@ describe('DatabaseLoki', () => {
   describe('.normalizeBanlist()', function () { 
     it('check the lifetime', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address);
+      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
       const count = loki.col.banlist.count();
       await loki.normalizeBanlist();
       const data = loki.col.banlist.find();
       assert.equal(count, data.length, 'check before');
-      data[0].updatedAt = Date.now() - this.node.options.network.banLifetime - 1;
+      data[0].resolvedAt = Date.now() - 1;
       await loki.normalizeBanlist();
       assert.equal(count - 1, loki.col.banlist.count(), 'check after');
     }); 
@@ -432,16 +435,9 @@ describe('DatabaseLoki', () => {
 
   describe('candidates behavior', function () { 
     let action;
-    let lastNodeDb;
 
     before(function () {
       action = 'test';
-      lastNodeDb = this.node.db;
-      this.node.db = loki;
-    });
-
-    after(function () {
-      this.node.db = lastNodeDb;
     });
  
     describe('.addBehaviorCandidate()', function () { 
@@ -700,7 +696,8 @@ describe('DatabaseLoki', () => {
         await loki.normalizeBehaviorFails();
         const data = loki.col.behaviorFails.find({ action });
         assert.equal(count, data.length, 'check before');
-        data[0].updatedAt = Date.now() - this.node.options.behavior.failLifetime - 1;
+        const options = await loki.getBehaviorFailOptions(action);
+        data[0].updatedAt = Date.now() - options.failLifetime - 1;
         await loki.normalizeBehaviorFails();
         assert.equal(count - 1, loki.col.behaviorFails.count({ action }), 'check after');
       });
@@ -711,7 +708,8 @@ describe('DatabaseLoki', () => {
         const behavior = await loki.addBehaviorFail(action, address);
         await loki.normalizeBehaviorFails();
         assert.equal(loki.col.banlist.count(), 0, 'check the banlist before');
-        behavior.suspicion = this.node.options.behavior.failSuspicionLevel + 1;
+        const options = await loki.getBehaviorFailOptions(action);
+        behavior.suspicion = options.failSuspicionLevel + 1;
         loki.col.behaviorFails.update(behavior);
         await loki.normalizeBehaviorFails();
         assert.equal(loki.col.banlist.count(), 1, 'check the banlist after');
@@ -818,6 +816,7 @@ describe('DatabaseLoki', () => {
   describe('.destroy()', function () { 
     it('should not throw an exception', async function () {
       await loki.destroy();
+      this.node.db = lastNodeDb;
     });
     
     it('should remove the db file', async function () {

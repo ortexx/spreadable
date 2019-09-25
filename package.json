@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -65,7 +65,7 @@
     "lokijs": "^1.5.5",
     "lookup-dns-cache": "^2.1.0",
     "ms": "^2.1.1",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^2.6.0",
     "optimist": "^0.6.1",
     "signal-exit": "^3.0.2",
     "tcp-port-used": "^1.0.1",
