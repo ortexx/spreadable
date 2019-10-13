@@ -40,7 +40,7 @@ module.exports = (Parent) => {
           level: 'info'
         },
         task: {
-          workerChangeInterval: '5m'
+          workerChangeInterval: '1m'
         }
       }, options);
 

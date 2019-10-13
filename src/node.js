@@ -45,7 +45,7 @@ module.exports = (Parent) => {
       }
 
       this.options = _.merge({
-        hostname: '',      
+        hostname: '',  
         request: {
           clientEndpointConcurrency: 10,
           timeoutSlippage: 120,
@@ -1286,6 +1286,8 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async request(url, options = {}) { 
+      options = _.merge({}, options);
+
       if(typeof url == 'object') {
         options = url;        
       } 
@@ -1506,7 +1508,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestMaster(address, action, options = {}) {
-      options.timeout = options.timeout || this.getRequestMasterTimeout(options);
+      options = _.merge({}, options, { timeout: options.timeout || this.getRequestMasterTimeout(options)});
       return await this.requestServer(address, `/api/master/${action}`, options);
     } 
 
@@ -1520,7 +1522,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestSlave(address, action, options = {}) {
-      options.timeout = options.timeout || this.getRequestSlaveTimeout(options);
+      options = _.merge({}, options, { timeout: options.timeout || this.getRequestSlaveTimeout(options)});
       return await this.requestServer(address, `/api/slave/${action}`, options);
     }
 
@@ -1573,6 +1575,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async requestServer(address, url, options = {}) {
+      options = _.merge({}, options);
       const timeout = options.timeout || this.getRequestServerTimeout();      
       const start = Date.now();
       options.timeout = timeout;

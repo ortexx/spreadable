@@ -51,10 +51,10 @@ midds.updateClientInfo = node => {
  * Control the current request's client access
  */
 midds.networkAccess = (node, checks = {}) => {
+  checks = _.merge({ secretKey: true, address: false, version: false }, checks);
+
   return async (req, res, next) => {    
     try {
-      checks = _.merge({ secretKey: true, address: false, version: false }, checks);
-
       if(checks.secretKey) {
         if((req.headers['network-secret-key'] || '') != node.options.network.secretKey) {
           throw new errors.AccessError('Wrong network secret key');
@@ -104,6 +104,12 @@ midds.requestQueueClientEndpoint = (node) => {
  * Control the parallel requests queue
  */
 midds.requestQueue = (node, key, options) => {  
+  options = _.merge({
+    limit: 1,
+    active: true,
+    fnCheck: () => true
+  }, options);
+
   return async (req, res, next) => { 
     try {   
       key = typeof key == 'function'? key(req): key;
@@ -117,20 +123,16 @@ midds.requestQueue = (node, key, options) => {
       (!obj[hash] || !obj[hash].length) && (obj[hash] = []);
       const arr = obj[hash];
       
-      options = _.merge({
-        limit: 1,
-        active: true,
-        fnCheck: () => true
-      }, options);
-      
       const finish = () => {        
         interval && clearInterval(interval);
         const index = arr.indexOf(req);
         index != -1 && arr.splice(index, 1);
         !arr.length && delete obj[hash];
+        req.removeListener('close', finish);
+        res.removeListener('finish', finish);
       };
 
-      req.on('close', finish);
+      req.on('close', finish);  
       res.on('finish', finish);
 
       let interval;

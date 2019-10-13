@@ -125,15 +125,17 @@ module.exports = (Parent) => {
         return;
       }
 
-      try {
-        task.isRun = true;
+      task.isRun = true;
+
+      try {        
         await task.fn();
-        task.isRun = false;
         this.options.showCompletionLogs && this.node.logger.info(`Task "${task.name}" has been completed`);
       }
       catch(err) {
         this.options.showFailLogs && this.node.logger.error(`Task "${task.name}",`, err.stack);
       }
+
+      task.isRun = false;
     }
 
     /**
