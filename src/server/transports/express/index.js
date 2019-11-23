@@ -1,5 +1,11 @@
 const express = require('express');
 const Server = require('../server')();
+const routes = require('./routes');
+const routesClient = require('./client/routes');
+const routesApi = require('./api/routes');
+const routesApiMaster = require('./api/master/routes');
+const routesApiSlave = require('./api/slave/routes');
+const routesApiNode = require('./api/node/routes');
 
 module.exports = (Parent) => {
   return class ServerExpress extends (Parent || Server) {
@@ -8,7 +14,7 @@ module.exports = (Parent) => {
      */
     async init() {
       this.app = express();
-      this.app.use(this.getMainRouter());
+      this.app.use(this.createRouter(this.getMainRoutes()));
       await super.init.apply(this, arguments);
     }
 
@@ -17,57 +23,57 @@ module.exports = (Parent) => {
     }
   
     /**
-     * Get the main router
+     * Get the main routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getMainRouter() {
-      return this.createRouter(require('./routes'));
+    getMainRoutes() {
+      return [...routes];
     }
   
     /**
-     * Get the client router
+     * Get the client routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getClientRouter() {
-      return this.createRouter(require('./client/routes'));
+    getClientRoutes() {
+      return [...routesClient];
     }
   
     /**
-     * Get the api router
+     * Get the api routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getApiRouter() {
-      return this.createRouter(require('./api/routes'));
+    getApiRoutes() {
+      return [...routesApi];
     }
   
     /**
-     * Get the api master router
+     * Get the api master routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getApiMasterRouter() {
-      return this.createRouter(require('./api/master/routes'));
+    getApiMasterRoutes() {
+      return [...routesApiMaster];
     }
   
     /**
-     * Get the api slave router
+     * Get the api slave routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getApiSlaveRouter() {
-      return this.createRouter(require('./api/slave/routes'));
+    getApiSlaveRoutes() {
+      return [...routesApiSlave];
     }
 
     /**
-     * Get the api node router
+     * Get the api node routes
      * 
-     * @returns {express.Router}
+     * @returns {array}
      */
-    getApiNodeRouter() {
-      return this.createRouter(require('./api/node/routes'));
+    getApiNodeRoutes() {
+      return [...routesApiNode];
     }
   
     /**

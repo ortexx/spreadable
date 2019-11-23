@@ -18,8 +18,7 @@ module.exports.register = node => {
       ) {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       } 
-
-      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
+      
       const chain = await node.getBacklinkChain();
       let size = await node.db.getSlavesCount();
 
@@ -27,6 +26,7 @@ module.exports.register = node => {
         return res.send({ chain, size });
       }
 
+      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       let result;
 
       try {

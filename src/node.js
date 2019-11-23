@@ -526,12 +526,14 @@ module.exports = (Parent) => {
      * 
      * @async
      */
-    async register() {
+    async register(options = {}) {
       if(await this.db.getBacklink()) {
         return;
       }
 
-      let timeout = this.getRequestServerTimeout() * 3;
+      const timer = this.createRequestTimer(options.timeout);
+      const serverTimeout = this.getRequestServerTimeout();
+      let timeout = timer([serverTimeout * 3, serverTimeout * 2]);
       
       let result = await this.requestNode(this.initialNetworkAddress, 'provide-registration', {
         body: {
@@ -616,8 +618,7 @@ module.exports = (Parent) => {
       }
 
       try {
-        timeout = this.getRequestServerTimeout() * 2;
-
+        timeout = timer();
         result = await this.requestNode(winner.address, 'register', {
           body: {
             target: this.address,
@@ -896,12 +897,20 @@ module.exports = (Parent) => {
      * @async
      */
     async normalizeMembers() {   
-      const members = await this.db.getData('members');
+      const members = await this.db.getData('members');      
+      const index = members.map(m => m.address).indexOf(this.address);
+      let server;
 
-      if(members.map(m => m.address).indexOf(this.address) == -1) {
-        members.push({ address: this.address, availability: await this.getAvailability() });
-        await this.db.setData('members', members);
+      if(index == -1) {
+        server = { address: this.address };
+        members.push(server);       
       }
+      else {
+        server = members[index];
+      }
+
+      server.availability = await this.getAvailability();
+      await this.db.setData('members', members);      
     }
 
     /**
