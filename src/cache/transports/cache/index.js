@@ -55,5 +55,14 @@ module.exports = (Parent) => {
     async remove() {
       throw new Error('Method "remove" is required for cache transport');
     }
+
+    /**
+     * Normalize the cache
+     * 
+     * @async
+     */
+    async normalize() {
+      throw new Error('Method "normalize" is required for cache transport');
+    }
   }
 };

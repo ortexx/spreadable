@@ -493,5 +493,16 @@ module.exports = (Parent) => {
     async removeCache() {
       throw new Error('Method "removeCache" is required for database transport');
     }
+
+     /**
+     * Get the cache
+     * 
+     * @async
+     * @param {string} type
+     * @param {object} [options]
+     */
+    async normalizeCache() {
+      throw new Error('Method "normalizeCache" is required for database transport');
+    }
   }
 };

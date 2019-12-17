@@ -984,7 +984,7 @@ module.exports = (Parent) => {
       }
 
       cache = this.col.cache.insert({ type, key, value, accessedAt: Date.now() });
-      options.limit && this.col.cache.chain().find().simplesort('accessedAt', true).offset(options.limit).remove();
+      options.limit && this.col.cache.chain().find({ type }).simplesort('accessedAt', true).offset(options.limit).remove();
       return cache;
     }
 
@@ -994,6 +994,14 @@ module.exports = (Parent) => {
     async removeCache(type, key) {
       const cache = this.col.cache.findOne({ type, key });
       cache && this.col.cache.remove(cache);
+    }
+
+    /**
+     * @see Database.prototype.normalizeCache
+     */
+    async normalizeCache(type, options = {}) {
+      options.limit && this.col.cache.chain().find({ type }).simplesort('accessedAt', true).offset(options.limit).remove();
+      options.lifetime && this.col.cache.chain().find({ type, accessedAt: { $lt: Date.now() - options.lifetime } }).remove();      
     }
   }
 };

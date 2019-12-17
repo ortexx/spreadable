@@ -5,7 +5,6 @@ const midds = require('../midds');
 
 module.exports = [
   { name: 'networkAccess', fn: midds.networkAccess },
-  { name: 'requestQueueClientEndpoint', fn: midds.requestQueueClientEndpoint },
 
   /**
    * Get an available node from the network

@@ -17,7 +17,7 @@ module.exports = (Parent) => {
      * @see Cache.prototype.set
      */
     async set(key, value) {
-      return await this.node.db.setCache(this.type, key, value, { limit: this.options.limit });
+      return await this.node.db.setCache(this.type, key, value, this.options);
     }
 
     /**
@@ -25,6 +25,13 @@ module.exports = (Parent) => {
      */
     async remove(key) {
       return await this.node.db.removeCache(this.type, key);
+    }
+
+    /**
+     * @see Cache.prototype.normalize
+     */
+    async normalize() {
+      return await this.node.db.normalizeCache(this.type, this.options);
     }
   }
 };

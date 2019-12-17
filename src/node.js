@@ -1,17 +1,17 @@
-const externalIp = require('external-ip');
+const ms = require('ms');
 const os = require('os');
 const v8 = require('v8');
 const urlib = require('url');
 const _ = require('lodash');
+const https = require('https');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
-const https = require('https');
+const externalIp = require('external-ip');
 const DatabaseLoki = require('./db/transports/loki')();
 const ServerExpress = require('./server/transports/express')();
 const LoggerConsole = require('./logger/transports/console')();
 const TaskInterval = require('./task/transports/interval')();
 const Service = require('./service')();
-const ms = require('ms');
 const utils = require('./utils');
 const schema = require('./schema');
 const errors = require('./errors');
@@ -47,7 +47,6 @@ module.exports = (Parent) => {
       this.options = _.merge({
         hostname: '',  
         request: {
-          clientEndpointConcurrency: 10,
           timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'   
@@ -696,7 +695,7 @@ module.exports = (Parent) => {
      * @returns {number}
      */
     async getSyncLifetime() {
-      const delay = utils.getMs(this.options.network.syncInterval);
+      const delay = this.options.network.syncInterval;
       return delay * this.options.network.serverMaxFails * await this.getNetworkOptimum();
     }
 
@@ -977,7 +976,7 @@ module.exports = (Parent) => {
      */
     async getAvailabilityCandidateFilterOptions() {
       return {
-        fnCompare: await this.createSuspicionComparisonFunction('getAvailablity', (a, b) => b.availability - a.availability),
+        fnCompare: await this.createSuspicionComparisonFunction('getAvailablity', await this.createAvailabilityComparisonFunction()),
         limit: 1
       }
     }
@@ -1019,6 +1018,16 @@ module.exports = (Parent) => {
         
         return suspicionLevelA - suspicionLevelB;
       }
+    }
+
+     /**
+     * Create an availability comparison function
+     * 
+     * @async
+     * @returns {function}
+     */
+    async createAvailabilityComparisonFunction() {
+      return (a, b) => b.availability - a.availability;
     }
 
     /**
@@ -1160,7 +1169,7 @@ module.exports = (Parent) => {
       const providers = (await this.db.getMasters()).filter(m => !m.fails && m.address != this.address).map(m => m.address);
       providers.indexOf(this.initialNetworkAddress) == -1 && providers.push(this.initialNetworkAddress);
       const syncTime = await this.getSyncLifetime();
-      const delay = utils.getMs(this.options.network.syncInterval);
+      const delay = this.options.network.syncInterval;
       const chance = 1 / (syncTime / delay / (this.options.behavior.failSuspicionLevel + 1));
       return providers.length && Math.random() <= chance? utils.getRandomElement(providers): this.address;
     }
@@ -1681,7 +1690,7 @@ module.exports = (Parent) => {
           typeof options.body == 'function' && (options.body = options.body(address));
           options.body.duplicates = servers.slice(1);
         }         
-
+        
         try {      
           options.timeout = timer();
           result = await this.requestNode(address, action, options);
@@ -1850,13 +1859,12 @@ module.exports = (Parent) => {
      * @param {integer} [options.limit]
      * @param {object} [options.schema]
      * @param {function} [options.fnFilter]
-     * @param {function} [options.fnCompare]
+     * @param {function} [options.fnCompare] 
+     * @param {function} [options.fn]
      * @returns {object[]}
      */
     async filterCandidates(arr, options = {}) {
       const limit = options.limit === undefined || options.limit > this.__maxCandidates? this.__maxCandidates: options.limit;
-      const schema = options.schema;
-      const fnCompare = options.fnCompare;
       arr = arr.slice();
 
       if(options.fnFilter) {
@@ -1869,19 +1877,20 @@ module.exports = (Parent) => {
         }
       }
 
-      if(schema) {
+      if(options.schema) {
         arr = arr.filter(item => {
           try {
-            utils.validateSchema(schema, item)
+            utils.validateSchema(options.schema, item)
             return true;
           }
           catch(err) {
             return false;
           }
         });
-      }
+      }  
       
-      fnCompare && arr.sort(fnCompare);
+      options.fn && (arr = options.fn(arr));
+      options.fnCompare && arr.sort(options.fnCompare);      
       limit && (arr = arr.slice(0, limit));
       return arr;
     }

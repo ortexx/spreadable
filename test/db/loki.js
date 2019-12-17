@@ -799,6 +799,31 @@ describe('DatabaseLoki', () => {
         assert.isNotOk(loki.col.cache.count({ type, key }));
       });
     });
+
+    describe('.normalizeCache()', function () { 
+      it('should keep the right limit', async function () {
+        const limit = 5;
+        const key = 'key1';
+
+        for(let i = 1; i < limit + 1; i++) {
+          await loki.setCache(type, i, i);
+          await tools.wait(10);
+        }
+
+        await loki.normalizeCache(type, { limit });
+        const data = loki.col.cache.find({ type });
+        assert.equal(data.length, limit, 'check the length');
+        assert.notEqual(data[0].key, key, 'check the first');
+      });
+
+      it('should remove old cache', async function () {
+        const count = loki.col.cache.chain().find({ type }).count();
+        await tools.wait(10);
+        await loki.setCache(type, count + 1, count + 1);
+        await loki.normalizeCache(type, { lifetime: 9 });        
+        assert.equal(1, loki.col.cache.chain().find({ type }).count());
+      });
+    });
   });
 
   describe('.deinit()', function () { 
