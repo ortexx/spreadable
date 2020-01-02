@@ -47,6 +47,7 @@ module.exports = (Parent) => {
       this.options = _.merge({
         hostname: '',  
         request: {
+          clientConcurrency: 10,
           timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'   

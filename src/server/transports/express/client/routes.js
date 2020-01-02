@@ -15,6 +15,9 @@ module.exports = [
     name: 'getAvailableNode',
     method: 'post',
     url: '/get-available-node',
-    fn: controllers.getAvailableNode
+    fn: [
+      midds.requestQueueClient,
+      controllers.getAvailableNode
+    ]
   }
 ];

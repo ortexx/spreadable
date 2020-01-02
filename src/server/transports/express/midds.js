@@ -89,6 +89,20 @@ midds.networkAccess = (node, checks = {}) => {
 };
 
 /**
+ * Control the client requests queue
+ */
+midds.requestQueueClient = (node, options = {}) => {
+  options = _.merge({
+    limit: node.request.clientConcurrency
+  }, options);
+
+  return (req, res, next) => {
+    const key = options.key || (req.method + req.originalUrl.split('?')[0]);
+    return midds.requestQueue(node, key, options)(req, res, next);
+  }
+};
+
+/**
  * Control the parallel requests queue
  */
 midds.requestQueue = (node, keys, options) => {  
