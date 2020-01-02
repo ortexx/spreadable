@@ -41,7 +41,7 @@ module.exports = (Parent) => {
       }
 
       if(!options.initialNetworkAddress) {
-        throw new Error(`You must pass the initial server address of the network`);
+        throw new Error(`You must pass the initial network address`);
       }
 
       this.options = _.merge({
@@ -122,7 +122,14 @@ module.exports = (Parent) => {
       await this.checkNodeAddress(this.address);
 
       if(this.options.network.autoSync) {
-        this.__syncInterval = setInterval(this.sync.bind(this), this.options.network.syncInterval);
+        this.__syncInterval = setInterval(async () => {
+          try {
+            await this.sync.call(this);
+          }
+          catch(err) {
+            this.logger.error(err.stack);
+          }          
+        }, this.options.network.syncInterval);
       }
     }
 
@@ -1312,7 +1319,7 @@ module.exports = (Parent) => {
       else {
         options.url = `${this.getRequestProtocol()}://${url}`;
       }
-
+      
       options = this.createDefaultRequestOptions(options);
       const urlInfo = urlib.parse(options.url);
       await this.addressFilter(`${urlInfo.hostname}:${urlInfo.port}`);

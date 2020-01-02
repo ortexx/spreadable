@@ -87,7 +87,8 @@ module.exports = (Parent) => {
   
       routes.forEach(route => {
         const fn = Array.isArray(route.fn)? route.fn.map(fn => fn(this.node)): route.fn(this.node);
-        router[route.method || 'use'](route.url || '*', fn);
+        const rfn = router[route.method || 'use'].bind(router);
+        route.url? rfn(route.url, fn): rfn(fn);
       });
   
       return router;

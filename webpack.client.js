@@ -20,12 +20,11 @@ module.exports = (options = {}) => {
   
   const include = [path.resolve(__dirname, 'src/browser/client')].concat(options.include || []);
   const mockIndexPath = options.mockIndexPath || path.resolve(__dirname, 'src/browser/client/mock');
-  const isProd = options.isProd === undefined? process.env.NODE_ENV == 'production': options.isProd;
-  const entry = {};
+  const isProd = options.isProd === undefined? process.env.NODE_ENV == 'production': options.isProd;  
   const alias = options.alias || {};
   const node = options.node || {};
+  const entry = {};
   entry[`${pack.name}.client`] = options.entry || path.resolve(process.cwd(), 'src/browser/client');
-  isProd && (entry[`${pack.name}.client.min`] = entry[`${pack.name}.client`] );
 
   for(let key in mock) {
     const val = mock[key];
@@ -42,7 +41,7 @@ module.exports = (options = {}) => {
     performance: { hints: false },
     watch: !isProd,
     bail: true,
-    devtool: 'inline-source-map',
+    devtool: isProd? false: 'inline-source-map',
     entry,
     output: {
       path: options.distPath || path.join(process.cwd(), '/dist'),
@@ -53,7 +52,6 @@ module.exports = (options = {}) => {
     optimization: {
       minimizer: [
         new TerserPlugin({
-          include: /\.min\.js$/,
           extractComments: false
         })
       ]
