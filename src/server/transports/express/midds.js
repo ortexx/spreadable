@@ -93,11 +93,12 @@ midds.networkAccess = (node, checks = {}) => {
  */
 midds.requestQueueClient = (node, options = {}) => {
   options = _.merge({
-    limit: node.request.clientConcurrency
+    limit: node.options.request.clientConcurrency
   }, options);
 
   return (req, res, next) => {
     const key = options.key || (req.method + req.originalUrl.split('?')[0]);
+    delete options.key;
     return midds.requestQueue(node, key, options)(req, res, next);
   }
 };
