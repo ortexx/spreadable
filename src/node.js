@@ -47,7 +47,7 @@ module.exports = (Parent) => {
       this.options = _.merge({
         hostname: '',  
         request: {
-          clientConcurrency: 10,
+          clientConcurrency: 100,
           timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'   
@@ -67,7 +67,7 @@ module.exports = (Parent) => {
         },
         behavior: {
           candidateSuspicionLevel: 5,
-          failSuspicionLevel: 10,
+          failSuspicionLevel: 20,
           failLifetime: '1d',          
           banLifetime: '27d'
         },
@@ -473,7 +473,7 @@ module.exports = (Parent) => {
      */
     async checkServerStructure(server) {
       await this.checkServerStructureSlaves(server.address, server.slaves);
-      await this.checkServerStructureNetworkSize(server.address, server.masters, server.slaves);      
+      await this.checkServerStructureNetworkSize(server.address, server.masters, server.slaves); 
     }
 
     /**
@@ -940,7 +940,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get the node backlink's chain
+     * Get the node backlink chain
      * 
      * @async
      * @returns {string[]}
@@ -1228,7 +1228,7 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Provide the node's group structure 
+     * Provide the node group structure 
      * 
      * @async
      * @param {array} targets
@@ -1926,7 +1926,7 @@ module.exports = (Parent) => {
     } 
     
     /**
-     * Get the node backlink's chain
+     * Get the node backlink chain
      * 
      * @async
      * @param {string} currentAddress

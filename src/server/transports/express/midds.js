@@ -47,7 +47,7 @@ midds.updateClientInfo = node => {
 };
 
 /**
- * Control the current request's client access
+ * Control the current request client access
  */
 midds.networkAccess = (node, checks = {}) => {
   checks = _.merge({ secretKey: true, address: false, version: false }, checks);

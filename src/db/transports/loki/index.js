@@ -285,7 +285,8 @@ module.exports = (Parent) => {
 
       return  _.merge({
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        reason: ''
       }, obj);
     }
 
@@ -894,7 +895,7 @@ module.exports = (Parent) => {
         }
 
         if(behavior.suspicion > options.failSuspicionLevel && options.ban) {
-          await this.addBanlistAddress(behavior.address, options.banLifetime);
+          await this.addBanlistAddress(behavior.address, options.banLifetime, behavior.action);
           this.col.behaviorFails.remove(behavior);
         }
       }
@@ -917,7 +918,7 @@ module.exports = (Parent) => {
     /**
      * @see Database.prototype.addBanlistAddress
      */
-    async addBanlistAddress(address, lifetime) {
+    async addBanlistAddress(address, lifetime, reason) {
       let ip = await utils.getAddressIp(address);
       ip = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
       const server = this.col.banlist.findOne({ address });
@@ -928,10 +929,11 @@ module.exports = (Parent) => {
         server.updatedAt = now;
         server.resolvedAt = resolvedAt;
         server.ip = ip;
+        reason !== undefined && (server.reason = reason);
         return this.col.banlist.update(server);
       }
       
-      return this.col.banlist.insert(this.createBanlistFields({ address, ip, resolvedAt }));
+      return this.col.banlist.insert(this.createBanlistFields({ address, ip, resolvedAt, reason }));
     }
 
     /**

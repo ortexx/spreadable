@@ -117,7 +117,7 @@ tools.createNodeOptions = async function (options = {}) {
     task: false,
     request: {
       pingTimeout: 350,
-      serverTimeout: 400
+      serverTimeout: 500
     },
     network: {
       syncInterval: 1000,

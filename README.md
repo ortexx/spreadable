@@ -63,7 +63,7 @@ const Node = require('spreadable').Node;
 })();
 ```
 
-In order to join to an already existing network, you need to pass __initialNetworkAddress__ option containing the address of any of the network's active node. If you are launching the very first server, then simply indicate in the option a link to yourself, as was done at the very beginning. Now you can add to the network the number of nodes you need. The client can use the address of any active network node to connect to the network itself.
+In order to join to an already existing network you need to pass __initialNetworkAddress__ option containing the address of any of the network active node. If you are launching the very first server then simply indicate in the option a link to yourself as was done at the very beginning. Now you can add to the network the number of nodes you need. The client can use the address of any active network node to connect to the network itself.
 
 ```javascript
 const Client = require('spreadable').Client;
@@ -127,13 +127,13 @@ import Client from 'spreadable/dist/spreadable.client.js';
 You can use webpack or something else to build the client for the browser with entry point __spreadable/src/browser/client/index.js__. Then you import / require it in your application and use as usually.
 
 ## How the network works
-For the network working, all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it, or the old one will leave, including the masters. After a while, another server will take over this role.
+For the network working all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it or the old one will leave. After a while, another server will take over this role.
 
 ## How nodes distinguish each other
-The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or an ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet, then it will use the local ip address. Or you can always pass the __hostname__ as an option manually. If the node address changes, then it is simply re-registering on the network.
+The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or an ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet then it will use the local ip address. Or you can always pass the __hostname__ as an option manually. If the node address changes then it is simply re-registering on the network.
 
 ## What are the limitations
-To implement various features, it is often required to go through the entire network to find the necessary information. The protocol allows to do this in a sequence of 2 http requests. But to iterate the network, many requests are made in parallel. The first query from the starting point goes to all masters, each of which is traversed by nodes from its list also in parallel. The number of simultaneous requests always strive to the square root of the network size. Therefore, with a larger network size, each node must be configured to be able to work with a large number of tcp connections simultaneously. For example, take a network of 10,000 nodes. For maximum network performance, each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network.
+To implement various features it is often required to go through the entire network to find the necessary information. The protocol allows to do this in a sequence of 2 http requests. But to iterate the network many requests are made in parallel. The first query from the starting point goes to all masters each of which is traversed by nodes from its list also in parallel. The number of simultaneous requests always strive to the square root of the network size. Therefore, with a larger network size each node must be configured to be able to work with a large number of tcp connections simultaneously. For example, take a network of 10,000 nodes. For maximum network performance each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network.
 
 ## How to control the time of requests
 When making requests the client can always specify a timeout.
@@ -419,4 +419,4 @@ const Client = require('spreadable').Client;
 })();
 ```
 
-In both cases, the network is closed, but not completely secure. If we use http protocol, the data transferred is not encrypted. In some cases this is a suitable option, otherwise you need to use https.
+In both cases the network is closed, but not completely secure. If we use http protocol the data transferred is not encrypted. In some cases this is a suitable option, otherwise you need to use https.

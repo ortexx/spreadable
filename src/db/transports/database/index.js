@@ -436,6 +436,7 @@ module.exports = (Parent) => {
      * @async
      * @param {string} address
      * @param {number} lifetime
+     * @param {string} [reason]
      */
     async addBanlistAddress() {
       throw new Error('Method "addBanlistAddress" is required for database transport');
