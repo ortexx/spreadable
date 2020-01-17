@@ -261,24 +261,30 @@ utils.getAddressIp = async function (address) {
 utils.getRequestTimer = function (timeout, options = {}) {
   let last = Date.now(); 
 
-  return fixArr => {
+  return (fixArr, opts) => {
+    opts = Object.assign({}, options, opts);
+
+    if(fixArr && !Array.isArray(fixArr)) {
+      fixArr = [fixArr];
+    }
+
     if(timeout === undefined) {
-      return;
+      return fixArr? fixArr[0]: undefined;
     }
 
     const now = Date.now();
     timeout -= now - last;
     last = now;
 
-    if(fixArr && !Array.isArray(fixArr)) {
-      fixArr = [fixArr];
-    }
-
     if(fixArr) {      
-      let dev = fixArr.reduce((a, b) => a + b) / timeout;  
-      let res = dev > 1? (fixArr[0] / dev): fixArr[0];
-      let min = options.min > timeout? timeout: options.min
+      let min = opts.min; 
+      let sum = fixArr.reduce((a, b) => a + b);   
+      let dev = sum / timeout;  
+      let res = dev > 1? fixArr[0] / dev: fixArr[0];
+      res > fixArr[0] && (res = fixArr[0]); 
+      opts.grabFree && (timeout > sum) && (res += ((timeout - sum) / fixArr.length));                 
       min && res < min && (res = min);
+      res > timeout && (res = timeout);
       return res > 0? res: 0;
     }
 
@@ -451,7 +457,10 @@ utils.createRequestTimeoutError = function () {
  * @returns {boolean}
  */
 utils.isRequestTimeoutError = function (err) {
-  return (['ESOCKETTIMEDOUT', 'ETIMEDOUT'].indexOf(err.code) != -1) || err.type == 'request-timeout';
+  return (
+    ['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) || 
+    ['request-timeout', 'body-timeout'].includes(err.type)
+  );
 };
 
 module.exports = utils;

@@ -288,10 +288,14 @@ module.exports = (Parent) => {
      * Create a request timer
      * 
      * @param {number} timeout 
+     * @param {object} [options] 
      * @returns {function}
      */
-    createRequestTimer(timeout) {
-      return utils.getRequestTimer(timeout, { min: this.options.request.pingTimeout });
+    createRequestTimer(timeout, options = {}) {
+      options = Object.assign({
+        min: this.options.request.pingTimeout
+      }, options)
+      return utils.getRequestTimer(timeout, options);
     }
 
     /**

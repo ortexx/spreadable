@@ -47,7 +47,7 @@ module.exports = (Parent) => {
       this.options = _.merge({
         hostname: '',  
         request: {
-          clientConcurrency: 100,
+          clientConcurrency: 50,
           timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'   
@@ -176,7 +176,7 @@ module.exports = (Parent) => {
     }
 
     async prepareBehavior() {
-      await this.db.addBehaviorFailOptions('requestDelays', { ban: false });
+      await this.db.addBehaviorFailOptions('requestDelays', { banLifetime: '5m', failSuspicionLevel: 200 });
     }
 
     /**
@@ -291,8 +291,9 @@ module.exports = (Parent) => {
      * Synchronize the node with the slave nodes
      * 
      * @async
+     * @param {object} [options]
      */
-    async syncDown() {
+    async syncDown(options = {}) {
       const slaves = await this.db.getSlaves();  
 
       if(!slaves.length) {
@@ -300,7 +301,7 @@ module.exports = (Parent) => {
       }
 
       let actualMasters = [];
-      const results = await this.provideGroupStructure(slaves);
+      const results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
 
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
@@ -332,8 +333,9 @@ module.exports = (Parent) => {
      * Synchronize the node with the master nodes
      * 
      * @async
+     * @param {object} [options]
      */
-    async syncUp() {
+    async syncUp(options = {}) {
       const backlink = await this.db.getBacklink();
 
       if(!backlink) {
@@ -343,7 +345,7 @@ module.exports = (Parent) => {
       let result;
 
       try {
-        result = await this.provideStructure(backlink.address);          
+        result = await this.provideStructure(backlink.address, { timeout: options.timeout });          
       }
       catch(err) {
         this.logger.warn(err.stack);
@@ -383,21 +385,22 @@ module.exports = (Parent) => {
      */
     async sync() {
       const startTime = Date.now();
+      const timer = this.createRequestTimer(this.options.network.syncInterval);
       await this.cleanUpServers();
       const slaves = await this.db.getSlaves();
       const size = slaves.length;
       size? await this.db.addMaster(this.address, size): await this.db.removeMaster(this.address);      
-      const mastersUp = await this.syncUp();
-      const mastersDown = await this.syncDown();
+      const mastersUp = await this.syncUp({ timeout: timer() });
+      const mastersDown = await this.syncDown({ timeout: timer() });
       const actualMasters = [].concat(mastersUp, mastersDown);
 
       if(size) {
         const masters = await this.db.getMasters();
         masters.forEach(m => m.source = this.address);
-        const structures = await this.updateMastersInfo([].concat(masters, actualMasters));
+        const structures = await this.updateMastersInfo([].concat(masters, actualMasters), { timeout: timer() });
         const members = slaves.concat(structures.reduce((p, c) => p.concat(c.slaves), []));
         await this.db.setData('members', members.map(m => _.pick(m, ['address', 'availability'])));
-        await this.checkMasterStructures(structures);
+        await this.checkMasterStructures(structures, { timeout: timer() });
       }
       else {
         await this.db.removeMasters();
@@ -421,7 +424,7 @@ module.exports = (Parent) => {
       await this.normalizeInitialAddress();
       
       try {
-        await this.register();
+        await this.register({ timeout: timer() });
       }
       catch(err) {
         if(err instanceof errors.WorkError) {
@@ -444,8 +447,9 @@ module.exports = (Parent) => {
      * 
      * @async
      * @param {object[]} structures
+     * @param {object} [options]
      */
-    async checkMasterStructures(structures) {
+    async checkMasterStructures(structures, options = {}) {
       if(this.options.network.isTrusted || !await this.isMaster()) {
         return;
       }
@@ -459,7 +463,7 @@ module.exports = (Parent) => {
       }
 
       checked.push(current.address);
-      await this.checkServerStructure(current);
+      await this.checkServerStructure(current, options);
       await this.db.setData('checkedMasterStructures', checked);
     }
   
@@ -470,9 +474,11 @@ module.exports = (Parent) => {
      * @param {object} server
      * @param {object[]} server.masters
      * @param {object[]} server.slaves
+     * @param {object} [options]
+     * 
      */
-    async checkServerStructure(server) {
-      await this.checkServerStructureSlaves(server.address, server.slaves);
+    async checkServerStructure(server, options = {}) {
+      await this.checkServerStructureSlaves(server.address, server.slaves, options);
       await this.checkServerStructureNetworkSize(server.address, server.masters, server.slaves); 
     }
 
@@ -482,9 +488,10 @@ module.exports = (Parent) => {
      * @async
      * @param {string} address 
      * @param {object[]} slaves
+     * @param {object} [options]
      */
-    async checkServerStructureSlaves(address, slaves) {
-      const results = await this.provideGroupStructure(slaves, { includeErrors: true });
+    async checkServerStructureSlaves(address, slaves, options = {}) {
+      const results = await this.provideGroupStructure(slaves, { includeErrors: true, timeout: options.timeout });
       let suspicious = 0;
 
       for(let i = 0; i < results.length; i++) {
@@ -539,8 +546,7 @@ module.exports = (Parent) => {
       }
 
       const timer = this.createRequestTimer(options.timeout);
-      const serverTimeout = this.getRequestServerTimeout();
-      let timeout = timer([serverTimeout * 3, serverTimeout * 2]);
+      let timeout = timer();
       
       let result = await this.requestNode(this.initialNetworkAddress, 'provide-registration', {
         body: {
@@ -732,8 +738,9 @@ module.exports = (Parent) => {
      * 
      * @async
      * @param {object[]} masters
+     * @param {object} [options]
      */
-    async updateMastersInfo(masters) {    
+    async updateMastersInfo(masters, options = {}) {    
       const obj = {};
       const suspicious = {};
       const sources = {};
@@ -770,7 +777,7 @@ module.exports = (Parent) => {
         arr.push({ address: item.master.address, sources: item.sources });
       }
 
-      const results = await this.provideGroupStructure(arr, { includeErrors: true });
+      const results = await this.provideGroupStructure(arr, { includeErrors: true, timeout: options.timeout });
 
       for(let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
@@ -1203,11 +1210,11 @@ module.exports = (Parent) => {
       }
 
       try {
-        const timeout = timer([serverTimeout * 2, serverTimeout]);
+        const timeout = timer(serverTimeout * 2);
 
         return await this.requestNode(provider, 'provide-structure', {
           body: { 
-            target, 
+            target,
             timeout,
             timestamp: Date.now()
           },
@@ -1215,14 +1222,13 @@ module.exports = (Parent) => {
           timeout
         });
       }
-      catch(err) {   
-        const timeout = timer(serverTimeout);
-
+      catch(err) {  
         if(provider == this.address) {
           throw err;
         }
 
         this.logger.warn(err.stack);
+        const timeout = timer();
         return await this.provideStructure(target, { provider: this.address, timeout });
       }    
     }
@@ -1254,7 +1260,7 @@ module.exports = (Parent) => {
       let result;
 
       try {
-        const timeout = timer([serverTimeout * 2, serverTimeout]);
+        const timeout = timer(serverTimeout * 2);
 
         result = await this.requestNode(provider, 'provide-group-structure', {
           body: { 
@@ -1271,7 +1277,7 @@ module.exports = (Parent) => {
           throw err;
         }
 
-        const timeout = timer(serverTimeout);
+        const timeout = timer();
         this.logger.warn(err.stack);
         return await this.provideGroupStructure(targets, { provider: this.address, timeout });
       }
@@ -1652,13 +1658,13 @@ module.exports = (Parent) => {
           }
         }
 
-        handleDelays();
+        await handleDelays();
         await this.db.successServerAddress(address);
         return result;
       }
       catch(err) {
         this.logger.warn(err.stack);
-        handleDelays();       
+        await handleDelays();       
 
         if(err instanceof errors.WorkError) {
           await this.db.successServerAddress(address);
@@ -2022,11 +2028,10 @@ module.exports = (Parent) => {
      * @param {object} data 
      * @param {number} data.timeout 
      * @param {number} data.timestamp
-     * @param {number} defaultTimeout
      */
-    createRequestTimeout(data, defaultTimeout) {
+    createRequestTimeout(data) {
       if(!data || typeof data != 'object' || !data.timeout) {
-        return defaultTimeout || this.getRequestServerTimeout();
+        return;
       }
 
       return (data.timeout - (Date.now() - data.timestamp)) - this.options.request.timeoutSlippage;
@@ -2066,8 +2071,11 @@ module.exports = (Parent) => {
      * @param {number} timeout 
      * @returns {function}
      */
-    createRequestTimer(timeout) { 
-      return utils.getRequestTimer(timeout, { min: this.options.request.pingTimeout });
+    createRequestTimer(timeout, options = {}) {
+      options = Object.assign({
+        min: this.options.request.pingTimeout
+      }, options)
+      return utils.getRequestTimer(timeout, options);
     }
 
     /**
