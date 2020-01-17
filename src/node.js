@@ -1684,8 +1684,9 @@ module.exports = (Parent) => {
      * @param {string} action 
      * @param {string[]} servers
      * @param {object} [options]
-     * @param {object|function} [options.formData]
-     * @param {object|function} [options.body]
+     * @param {object|function} [options.serverOptions]
+     * @param {object} [options.formData]
+     * @param {object} [options.body]
      * @returns {object}
      */
     async duplicateData(action, servers, options = {}) {
@@ -1695,19 +1696,19 @@ module.exports = (Parent) => {
 
       while(servers.length) {
         const address = servers[0];
+        let serverOptions = typeof options.serverOptions == 'function'? options.serverOptions(address): options.serverOptions;
+        serverOptions = options = _.merge({}, options, serverOptions || {});
 
         if(options.formData) {
-          typeof options.formData == 'function' && (options.formData = options.formData(address));
           servers.slice(1).forEach((val, i) => options.formData[`dublicates[${i}]`] = val);
         }
         else {
-          typeof options.body == 'function' && (options.body = options.body(address));
-          options.body.duplicates = servers.slice(1);
+          serverOptions.body.duplicates = servers.slice(1);
         }         
         
         try {      
-          options.timeout = timer();
-          result = await this.requestNode(address, action, options);
+          serverOptions.timeout = timer(serverOptions.timeout);
+          result = await this.requestNode(address, action, serverOptions);
           return result;
         }
         catch(err) {
