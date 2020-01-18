@@ -336,8 +336,8 @@ module.exports = (Parent) => {
      * @async
      * @param {string} action
      */
-    async clearBehaviorDelays() {
-      throw new Error('Method "clearBehaviorDelays" is required for database transport');
+    async cleanBehaviorDelays() {
+      throw new Error('Method "cleanBehaviorDelays" is required for database transport');
     }
 
     /**

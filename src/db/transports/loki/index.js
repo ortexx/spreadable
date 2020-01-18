@@ -803,9 +803,9 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.prototype.clearBehaviorDelays
+     * @see Database.prototype.cleanBehaviorDelays
      */
-    async clearBehaviorDelays(action) {
+    async cleanBehaviorDelays(action) {
       this.col.behaviorDelays.chain().find({ action }).remove();
     }
 

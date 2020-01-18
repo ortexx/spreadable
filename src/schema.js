@@ -36,6 +36,7 @@ schema.getStatusResponse = function () {
     type: 'object',
     props: {
       availability: 'number',
+      syncAvgTime: 'number',
       isMaster: 'boolean',
       isNormalized: 'boolean',
       isRegistered: 'boolean',
@@ -48,7 +49,8 @@ schema.getStatusResponse = function () {
 schema.getStatusPrettyResponse = function () {
   return _.merge(this.getStatusResponse(), {
     props: {
-      availability: 'string'
+      availability: 'string',
+      syncAvgTime: 'string'
     }    
   });
 };

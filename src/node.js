@@ -55,6 +55,7 @@ module.exports = (Parent) => {
         network: {
           autoSync: true,
           syncInterval: '10s',
+          syncTimeCalculationPeriod: '1d',
           isTrusted: false,
           secretKey: '',
           serverMaxFails: 5,
@@ -67,8 +68,8 @@ module.exports = (Parent) => {
         },
         behavior: {
           candidateSuspicionLevel: 5,
-          failSuspicionLevel: 20,
-          failLifetime: '1d',          
+          failSuspicionLevel: 15,
+          failLifetime: '1d',
           banLifetime: '27d'
         },
         logger: {
@@ -94,6 +95,7 @@ module.exports = (Parent) => {
       this.__cpuUsage = 0;
       this.__requestQueue = {};
       this.__requestQueueInterval = 10;
+      this.__syncList = [];
       this.prepareOptions();
     }    
 
@@ -301,7 +303,15 @@ module.exports = (Parent) => {
       }
 
       let actualMasters = [];
-      const results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
+      let results;
+
+      try {
+        results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
+      }
+      catch(err) {
+        this.logger.warn(err.stack);
+        return [];
+      }
 
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
@@ -339,6 +349,7 @@ module.exports = (Parent) => {
       const backlink = await this.db.getBacklink();
 
       if(!backlink) {
+        await this.db.setData('members', []);
         return [];
       }
 
@@ -439,7 +450,10 @@ module.exports = (Parent) => {
       await this.db.normalizeBanlist();
       await this.db.normalizeBehaviorCandidates();
       await this.db.normalizeServers();
-      this.logger.info(`Sync takes ${ms(Date.now() - startTime)}`);
+      const time = Date.now() - startTime;
+      this.__syncList.push({ time });
+      this.__syncList.length > this.getSyncListSize() && this.__syncList.shift();
+      this.logger.info(`Sync takes ${ms(time)}`);
     }
 
     /**
@@ -627,7 +641,7 @@ module.exports = (Parent) => {
       winner = utils.getRandomElement(freeMasters.length? freeMasters: candidates);               
       
       if(!winner) {
-        return false;
+        throw new errors.WorkError(`No available server to register the node`, 'ERR_SPREADABLE_NETWORK_NO_AVAILABLE_MASTER');
       }
 
       try {
@@ -648,11 +662,10 @@ module.exports = (Parent) => {
         throw err;
       }
       
+      await this.db.cleanBehaviorDelays('registration'); 
       await this.db.setData('registrationTime', Date.now());
       await this.db.addBacklink(winner.address, result.chain);
-      await this.db.addMaster(winner.address, result.size);
-      await this.db.clearBehaviorDelays('registration');      
-      return true;
+      await this.db.addMaster(winner.address, result.size); 
     } 
 
     /**
@@ -692,9 +705,11 @@ module.exports = (Parent) => {
      */
     async getStatusInfo(pretty = false) {
       const availability = await this.getAvailability();
+      const syncAvgTime = this.getSyncAvgTime();
       
       return { 
         availability: pretty? availability.toFixed(2): availability,
+        syncAvgTime: pretty? ms(syncAvgTime): syncAvgTime,
         isMaster: await this.isMaster(),
         isNormalized: await this.isNormalized(),
         isRegistered: await this.isRegistered(),
@@ -1928,6 +1943,7 @@ module.exports = (Parent) => {
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
       this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
+      this.options.network.syncTimeCalculationPeriod = utils.getMs(this.options.network.syncTimeCalculationPeriod);
       this.options.behavior.failLifetime = utils.getMs(this.options.behavior.failLifetime);      
       this.options.behavior.banLifetime = utils.getMs(this.options.behavior.banLifetime);
     } 
@@ -2086,6 +2102,28 @@ module.exports = (Parent) => {
      */
     getRequestProtocol() {
       return this.options.server.https? 'https': 'http';
+    }
+
+    /**
+     * Get the sync list size
+     * 
+     * @returns {number}
+     */
+    getSyncListSize() {
+      return Math.floor(this.options.network.syncTimeCalculationPeriod / this.options.network.syncInterval);
+    }
+
+    /**
+     * Get the sync average time
+     * 
+     * @returns {number}
+     */
+    getSyncAvgTime() {
+      if(!this.__syncList.length) {
+        return 0;
+      }
+      
+      return this.__syncList.reduce((p, c) => c.time + p, 0) / this.__syncList.length;
     }
 
     /**

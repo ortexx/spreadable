@@ -596,14 +596,14 @@ describe('DatabaseLoki', () => {
       });
     });
 
-    describe('.clearBehaviorDelays()', function () { 
+    describe('.cleanBehaviorDelays()', function () { 
       it('should remove all action behavior', async function () {
         const address = 'localhost:1';
         await loki.addBehaviorDelay(action, address);
         await loki.addBehaviorDelay('anotherAction', address);
         let data = loki.col.behaviorDelays.find({ action });
         assert.equal(data.length, 2, 'check before');
-        await loki.clearBehaviorDelays(action);
+        await loki.cleanBehaviorDelays(action);
         data = loki.col.behaviorDelays.find({ action });
         assert.equal(data.length, 0, 'check the current action');
         data = loki.col.behaviorDelays.find();
