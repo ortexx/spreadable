@@ -428,8 +428,8 @@ describe('utils', () => {
 
   describe('.isValidPort()', () => {
     it('should return true', () => {
-      for(let i = 0; i < 65535; i++) {
-        assert.isTrue(utils.isValidPort(i + 1));
+      for(let i = 0; i <= 65535; i++) {
+        assert.isTrue(utils.isValidPort(i));
       }    
       
       assert.isTrue(utils.isValidPort('1'), 'check a string');
@@ -437,7 +437,6 @@ describe('utils', () => {
 
     it('should return false', () => {
       assert.isFalse(utils.isValidPort(65536));
-      assert.isFalse(utils.isValidPort(0));
       assert.isFalse(utils.isValidPort(65536 * 2));
       assert.isFalse(utils.isValidPort('string'));     
       assert.isFalse(utils.isValidPort()); 

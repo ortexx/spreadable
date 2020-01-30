@@ -24,6 +24,8 @@ describe('services', () => {
   describe('logger', () => {
     require('./logger/logger');
     require('./logger/console');
+    require('./logger/file');
+    require('./logger/adapter');
   });
 
   describe('task', () => {

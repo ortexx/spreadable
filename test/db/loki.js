@@ -690,6 +690,15 @@ describe('DatabaseLoki', () => {
       });
     });
 
+    describe('.cleanBehaviorFail()', function () { 
+      it('should remove the behavior', async function () {
+        const address = 'localhost:1';
+        await loki.addBehaviorFail(action, address, 10); 
+        await loki.cleanBehaviorFail(action, address); 
+        assert.isNull(await loki.getBehaviorFail(action, address));
+      });
+    });
+
     describe('.normalizeBehaviorFails()', function () { 
       it('check the lifetime', async function () {
         const count = loki.col.behaviorFails.count({ action });

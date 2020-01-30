@@ -5,6 +5,13 @@ module.exports.WorkError = class WorkError extends Error {
   }
 };
 
+module.exports.AuthError = class AuthError extends Error {
+  constructor(message) {
+    super(message);
+    this.statusCode = 401;
+  }
+};
+
 module.exports.AccessError = class AccessError extends Error {
   constructor(message) {
     super(message);

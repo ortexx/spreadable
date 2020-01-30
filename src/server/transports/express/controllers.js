@@ -8,7 +8,7 @@ const utils = require('../../../utils');
 module.exports.clientInfo = () => {
   return (req, res, next) => {
     req.clientIp = utils.getRemoteIp(req);
-    req.clientAddress = req.headers['original-address'];
+    req.clientAddress = req.headers['original-address'] || `${req.clientIp}:0`;
     next();
   };
 };

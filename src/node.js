@@ -2,6 +2,8 @@ const ms = require('ms');
 const os = require('os');
 const v8 = require('v8');
 const urlib = require('url');
+const path = require('path');
+const fse = require('fs-extra');
 const _ = require('lodash');
 const https = require('https');
 const fetch = require('node-fetch');
@@ -46,6 +48,9 @@ module.exports = (Parent) => {
 
       this.options = _.merge({
         hostname: '',  
+        storage: {
+          path: '',
+        },
         request: {
           clientConcurrency: 50,
           timeoutSlippage: 120,
@@ -57,7 +62,8 @@ module.exports = (Parent) => {
           syncInterval: '10s',
           syncTimeCalculationPeriod: '1d',
           isTrusted: false,
-          secretKey: '',
+          auth: null,
+          authCookieMaxAge: '7d',
           serverMaxFails: 5,
           whitelist: [],
           blacklist: []
@@ -68,7 +74,7 @@ module.exports = (Parent) => {
         },
         behavior: {
           candidateSuspicionLevel: 5,
-          failSuspicionLevel: 15,
+          failSuspicionLevel: 10,
           failLifetime: '1d',
           banLifetime: '27d'
         },
@@ -94,7 +100,6 @@ module.exports = (Parent) => {
       this.__syncInterval = null;
       this.__cpuUsage = 0;
       this.__requestQueue = {};
-      this.__requestQueueInterval = 10;
       this.__syncList = [];
       this.prepareOptions();
     }    
@@ -105,6 +110,7 @@ module.exports = (Parent) => {
      * @async
      */
     async init() {
+      this.storagePath = this.options.storage.path || path.join(process.cwd(), this.constructor.codename, `storage-${this.port}`);
       this.hostname = this.options.hostname || (await this.getExternalIp()) || (await this.getLocalIp());
       this.address = utils.createAddress(this.hostname, this.publicPort);
       this.ip = await utils.getHostIp(this.hostname);
@@ -113,6 +119,7 @@ module.exports = (Parent) => {
         throw new Error(`Hostname ${this.hostname} is not found`);
       }
 
+      await fse.ensureDir(this.storagePath);
       await this.prepareServices();
       await this.prepareBehavior();
       await this.initServices();     
@@ -178,7 +185,8 @@ module.exports = (Parent) => {
     }
 
     async prepareBehavior() {
-      await this.db.addBehaviorFailOptions('requestDelays', { banLifetime: '5m', failSuspicionLevel: 200 });
+      await this.db.addBehaviorFailOptions('requestDelays', { banLifetime: ms('5m'), failSuspicionLevel: 200 });
+      await this.db.addBehaviorFailOptions('authentication', { banLifetime: ms('15m'), failSuspicionLevel: 10 });
     }
 
     /**
@@ -1379,7 +1387,7 @@ module.exports = (Parent) => {
           return options.getFullResponse? result: await result.json();
         }
 
-        const body = await result.json();
+        const body = (result.headers.get('content-type') || '').match('application/json')? await result.json(): null;
 
         if(!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
@@ -1944,6 +1952,7 @@ module.exports = (Parent) => {
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
       this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
       this.options.network.syncTimeCalculationPeriod = utils.getMs(this.options.network.syncTimeCalculationPeriod);
+      this.options.network.authCookieMaxAge = utils.getMs(this.options.network.authCookieMaxAge);      
       this.options.behavior.failLifetime = utils.getMs(this.options.behavior.failLifetime);      
       this.options.behavior.banLifetime = utils.getMs(this.options.behavior.banLifetime);
     } 
@@ -2063,12 +2072,17 @@ module.exports = (Parent) => {
     createDefaultRequestOptions(options = {}) {
       const defaults = {
         method: 'POST',
-        headers: {
-          'network-secret-key': this.options.network.secretKey,
+        headers: {          
           'original-address': this.address,
           'node-version': this.getVersion()
         }
       };
+
+      if(this.options.network.auth) {
+        const user = this.options.network.auth.username;
+        const pass = this.options.network.auth.password;
+        defaults.headers.authorization = `Basic ${ Buffer.from(user + ":" + pass).toString('base64') }`;
+      }
 
       if(options.timeout) {
         options.timeout = utils.getMs(options.timeout);

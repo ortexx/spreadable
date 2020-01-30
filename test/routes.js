@@ -11,9 +11,16 @@ describe('routes', () => {
   let client;
 
   before(async function() {
-    node = new Node(await tools.createNodeOptions({ network: { secretKey: 'key' } }));
+    node = new Node(await tools.createNodeOptions({ 
+      network: { 
+        auth: { username: 'username', password: 'password' }
+      } 
+    }));
     await node.init();
-    client = new Client(await tools.createClientOptions({ address: node.address, secretKey: 'key' }));
+    client = new Client(await tools.createClientOptions({ 
+      address: node.address, 
+      auth: { username: 'username', password: 'password' }
+    }));
     await client.init();
   });
 
@@ -29,9 +36,9 @@ describe('routes', () => {
   });
 
   describe('/status', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const res = await fetch(`http://${node.address}/status`);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the status', async function () { 
@@ -56,9 +63,9 @@ describe('routes', () => {
   });
 
   describe('/members', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const res = await fetch(`http://${node.address}/members`);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the members', async function () { 
@@ -73,9 +80,9 @@ describe('routes', () => {
   });
 
   describe('/client/get-available-node', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const res = await fetch(`http://${node.address}/client/get-available-node`, { method: 'post' });
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the node address', async function () { 
@@ -90,9 +97,9 @@ describe('routes', () => {
   });
 
   describe('/api/master/walk', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const res = await fetch(`http://${node.address}/api/master/walk`, { method: 'post' });
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return a master acception error', async function () { 
@@ -120,9 +127,9 @@ describe('routes', () => {
       await targetNode.deinit();
     })
 
-    it('should return an access error', async function () {        
+    it('should return an auth error', async function () {        
       const res = await fetch(`http://${node.address}/api/node/register`, { method: 'post' });
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return an interview eror', async function () {        
@@ -144,10 +151,10 @@ describe('routes', () => {
   });
 
   describe('/api/node/structure', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const options = tools.createJsonRequestOptions();         
       const res = await fetch(`http://${node.address}/api/node/structure`, options);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the right schema', async function () {
@@ -171,10 +178,10 @@ describe('routes', () => {
       };
     });
 
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const options = tools.createJsonRequestOptions({ body });         
       const res = await fetch(`http://${node.address}/api/node/provide-structure`, options);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the right schema', async function () {
@@ -198,10 +205,10 @@ describe('routes', () => {
       };
     });
 
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const options = tools.createJsonRequestOptions({ body });         
       const res = await fetch(`http://${node.address}/api/node/provide-group-structure`, options);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the right schema', async function () {
@@ -215,10 +222,10 @@ describe('routes', () => {
   });
 
   describe('/api/node/get-interview-summary', function () {
-    it('should return an access error', async function () { 
+    it('should return an auth error', async function () { 
       const options = tools.createJsonRequestOptions();         
       const res = await fetch(`http://${node.address}/api/node/get-interview-summary`, options);
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the right schema', async function () {
@@ -232,9 +239,9 @@ describe('routes', () => {
   });
 
   describe('/api/node/provide-registration', function () {
-    it('should return an access error', async function () {         
+    it('should return an auth error', async function () {         
       const res = await fetch(`http://${node.address}/api/node/provide-registration`, { method: 'post' });
-      assert.equal(await res.status, 403);
+      assert.equal(await res.status, 401);
     });
 
     it('should return the right schema', async function () {

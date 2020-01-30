@@ -376,6 +376,17 @@ module.exports = (Parent) => {
       throw new Error('Method "subBehaviorFail" is required for database transport');
     }
 
+     /**
+     * Clean the fail behavior
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} address
+     */
+    async cleanBehaviorFail() {
+      throw new Error('Method "cleanBehaviorFail" is required for database transport');
+    }
+
     /**
      * Set the behavior fail options
      * 

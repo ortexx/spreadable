@@ -17,6 +17,50 @@ module.exports = (Parent) => {
   return class Client extends (Parent || Service) {
     static get LoggerTransport () { return LoggerConsole }
     static get TaskTransport () { return TaskInterval }
+    
+    /**
+     * Get the auth cookie value
+     * 
+     * @returns {object}
+     */
+    static getAuthCookieValue() {
+      if(typeof location != 'object' || !location.hostname) {
+        return null;
+      }
+     
+      const address = this.getPageAddress();
+      const name = `spreadableNetworkAuth[${ address }]`;
+      const value = "; " + document.cookie;
+      const parts = value.split("; " + name + "=");
+      const res = parts.length == 2 && parts.pop().split(";").shift();
+      return res? JSON.parse(atob(res)): null;
+    }
+
+    /**
+     * Get the page address
+     * 
+     * @returns {string}
+     */
+    static getPageAddress() {
+      if(typeof location != 'object' || !location.hostname) {
+        return '';
+      }
+
+      return `${ location.hostname }:${ location.port || (this.getPageProtocol() == 'https'? 443: 80) }`;
+    }
+
+    /**
+     * Get the page protocol
+     * 
+     * @returns {string}
+     */
+    static getPageProtocol() {
+      if(typeof location != 'object' || !location.protocol) {
+        return '';
+      }
+
+      return location.protocol.split(':')[0];
+    }
 
     /**
      * @param {object} options
@@ -25,16 +69,13 @@ module.exports = (Parent) => {
     constructor(options = {}) {
       super(...arguments);
 
-      if(!options.address) {
-        throw new Error('You must pass the node address in "ip:port" format');
-      }
-
       this.options = merge({
         request: {
           pingTimeout: '1s',
-          clientTimeout: '8s'
+          clientTimeout: '10s'
         },
-        secretKey: '',
+        auth: this.constructor.getAuthCookieValue(),
+        address: this.constructor.getPageAddress(),
         https: false,
         logger: {
           level: 'info'
@@ -44,10 +85,15 @@ module.exports = (Parent) => {
         }
       }, options);
 
+      if(!this.options.address) {
+        throw new Error('You must pass the node address in "ip:port" format');
+      }
+
       !this.options.logger && (this.options.logger = { level: false });
+      typeof this.options.logger == 'string' && (this.options.logger = { level: this.options.logger });
       this.LoggerTransport = this.constructor.LoggerTransport;
       this.TaskTransport = this.constructor.TaskTransport;
-      this.address = options.address;
+      this.address = this.options.address;
       this.prepareOptions();
     }
 
@@ -218,8 +264,8 @@ module.exports = (Parent) => {
 
       try {        
         const result = await fetch(options.url, options);    
-        this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);    
-        const body = await result.json();
+        this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);
+        const body = (result.headers.get('content-type') || '').match('application/json')? await result.json(): null;
 
         if(result.ok) {
           return body;
@@ -263,14 +309,27 @@ module.exports = (Parent) => {
      * @param {object} options
      * @returns {object}
      */
-    createDefaultRequestOptions(options = {}) {      
+    createDefaultRequestOptions(options = {}) {   
       const defaults = {
         method: 'POST',
         timeout: this.options.request.clientTimeout,
-        headers: {
-          'network-secret-key': this.options.secretKey          
-        }
+        headers: {}
       };
+
+      if(this.options.auth) {
+        const username = this.options.auth.username;
+        const password = this.options.auth.password;
+        let header = 'Basic ';
+
+        if(typeof Buffer == 'function') {
+          header += Buffer.from(username + ":" + password).toString('base64');
+        }
+        else {
+          header += btoa(username + ":" + password);
+        }
+
+        defaults.headers.authorization = header;
+      }
 
       if(options.timeout) {
         options.timeout = utils.getMs(options.timeout);

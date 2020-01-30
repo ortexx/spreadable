@@ -2,6 +2,8 @@ const errors = require('../../../errors');
 const utils = require('../../../utils');
 const _ = require('lodash');
 const crypto = require('crypto');
+const Cookies = require('cookies');
+const basicAuth = require('basic-auth');
 const cors = require('cors');
 const midds = {};
 
@@ -32,7 +34,7 @@ midds.checkMasterAcception = node => {
 };
 
 /**
- * Update client info
+ * Update the client info
  */
 midds.updateClientInfo = node => {
   return async (req, res, next) => {
@@ -50,13 +52,51 @@ midds.updateClientInfo = node => {
  * Control the current request client access
  */
 midds.networkAccess = (node, checks = {}) => {
-  checks = _.merge({ secretKey: true, address: false, version: false }, checks);
+  checks = _.merge({ 
+    auth: true, 
+    address: false, 
+    version: false, 
+  }, checks);
 
   return async (req, res, next) => {    
     try {
-      if(checks.secretKey) {
-        if((req.headers['network-secret-key'] || '') != node.options.network.secretKey) {
-          throw new errors.AccessError('Wrong network secret key');
+      await node.addressFilter(req.clientAddress);
+      await node.networkAccess(req);
+
+      if(
+        checks.address && 
+        (
+          !utils.isValidAddress(req.clientAddress) ||
+          !utils.isIpEqual(await utils.getAddressIp(req.clientAddress), req.clientIp)
+        )
+      ) {      
+        throw new errors.AccessError(`Wrong address "${ req.clientAddress }"`);
+      }
+
+      if(checks.auth && node.options.network.auth) {
+        const auth = node.options.network.auth;
+        const cookies = new Cookies(req, res);
+        const cookieKey = `spreadableNetworkAuth[${ node.address }]`;
+        const cookieKeyValue = cookies.get(cookieKey);
+        const info = basicAuth(req);
+        const cookieInfo = cookieKeyValue? JSON.parse(Buffer.from(cookieKeyValue, 'base64')): null;
+        
+        if(
+          (!cookieInfo || cookieInfo.username != auth.username || cookieInfo.password != auth.password) && 
+          (!info || info.name != auth.username || info.pass != auth.password)
+        ) {
+          res.setHeader('WWW-Authenticate', `Basic realm="${ node.address }"`);
+          await node.db.addBehaviorFail('authentication', req.clientAddress);
+          throw new errors.AuthError('Authentication is required');
+        }
+
+        await node.db.cleanBehaviorFail('authentication', req.clientAddress);
+
+        if(!cookieKeyValue) {
+          cookies.set(cookieKey, Buffer.from(JSON.stringify(auth)).toString('base64'), { 
+            maxAge: node.options.network.authCookieMaxAge, 
+            httpOnly: false 
+          });
         }
       }
 
@@ -64,22 +104,10 @@ midds.networkAccess = (node, checks = {}) => {
         const version = node.getVersion();
 
         if(req.headers['node-version'] != version) {
-          throw new errors.AccessError(`Client version is different: "${req.headers['node-version']}" instead of "${version}"`);
+          throw new errors.AccessError(`Client version is different: "${ req.headers['node-version'] }" instead of "${ version }"`);
         }
       }
-
-      let address = utils.createAddress(req.clientIp, 1);
-
-      if(checks.address) {
-        address = req.clientAddress;
       
-        if(!utils.isValidAddress(address) || (!utils.isIpEqual(await utils.getAddressIp(address), req.clientIp))) {
-          throw new errors.AccessError(`Wrong address "${address}"`);
-        }
-      }
-
-      await node.addressFilter(address);
-      await node.networkAccess(req);
       next();
     }
     catch(err) {
@@ -89,7 +117,7 @@ midds.networkAccess = (node, checks = {}) => {
 };
 
 /**
- * Control the client requests queue
+ * Control client requests queue
  */
 midds.requestQueueClient = (node, options = {}) => {
   options = _.merge({
@@ -104,26 +132,17 @@ midds.requestQueueClient = (node, options = {}) => {
 };
 
 /**
- * Control the parallel requests queue
+ * Control parallel requests queue
  */
-midds.requestQueue = (node, keys, options) => {  
-  options = _.merge({
-    limit: 0,
-    active: true,
-    fnCheck: () => true
-  }, options);
+midds.requestQueue = (node, keys, options) => { 
+  options = _.merge({ limit: 1 }, options);
 
-  return async (req, res, next) => {    
-    !Array.isArray(keys) && (keys = [keys]);
-    const promise = [];
-    
-    try { 
-      for(let i = 0; i < keys.length; i++) {        
-        let key = keys[i];
+  return async (req, res, next) => {
+    const createPromise = key => {
+      return new Promise((resolve, reject) => {
         key = typeof key == 'function'? key(req): key;
         const hash = crypto.createHash('md5').update(key).digest("hex"); 
         const obj = node.__requestQueue;
-       
 
         if(!hash) {
           throw new errors.WorkError('"hash" is invalid', 'ERR_STORACLE_INVALID_REQUEST_QUEUE_HASH');
@@ -131,37 +150,43 @@ midds.requestQueue = (node, keys, options) => {
     
         (!obj[hash] || !obj[hash].length) && (obj[hash] = []);
         const arr = obj[hash];
-        
-        const finish = () => {        
-          interval && clearInterval(interval);
-          const index = arr.indexOf(req);
-          index != -1 && arr.splice(index, 1);
-          !arr.length && delete obj[hash];
-          req.removeListener('close', finish);
-          res.removeListener('finish', finish);
-        };
+        let finished = false;        
+        const finishFn = () => {
+          try {
+            if(finished) {
+              return;
+            }
 
-        req.on('close', finish);  
-        res.on('finish', finish);
-
-        let interval;
-        const check = () => (!options.limit || arr.indexOf(req) < options.limit) && options.fnCheck(arr);
-        arr.push(req);
-
-        if(options.active) {
-          if(check()) {
-            continue;
+            finished = true;
+            req.removeListener('close', finishFn);
+            res.removeListener('finish', finishFn);
+            const index = arr.findIndex(it => it.req == req);
+ 
+            if(index >= 0) {
+              arr.splice(index, 1);
+              arr[options.limit - 1] && arr[options.limit - 1].startFn();
+            }
+            
+            !arr.length && delete obj[hash];     
           }
+          catch(err) {
+            reject(err);
+          }
+        };
+        const startFn = resolve;
+        req.on('close', finishFn);  
+        res.on('finish', finishFn);
+        arr.push({ req, startFn });
+        arr.length <= options.limit && startFn();
+      });
+    }
+    
+    try {
+      !Array.isArray(keys) && (keys = [keys]);
+      const promise = [];
 
-          promise.push(new Promise(resolve => {
-            interval = setInterval(() => {              
-              if(check()) {              
-                clearInterval(interval);
-                resolve();
-              }              
-            }, node.__requestQueueInterval);
-          }));
-        } 
+      for(let i = 0; i < keys.length; i++) {
+        promise.push(createPromise(keys[i]));
       }
 
       await Promise.all(promise);

@@ -373,7 +373,11 @@ utils.createAddress = function (hostname, port) {
  * @returns {boolean}
  */
 utils.isValidPort = function (port) {
-  return +port > 0 && +port <= 65535;
+  if(!['number', 'string'].includes(typeof port)) {
+    return false;
+  }
+
+  return +port >= 0 && +port <= 65535;
 };
 
 /**

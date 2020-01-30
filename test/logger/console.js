@@ -41,21 +41,42 @@ describe('LoggerConsole', function () {
   });
 
   describe('.info()', function () { 
-    it('should increment info', async function () {
+    it('should not increment', async function () {
+      logger.level = 'warn';
+      await logger.info('test info');
+      assert.equal(status['info'], 0);
+    }); 
+
+    it('should increment', async function () {
+      logger.level = 'info';
       await logger.info('test info');
       assert.equal(status['info'], 1);
     }); 
   });
 
   describe('.warn()', function () { 
-    it('should increment warn', async function () {
+    it('should not increment', async function () {
+      logger.level = 'error';
+      await logger.info('test warn');
+      assert.equal(status['warn'], 0);
+    });
+
+    it('should increment', async function () {
+      logger.level = 'warn';
       await logger.warn('test warn');
       assert.equal(status['warn'], 1);
     });    
   });
 
   describe('.error()', function () { 
-    it('should increment error', async function () {
+    it('should not increment', async function () {
+      logger.level = false;
+      await logger.info('test warn');
+      assert.equal(status['error'], 0);
+    });
+
+    it('should increment', async function () {
+      logger.level = 'error';
       await logger.error('test error');
       assert.equal(status['error'], 1);
     });    

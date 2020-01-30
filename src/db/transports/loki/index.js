@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 const loki = require('lokijs');
+const LokiFsSyncAdapter = require('lokijs/src/loki-fs-sync-adapter.js');  
 const utils = require('../../../utils');
 const onExit = require('signal-exit');
 
@@ -13,7 +14,7 @@ module.exports = (Parent) => {
   return class DatabaseLoki extends (Parent || Database) {
     constructor(node, options = {}) {
       options = _.merge({
-        filename: path.join(process.cwd(), node.constructor.codename, `loki-${node.port}.db`),
+        filename: path.join(node.storagePath, 'loki.db'),
         autosaveInterval: 3000
       }, options);
 
@@ -44,8 +45,10 @@ module.exports = (Parent) => {
       });        
 
       this.__onExitListenerRemoveFn = onExit(() => {
-        if(this.loki && this.__initialized) {
-          fs.writeFileSync(this.loki.filename, this.loki.serialize());
+        if(this.loki && this.__initialized) {                
+          this.loki.persistenceMethod = 'adapter';
+          this.loki.persistenceAdapter = new LokiFsSyncAdapter();
+          this.saveDatabase();
         }
       });
 
@@ -853,6 +856,19 @@ module.exports = (Parent) => {
 
       behavior.updatedAt = Date.now();
       this.col.behaviorFails.update(behavior);
+    }
+
+     /**
+     * @see Database.prototype.cleanBehaviorFail
+     */
+    async cleanBehaviorFail(action, address) {
+      const behavior = this.col.behaviorFails.findOne({ address, action });
+
+      if(!behavior) {
+        return;
+      }
+      
+      this.col.behaviorFails.remove(behavior);
     }
 
     /**

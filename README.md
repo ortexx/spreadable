@@ -1,4 +1,4 @@
-# [Spreadable](https://github.com/ortexx/spreadable/) [alpha]
+# [Spreadable](https://github.com/ortexx/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable)
 
 Spreadable is a decentralized network mechanism.
 You can use it to combine servers in a public or private network for any purpose. The library consists of two parts:
@@ -325,10 +325,10 @@ You need to make all the necessary settings and redirects on the receiving serve
 
 ## How to create a private network
 
-### 1. Use a secret key
+### 1. Use the basic authentication
 ```javascript
 const Node = require('spreadable').Node;
-const secretKey = 'mySecretKey';
+const auth = { username: 'user', password: 'pass' };
 
 (async () => {  
   try {
@@ -337,7 +337,7 @@ const secretKey = 'mySecretKey';
       hostname: 'localhost',
       initialNetworkAddress: 'localhost:4000',
       network: {
-        secretKey
+        auth
       }
     });
     await node.init();
@@ -351,13 +351,13 @@ const secretKey = 'mySecretKey';
 
 ```javascript
 const Client = require('spreadable').Client;
-const secretKey = 'mySecretKey';
+const auth = { username: 'user', password: 'pass' };
 
 (async () => {  
   try {
     const client = new Client({
       address: 'localhost:4000',
-      secretKey
+      auth
     });
     await client.init();
   }

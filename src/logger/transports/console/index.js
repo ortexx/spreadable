@@ -20,14 +20,13 @@ module.exports = (Parent) => {
     /**
      * @see Logger.prototype.log
      */
-    async log(level, ...args) {
-      if(this.isLevelActive(level)) {   
-        //eslint-disable-next-line no-console
-        console[level].apply(console[level], utils.isBrowserEnv()? args: args.map(arg => {
-          arg && typeof arg == 'object' && (arg = JSON.stringify(arg));
-          return chalk[this.colors[level]](arg);
-        }));
-      }
+    async log(level, message) {
+      if(!this.isLevelActive(level)) {  
+        return;
+      } 
+      
+      //eslint-disable-next-line no-console
+      (console[level] || console.log)(utils.isBrowserEnv()? message: chalk[this.colors[level]](message));
     }
   }
 };

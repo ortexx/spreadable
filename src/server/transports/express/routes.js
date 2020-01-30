@@ -11,7 +11,7 @@ module.exports = [
  { name: 'ping', mehtod: 'get', url: '/ping', fn: controllers.ping },
  { name: 'status', mehtod: 'get', url: '/status', fn: [midds.networkAccess, controllers.status] },
  { name: 'members', mehtod: 'get', url: '/members', fn: [midds.networkAccess, controllers.members] },
- { name: 'indexPage', mehtod: 'get', url: '*', fn: controllers.indexPage },
+ { name: 'indexPage', mehtod: 'get', url: '*', fn: [midds.networkAccess, controllers.indexPage] },
  { name: 'notFound', fn: controllers.notFound },
  { name: 'handleErrors', fn: controllers.handleErrors }
 ];
