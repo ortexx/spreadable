@@ -453,7 +453,7 @@ When you create an instance of the node you can pass options below:
 
 * {boolean} __[network.isTrusted=false]__ - can nodes trust each other on this network or not. If the value is false the system will perform additional checks to recognize and ban intruders. This can be resource intensive with a large number of nodes. Therefore, if your network is closed and you control all of your nodes yourself then enable this option.
 
-* {number|string} __[network.syncInterval="16s"]__ - synchronization interval
+* {number|string} __[network.syncInterval="16s"]__ - synchronization interval.
 
 * {number|string} __[network.syncTimeCalculationPeriod="1d"]__ - synchronization statistics collection period.
 
@@ -473,21 +473,21 @@ When you create an instance of the node you can pass options below:
 
 * {object} __[server]__ - section that responds for the server settings.
 
-* {boolean} __[server.https=false]__ - use https or not
+* {boolean} __[server.https=false]__ - use https or not.
 
-* {number|string} __[server.maxBodySize="500kb"]__ - maximum body size
+* {number|string} __[server.maxBodySize="500kb"]__ - maximum body size.
 
-* {string} __[server.key]__ - ssl key
+* {string} __[server.key]__ - ssl key.
 
-* {string} __[server.cert]__ - ssl certificate
+* {string} __[server.cert]__ - ssl certificate.
 
-* {string} __[server.ca]__ - ssl certificate authority
+* {string} __[server.ca]__ - ssl certificate authority.
 
 * {object} __[behavior]__ - section that responds for the behavior settings. If the "network.isTrusted" is false then the behavior of the node is monitored to block nodes that disrupt the network.
 
-* {boolean} __[behavior.ban=true]__ - ban suspicious nodes or not
+* {boolean} __[behavior.ban=true]__ - ban suspicious nodes or not.
 
-* {number|string} __[behavior.banLifetime="27d"]__ - ban period
+* {number|string} __[behavior.banLifetime="27d"]__ - ban period.
 
 * {number} __[behavior.candidateSuspicionLevel=5]__ - suspicious level of the candidate node.
 
@@ -497,7 +497,7 @@ When you create an instance of the node you can pass options below:
 
 * {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.
 
-* {string|false} __[logger.level="info"]__ - logger level. There are three levels by default: "info", "warn", "error". The order of listing matters. If the level is "info" this means that all calls will be logged. If you use "warn" level then only "warn" and "error" calls will be logged and so on. To disable the logger pass the level as false.
+* {string|false} __[logger.level="info"]__ - logger level. There are three levels, by default: "info", "warn", "error". The order of listing matters. If the level is "info" this means that all calls will be logged. If you use "warn" level then only "warn" and "error" calls will be logged and so on. To disable the logger pass the level as false.
 
 * {object|false} __[task]__ - section that responds for the task settings. It is necessary to perform some tasks in the background.
 
@@ -509,21 +509,21 @@ When you create an instance of the client you can pass options below:
 
 * {string|string[]} __address__ - input node address to connect to the network. It can be an array with addresses that will be tested in turn until a working one is found.
 
-* __[auth]__ - look at _node.options.network.auth_
+* __[auth]__ - look at _node.options.network.auth_.
 
-* __[logger]__ - look at _node.options.logger_
+* __[logger]__ - look at _node.options.logger_.
 
-* __[request]__ - look at _node.options.request_
+* __[request]__ - look at _node.options.request_.
 
-* __[request.pingTimeout]__ - look at _node.options.request.pingTimeout_
+* __[request.pingTimeout]__ - look at _node.options.request.pingTimeout_.
 
 * {number|string} __[request.clientTimeout="10s"]__ - default timeout for a typical client request for any purpose.
 
-* {boolean|object} __[https=false]__ - use https or not
+* {boolean|object} __[https=false]__ - use https or not.
 
-* {string} __[https.ca]__ - ssl certificate authority
+* {string} __[https.ca]__ - ssl certificate authority.
 
-* __[task]__ - look at _node.options.task_
+* __[task]__ - look at _node.options.task_.
 
 * {number|string} __[task.workerChangeInterval="30s"]__ - worker node changing interval. Client requests don't have to be made through the passed input address. The input node returns the most free one from the network which is called "worker" in this context. Requests occur through it. After a certain time the worker changes.
 
