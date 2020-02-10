@@ -104,7 +104,7 @@ midds.networkAccess = (node, checks = {}) => {
         const version = node.getVersion();
 
         if(req.headers['node-version'] != version) {
-          throw new errors.AccessError(`Client version is different: "${ req.headers['node-version'] }" instead of "${ version }"`);
+          throw new errors.AccessError(`Node version is different: "${ req.headers['node-version'] }" instead of "${ version }"`);
         }
       }
       
@@ -135,7 +135,7 @@ midds.requestQueueClient = (node, options = {}) => {
  * Control parallel requests queue
  */
 midds.requestQueue = (node, keys, options) => { 
-  options = _.merge({ limit: 1 }, options);
+  options = _.merge({ limit: 1 }, options);  
 
   return async (req, res, next) => {
     const createPromise = key => {
@@ -183,6 +183,7 @@ midds.requestQueue = (node, keys, options) => {
     
     try {
       !Array.isArray(keys) && (keys = [keys]);
+      keys = [...new Set(keys)].filter(it => it);
       const promise = [];
 
       for(let i = 0; i < keys.length; i++) {

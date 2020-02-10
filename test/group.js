@@ -31,7 +31,7 @@ describe('group communication', () => {
     await nodes[2].init();
     nodes[1].initialNetworkAddress = nodes[2].address;    
     await tools.wait(await nodes[1].getSyncLifetime());
-    await nodes[1].sync();    
+    await nodes[1].sync();
     assert.equal((await nodes[1].db.getBacklink()).address, nodes[2].address, 'check the new backlink');      
     await nodes[0].sync();
     assert.isFalse(await nodes[0].db.hasSlave(nodes[1].address), 'check the slave is removed in the master');

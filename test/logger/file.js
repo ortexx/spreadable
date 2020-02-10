@@ -9,7 +9,7 @@ describe('LoggerConsole', function () {
   let folder;
 
   before(() => {
-    folder = tools.tmpPath + '/file-logs';
+    folder = path.join(tools.tmpPath, 'file-logs');
   });
   
   describe('instance creation', function () {

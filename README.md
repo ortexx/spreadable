@@ -41,7 +41,7 @@ const Client = require('spreadable').Client;
 })();
 ```
 
-In the example above, we run a node, and then we connected to it through the client in order to perform some actions in the future. Let's add another node to our local network.
+In the example above we run the node and connected to it via the client to do something in the future. Let's add another node to our local network.
 
 ```javascript  
 // Another server
@@ -63,7 +63,7 @@ const Node = require('spreadable').Node;
 })();
 ```
 
-In order to join to an already existing network you need to pass __initialNetworkAddress__ option containing the address of any of the network active node. If you are launching the very first server then simply indicate in the option a link to yourself as was done at the very beginning. Now you can add to the network the number of nodes you need. The client can use the address of any active network node to connect to the network itself.
+In order to join to an already existing network you need to pass __initialNetworkAddress__ option containing the address of any of the network active node. If you are launching the very first server then simply indicate in the option a link to yourself as was done at the very beginning or just skip this option. Now you can add to the network the number of nodes you need. The client can use the address of any active network node to connect to the network itself.
 
 ```javascript
 const Client = require('spreadable').Client;
@@ -127,13 +127,13 @@ import Client from 'spreadable/dist/spreadable.client.js';
 You can use webpack or something else to build the client for the browser with entry point __spreadable/src/browser/client/index.js__. Then you import / require it in your application and use as usually.
 
 ## How the network works
-For the network working all nodes must be able to communicate with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it or the old one will leave. After a while, another server will take over this role.
+For the network working all nodes must be able to interact with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it or the old one will leave. After a while, another server will take over this role.
 
 ## How nodes distinguish each other
 The node ID is called __address__ and written as __hostname:port__. Hostname might be a domain name or an ip address. For ipv6 it is __[ip]:port__. By default, the server tries to get its external ip. If the computer is not connected to the Internet then it will use the local ip address. Or you can always pass the __hostname__ as an option manually. If the node address changes then it is simply re-registering on the network.
 
 ## What are the limitations
-To implement various features it is often required to go through the entire network to find the necessary information. The protocol allows to do this in a sequence of 2 http requests. But to iterate the network many requests are made in parallel. The first query from the starting point goes to all masters each of which is traversed by nodes from its list also in parallel. The number of simultaneous requests always strive to the square root of the network size. Therefore, with a larger network size each node must be configured to be able to work with a large number of tcp connections simultaneously. For example, take a network of 10,000 nodes. For maximum network performance each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network.
+To implement various features it is often required to go through the entire network to find the necessary information. The protocol allows to do this in a sequence of 3 http requests. The first query from the starting point goes from the client to the entry node, the next goes to all masters simultaneously each of which goes through nodes from its list in parallel as well. The number of simultaneous requests always strive to the square root of the network size. Therefore, with a larger network size each node must be configured to be able to work with a large number of tcp connections simultaneously. For example, take a network of 10,000 nodes. For maximum network performance each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network.
 
 ## How to control the time of requests
 When making requests the client can always specify a timeout.
@@ -142,7 +142,7 @@ When making requests the client can always specify a timeout.
 const Client = require('storacle').Client;
 const hash = 'someFileHash';
 
-(async () => {  
+(async () => {
   try {
     const client = new Client({      
       address: 'localhost:4000',
@@ -420,3 +420,125 @@ const Client = require('spreadable').Client;
 ```
 
 In both cases the network is closed, but not completely secure. If we use http protocol the data transferred is not encrypted. In some cases this is a suitable option, otherwise you need to use https.
+
+## Versioning
+
+In order for the nodes to interact with each other, they must have the same version. By default, the version consists of the node codename and the first two digits of the library version from package.json. It looks like __spreadable-1.12__, for example. Therefore, if minor and major changes have occurred in the library, then the nodes need to be updated.
+
+## Node configuration
+
+When you create an instance of the node you can pass options below:
+
+* {integer} __port__ - port on which the server will be run.  
+
+* {string} __[initialNetworkAddress]__ - input node address to connect to the network. By default, it is the node own address.
+
+* {string} __[hostname]__ - node hostname. By default, the system tries to find the external ip address. If it can't, then it chooses the internal one. Therefore, if you want to test something locally it is better to pass "localhost" manually.
+
+* {object} __[storage]__ - section that responds to storage settings. Storage is a place where all the necessary files are recorded: settings, logs, database, etc.
+
+* {string} __[storage.path]__ - storage path. By default, it is ``` `${process.cwd()}/${node.constructor.codename}/storage-${node.port}` ```
+
+* {object} __[request]__ - section that responds for http request settings.
+
+* {integer} __[request.clientConcurrency=50]__ - client request queue size. This means the maximum number of simultaneous client requests per endpoint.
+
+* {number|string} __[request.pingTimeout="1s"]__ - timeout for server health check requests.  
+
+* {number|string} __[request.serverTimeout="2s"]__ - default timeout for a typical server request for any purpose.
+
+* {object} __[network]__ - section that responds for the network settings.
+
+* {boolean} __[network.autoSync=true]__ - automatic node synchronization with the network or not.
+
+* {boolean} __[network.isTrusted=false]__ - can nodes trust each other on this network or not. If the value is false the system will perform additional checks to recognize and ban intruders. This can be resource intensive with a large number of nodes. Therefore, if your network is closed and you control all of your nodes yourself then enable this option.
+
+* {number|string} __[network.syncInterval="16s"]__ - synchronization interval
+
+* {number|string} __[network.syncTimeCalculationPeriod="1d"]__ - synchronization statistics collection period.
+
+* {object|null} __[network.auth=null]__ - basic authentication information. You can close the network from external access through the basic authentication mechanism using username and password.
+
+* {string} __[network.auth.username]__ - basic authentication username.
+
+* {string} __[network.auth.password]__ - basic authentication password.
+
+* {number|string} __[network.authCookieMaxAge="7d"]__ - period of saving authorization data on the client.
+
+* {integer} __[network.serverMaxFails=3]__ - number of failed requests to some node after which it will be removed from the lists.
+
+* {string[]} __[network.whitelist=[]]__ - list of node addresses or IP addresses that can work with the network. If the list is empty the node is accessible to everyone.
+
+* {string[]} __[network.blacklist=[]]__ - list of node addresses or IP addresses that can't work with the network. The blacklist has priority over the whitelist.
+
+* {object} __[server]__ - section that responds for the server settings.
+
+* {boolean} __[server.https=false]__ - use https or not
+
+* {number|string} __[server.maxBodySize="500kb"]__ - maximum body size
+
+* {string} __[server.key]__ - ssl key
+
+* {string} __[server.cert]__ - ssl certificate
+
+* {string} __[server.ca]__ - ssl certificate authority
+
+* {object} __[behavior]__ - section that responds for the behavior settings. If the "network.isTrusted" is false then the behavior of the node is monitored to block nodes that disrupt the network.
+
+* {boolean} __[behavior.ban=true]__ - ban suspicious nodes or not
+
+* {number|string} __[behavior.banLifetime="27d"]__ - ban period
+
+* {number} __[behavior.candidateSuspicionLevel=5]__ - suspicious level of the candidate node.
+
+* {number} __[behavior.failSuspicionLevel=10]__ - suspicious level of the failed node.
+
+* {number|string} __[behavior.failLifetime="1d"]__ - node fail information retention period
+
+* {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.
+
+* {string|false} __[logger.level="info"]__ - logger level. There are three levels by default: "info", "warn", "error". The order of listing matters. If the level is "info" this means that all calls will be logged. If you use "warn" level then only "warn" and "error" calls will be logged and so on. To disable the logger pass the level as false.
+
+* {object|false} __[task]__ - section that responds for the task settings. It is necessary to perform some tasks in the background.
+
+* {number|string} __[task.calculateCpuUsageInterval="1s"]__ - CPU load counting task interval. 
+
+## Client configuration
+
+When you create an instance of the client you can pass options below:
+
+* {string|string[]} __address__ - input node address to connect to the network. It can be an array with addresses that will be tested in turn until a working one is found.
+
+* __[auth]__ - look at _node.options.network.auth_
+
+* __[logger]__ - look at _node.options.logger_
+
+* __[request]__ - look at _node.options.request_
+
+* __[request.pingTimeout]__ - look at _node.options.request.pingTimeout_
+
+* {number|string} __[request.clientTimeout="10s"]__ - default timeout for a typical client request for any purpose.
+
+* {boolean|object} __[https=false]__ - use https or not
+
+* {string} __[https.ca]__ - ssl certificate authority
+
+* __[task]__ - look at _node.options.task_
+
+* {number|string} __[task.workerChangeInterval="30s"]__ - worker node changing interval. Client requests don't have to be made through the passed input address. The input node returns the most free one from the network which is called "worker" in this context. Requests occur through it. After a certain time the worker changes.
+
+## Client interface
+
+__Client.getAuthCookieValue()__ - get the basic auth info from cookies. This method is for the browser client only.
+
+__Client.getPageAddress()__ - get the current page address. This method is for the browser client only.
+
+__Client.getPageProtocol()__ - get the current page url protocol. This method is for the browser client only.
+
+async __Client.prototype.request()__ - request to some client endpoint
+  * {string} __endpoint__ - client endpoint to request
+  * {object} __[options]__ - request options
+
+## Contribution
+
+If you face a bug or have an idea how to improve the library create an issue on github. In order to fix something or add new code yourself fork the library, make changes and create a pull request to the master branch. Don't forget about tests in this case. Also you can join [the project on github](https://github.com/ortexx/spreadable/projects/1).

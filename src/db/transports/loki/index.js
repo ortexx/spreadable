@@ -631,7 +631,11 @@ module.exports = (Parent) => {
         .chain()
         .find({ 
           isBroken: true,
-          fails: { $lte: this.node.options.network.serverMaxFails }         
+          $or: [{ 
+            fails: { $lte: this.node.options.network.serverMaxFails }
+          }, {
+            address: this.node.address
+          }]
         })
         .update((obj) => {
           obj.isBroken = false;
@@ -642,7 +646,8 @@ module.exports = (Parent) => {
         .chain()
         .find({
           isBroken: false,
-          fails: { $gt: this.node.options.network.serverMaxFails }
+          fails: { $gt: this.node.options.network.serverMaxFails },
+          address: { $ne: this.node.address }
         })
         .update((obj) => {
           obj.isBroken = true;
@@ -684,6 +689,10 @@ module.exports = (Parent) => {
      * @see Database.prototype.failedServerAddress
      */
     async failedServerAddress(address) {
+      if(address == this.node.address) {
+        return;
+      }
+
       let server = this.col.servers.findOne({ address });
 
       if(!server) {
@@ -718,6 +727,10 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBehaviorCandidate
      */
     async addBehaviorCandidate(action, address) {
+      if(this.node.options.network.isTrusted) {
+        return;
+      }
+
       const data = this.col.behaviorCandidates.chain().find({ action }).simplesort('updatedAt', true).limit(1).data();
       const last = data.length? data[0]: null;  
       
@@ -823,6 +836,10 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBehaviorFail
      */
     async addBehaviorFail(action, address, step = 1) {
+      if(address == this.node.address || this.node.options.network.isTrusted) {
+        return;
+      }
+      
       const behavior = this.col.behaviorFails.findOne({ address, action });
       typeof step == 'function' && (step = step(behavior));
 
@@ -875,6 +892,9 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBehaviorFailOptions
      */
     async addBehaviorFailOptions(action, options) {
+      options = Object.assign({}, options);
+      options.banLifetime !== undefined && (options.banLifetime = utils.getMs(options.banLifetime));
+      options.failLifetime !== undefined && (options.failLifetime = utils.getMs(options.failLifetime));
       return this.__behaviorFailOptions[action] = options;
     }
 
@@ -882,12 +902,7 @@ module.exports = (Parent) => {
      * @see Database.prototype.getBehaviorFailOptions
      */
     async getBehaviorFailOptions(action) {
-      return _.merge({
-        ban: true,
-        banLifetime: this.node.options.behavior.banLifetime,
-        failSuspicionLevel: this.node.options.behavior.failSuspicionLevel,
-        failLifetime: this.node.options.behavior.failLifetime
-      }, this.__behaviorFailOptions[action] || {});
+      return _.merge({}, this.node.options.behavior, this.__behaviorFailOptions[action] || {});
     }
 
     /**
@@ -903,10 +918,6 @@ module.exports = (Parent) => {
        
         if(behavior.updatedAt < now - options.failLifetime) {
           this.col.behaviorFails.remove(behavior);
-          continue;
-        }
-
-        if(this.node.options.network.isTrusted) {
           continue;
         }
 
@@ -935,6 +946,10 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBanlistAddress
      */
     async addBanlistAddress(address, lifetime, reason) {
+      if(address == this.node.address || this.node.options.network.isTrusted) {
+        return;
+      }
+
       let ip = await utils.getAddressIp(address);
       ip = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
       const server = this.col.banlist.findOne({ address });

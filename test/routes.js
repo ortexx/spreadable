@@ -132,7 +132,7 @@ describe('routes', () => {
       assert.equal(await res.status, 401);
     });
 
-    it('should return an interview eror', async function () {        
+    it('should return an interview error', async function () {        
       const body = { target: 'localhost:1' };
       const options = node.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
       const res = await fetch(`http://${node.address}/api/node/register`, options);

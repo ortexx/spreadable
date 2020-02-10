@@ -17,13 +17,14 @@ const Service = require('./service')();
 const utils = require('./utils');
 const schema = require('./schema');
 const errors = require('./errors');
-const pack = require('../package');
+const pack = require('../package.json');
 
 module.exports = (Parent) => { 
   /**
    * The node class
    */
   return class Node extends (Parent || Service) {
+    static get version () { return pack.version }
     static get codename () { return 'spreadable' }
     static get DatabaseTransport () { return DatabaseLoki }
     static get ServerTransport () { return ServerExpress }
@@ -42,10 +43,6 @@ module.exports = (Parent) => {
         throw new Error('You must pass the necessary port');
       }
 
-      if(!options.initialNetworkAddress) {
-        throw new Error(`You must pass the initial network address`);
-      }
-
       this.options = _.merge({
         hostname: '',  
         storage: {
@@ -53,18 +50,17 @@ module.exports = (Parent) => {
         },
         request: {
           clientConcurrency: 50,
-          timeoutSlippage: 120,
           serverTimeout: '2s',
           pingTimeout: '1s'   
         },
         network: {
           autoSync: true,
-          syncInterval: '10s',
-          syncTimeCalculationPeriod: '1d',
           isTrusted: false,
+          syncInterval: '16s',
+          syncTimeCalculationPeriod: '1d',          
           auth: null,
           authCookieMaxAge: '7d',
-          serverMaxFails: 5,
+          serverMaxFails: 3,
           whitelist: [],
           blacklist: []
         },
@@ -73,10 +69,11 @@ module.exports = (Parent) => {
           maxBodySize: '500kb'
         },
         behavior: {
+          ban: true,
+          banLifetime: '27d',
           candidateSuspicionLevel: 5,
           failSuspicionLevel: 10,
-          failLifetime: '1d',
-          banLifetime: '27d'
+          failLifetime: '1d'         
         },
         logger: {
           level: 'info'
@@ -87,15 +84,16 @@ module.exports = (Parent) => {
       }, options);
 
       !this.options.logger && (this.options.logger = { level: false }); 
+      typeof this.options.logger == 'string' && (this.options.logger = { level: this.options.logger });
       this.port = this.options.port;
       this.publicPort = this.options.publicPort || this.port;
-      this.initialNetworkAddress = this.options.initialNetworkAddress;
       this.DatabaseTransport = this.constructor.DatabaseTransport;
       this.ServerTransport = this.constructor.ServerTransport;
       this.LoggerTransport = this.constructor.LoggerTransport;  
       this.TaskTransport = this.constructor.TaskTransport;     
       this.__cpuUsageInterval = 900,
       this.__maxCandidates = 500;
+      this.__timeoutSlippage = 120;
       this.__initialized = false;
       this.__syncInterval = null;
       this.__cpuUsage = 0;
@@ -113,6 +111,7 @@ module.exports = (Parent) => {
       this.storagePath = this.options.storage.path || path.join(process.cwd(), this.constructor.codename, `storage-${this.port}`);
       this.hostname = this.options.hostname || (await this.getExternalIp()) || (await this.getLocalIp());
       this.address = utils.createAddress(this.hostname, this.publicPort);
+      this.initialNetworkAddress = this.options.initialNetworkAddress || this.address;
       this.ip = await utils.getHostIp(this.hostname);
 
       if(!this.ip) {
@@ -185,8 +184,8 @@ module.exports = (Parent) => {
     }
 
     async prepareBehavior() {
-      await this.db.addBehaviorFailOptions('requestDelays', { banLifetime: ms('5m'), failSuspicionLevel: 200 });
-      await this.db.addBehaviorFailOptions('authentication', { banLifetime: ms('15m'), failSuspicionLevel: 10 });
+      await this.db.addBehaviorFailOptions('requestDelays', { banLifetime: '5m', failSuspicionLevel: 200 });
+      await this.db.addBehaviorFailOptions('authentication', { banLifetime: '15m', failSuspicionLevel: 10 });
     }
 
     /**
@@ -311,15 +310,7 @@ module.exports = (Parent) => {
       }
 
       let actualMasters = [];
-      let results;
-
-      try {
-        results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
-      }
-      catch(err) {
-        this.logger.warn(err.stack);
-        return [];
-      }
+      const results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
 
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
@@ -328,6 +319,14 @@ module.exports = (Parent) => {
         const address = result.address;
         const slaves = result.slaves;
         const availability = result.availability;
+        const selfMaster = masters.find(m => m.address == this.address);
+
+        if(!selfMaster || selfMaster.size != await this.db.getSlavesCount()) {
+          await this.db.addBehaviorFail('slaveMasters', address);
+        }
+        else {
+          await this.db.subBehaviorFail('slaveMasters', address);
+        }
 
         if(!backlink || backlink.address != this.address) {
           await this.db.removeSlave(address);
@@ -355,30 +354,36 @@ module.exports = (Parent) => {
      */
     async syncUp(options = {}) {
       const backlink = await this.db.getBacklink();
+      const failFn = async () => (await this.db.setData('members', []), []);
 
       if(!backlink) {
-        await this.db.setData('members', []);
-        return [];
+        return await failFn();
       }
 
       let result;
-
+      
       try {
-        result = await this.provideStructure(backlink.address, { timeout: options.timeout });          
+        result = await this.provideStructure(backlink.address, { timeout: options.timeout });
       }
       catch(err) {
-        this.logger.warn(err.stack);
-        return [];
+        return await failFn();
       }
-
+      
       const slaves = result.slaves;
       const masters = result.masters;
-      const grandlink = result.backlink;      
+      const grandlink = result.backlink;    
+      
+      if(!masters.find(m => m.address == backlink.address)) {
+        await this.db.addBehaviorFail('backlinkMasters', backlink.address);
+      }
+      else {
+        await this.db.subBehaviorFail('backlinkMasters', backlink.address);
+      }
 
       if(!slaves.find(s => s.address == this.address)) {
         await this.db.removeBacklink();
         await this.db.addBehaviorFail('backlinkSlaves', backlink.address);
-        return [];
+        return await failFn();
       }
       else {
         await this.db.subBehaviorFail('backlinkSlaves', backlink.address);
@@ -485,7 +490,7 @@ module.exports = (Parent) => {
       }
 
       checked.push(current.address);
-      await this.checkServerStructure(current, options);
+      await this.checkServerStructure(current, structures, options);
       await this.db.setData('checkedMasterStructures', checked);
     }
   
@@ -494,14 +499,44 @@ module.exports = (Parent) => {
      * 
      * @async
      * @param {object} server
-     * @param {object[]} server.masters
-     * @param {object[]} server.slaves
+     * @param {object[]} structures
      * @param {object} [options]
      * 
      */
-    async checkServerStructure(server, options = {}) {
+    async checkServerStructure(server, structures, options = {}) {
       await this.checkServerStructureSlaves(server.address, server.slaves, options);
+      await this.checkServerStructureMasters(server.address, server.masters, structures);
       await this.checkServerStructureNetworkSize(server.address, server.masters, server.slaves); 
+    }
+
+    /**
+     * Check the server masters
+     * 
+     * @async
+     * @param {string} address 
+     * @param {object[]} masters
+     * @param {object[]} structures
+     */
+    async checkServerStructureMasters(address, masters, structures) {
+      let failed = false;
+
+      if(!masters.find(m => m.address == address)) {
+        await this.db.addBehaviorFail('serverMasters', address, 1);
+        failed = true;
+      }
+      
+      if(await this.isMaster() && !masters.find(m => m.address == this.address)) {  
+        let count = 0;
+
+        for(let i = 0; i < structures.length; i++) {
+          count += Number(!!structures[i].masters.find(m => m.address == this.address));
+        }
+        
+        await this.db.addBehaviorFail('serverMasters', address, count / structures.length);
+        failed = true;
+      }
+
+      !failed && await this.db.subBehaviorFail('serverMasters', address);
     }
 
     /**
@@ -824,7 +859,7 @@ module.exports = (Parent) => {
       }
       
       for(let source in sources) {
-        const mastersCount = sources[source].length; 
+        const mastersCount = sources[source].length;
 
         if(suspicious[source] && source != this.address) {
           const val = suspicious[source] / mastersCount;
@@ -947,7 +982,15 @@ module.exports = (Parent) => {
       }
 
       server.availability = await this.getAvailability();
-      await this.db.setData('members', members);      
+      await this.db.setData('members', members);  
+      
+      if(!await this.isMaster()) {
+        return;
+      }
+
+      if(members.length != await this.getNetworkSize()) {
+        await this.db.removeBacklink();
+      }
     }
 
     /**
@@ -957,10 +1000,15 @@ module.exports = (Parent) => {
      */
     async normalizeInitialAddress() {   
       const lifetime = await this.getSyncLifetime();
+      const backlink = await this.db.getBacklink();
+
+      if(!backlink) {
+        return;
+      }
 
       if(Date.now() - lifetime < this.__initialized) {
         return;
-      }   
+      }
 
       const members = await this.db.getData('members');
 
@@ -1234,8 +1282,7 @@ module.exports = (Parent) => {
 
       try {
         const timeout = timer(serverTimeout * 2);
-
-        return await this.requestNode(provider, 'provide-structure', {
+        let result = await this.requestNode(provider, 'provide-structure', {
           body: { 
             target,
             timeout,
@@ -1244,6 +1291,22 @@ module.exports = (Parent) => {
           responseSchema: schema.getProvideStructureResponse(),
           timeout
         });
+
+        if(result.message) {
+          if(result.code) {
+            result = new errors.WorkError(result.message, result.code);
+            await this.db.successServerAddress(target);
+          }
+          else {
+            result = new Error(result.message);
+            await this.db.failedServerAddress(target);
+          }
+          
+          throw result;
+        }
+
+        await this.db.successServerAddress(target);
+        return result;
       }
       catch(err) {  
         if(provider == this.address) {
@@ -1271,7 +1334,7 @@ module.exports = (Parent) => {
       const provider = options.provider || await this.getStructureProvider();
       const timer = this.createRequestTimer(options.timeout);
       const serverTimeout = this.getRequestServerTimeout();
-      
+
       if(provider == this.address) {
         return await this.requestGroup(targets, 'structure', { 
           responseSchema: schema.getStructureResponse(),
@@ -1289,7 +1352,7 @@ module.exports = (Parent) => {
           body: { 
             targets: targets.map(t => t.address), 
             timeout, 
-            timestamp: Date.now() 
+            timestamp: Date.now()
           },
           responseSchema: schema.getProvideGroupStructureResponse(),
           timeout
@@ -1300,32 +1363,43 @@ module.exports = (Parent) => {
           throw err;
         }
 
-        const timeout = timer();
         this.logger.warn(err.stack);
+        const timeout = timer();       
         return await this.provideGroupStructure(targets, { provider: this.address, timeout });
       }
 
-      let results = result.results.map(item => {
+      let results = [];
+
+      for (let i = 0; i < result.results.length; i++) {
+        let item = result.results[i];
+        
         if(item.message) {
           if(item.code) {
             item = new errors.WorkError(item.message, item.code);
+            await this.db.successServerAddress(item.address);
           }
           else {
             item = new Error(item.message);
+            await this.db.failedServerAddress(item.address);
           }
-
-          return item;
+          
+          results.push(item);
+          continue;
         }
+
+        await this.db.successServerAddress(item.address);
 
         try {
           utils.validateSchema(schema.getStructureResponse(), item);
-          return item;
+          results.push(item);
+          continue;
         }
         catch(err) {
           err.code = 'ERR_SPREADABLE_RESPONSE_SCHEMA';
-          return err;
+          results.push(err);
+          continue;
         }
-      });
+      }
       
       !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
       return results;
@@ -1611,7 +1685,12 @@ module.exports = (Parent) => {
         const item = arr[i];
 
         requests.push(new Promise(resolve => {
-          this.requestNode(item.address, action, _.merge({}, options, item.options)).then(resolve).catch(resolve)
+          this.requestNode(item.address, action, _.merge({}, options, item.options))
+          .then(resolve)
+          .catch(err => {
+            err.address = item.address;
+            resolve(err);
+          })
         }));
       }
 
@@ -1946,8 +2025,7 @@ module.exports = (Parent) => {
     /**
      * Prepare the options
      */
-    prepareOptions() {
-      this.options.request.timeoutSlippage = utils.getMs(this.options.request.timeoutSlippage);
+    prepareOptions() {      
       this.options.request.serverTimeout = utils.getMs(this.options.request.serverTimeout);
       this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
       this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
@@ -2060,7 +2138,7 @@ module.exports = (Parent) => {
         return;
       }
 
-      return (data.timeout - (Date.now() - data.timestamp)) - this.options.request.timeoutSlippage;
+      return (data.timeout - (Date.now() - data.timestamp)) - this.__timeoutSlippage;
     }
 
     /**
@@ -2146,7 +2224,7 @@ module.exports = (Parent) => {
      * @returns {string}
      */
     getVersion() {
-      return `${this.constructor.codename}-${pack.version.split('.')[0]}`;
-    }    
+      return `${ this.constructor.codename }-${ this.constructor.version.split('.').slice(0, -1).join('.') }`;
+    }
   }
 };

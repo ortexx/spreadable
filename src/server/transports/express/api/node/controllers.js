@@ -62,10 +62,9 @@ module.exports.structure = node => {
   return async (req, res, next) => {
     try { 
       let backlink = await node.db.getBacklink();
-      backlink && backlink.fails && (backlink = null);
       backlink && (backlink = _.pick(backlink, ['address', 'chain']));
-      const masters = (await node.db.getMasters()).filter(s => !s.fails).map(m => _.pick(m, ['address', 'size']));      
-      const slaves = (await node.db.getSlaves()).filter(s => !s.fails).map(s => _.pick(s, ['address', 'availability']));      
+      const masters = (await node.db.getMasters()).map(m => _.pick(m, ['address', 'size']));      
+      const slaves = (await node.db.getSlaves()).map(s => _.pick(s, ['address', 'availability']));      
       const members = await node.db.getData('members');
       const availability = await node.getAvailability();
       return res.send({ slaves, masters, backlink, members, availability });
@@ -106,8 +105,23 @@ module.exports.provideStructure = node => {
         responseSchema: schema.getStructureResponse(),
         timeout: node.createRequestTimeout(req.body)
       };
-      const result = await node.requestNode(target, 'structure', options); 
-      res.send(result);
+
+      try {
+        const result = await node.requestNode(target, 'structure', options); 
+        res.send(result);
+      }
+      catch(err) {
+        let result;
+
+        if(result instanceof errors.WorkError) {
+          result = { message: err.message, code: err.code };
+        }
+        else if(result instanceof Error) {
+          result = { message: err.message };
+        }
+
+        res.send(result);
+      }
     }
     catch(err) {
       next(err);
@@ -136,10 +150,10 @@ module.exports.provideGroupStructure = node => {
       let results = await node.requestGroup(targets.map(t => ({ address: t })), 'structure', options);      
       results = results.map(r => {
         if(r instanceof errors.WorkError) {
-          return { message: r.message, code: r.code };
+          return { message: r.message, code: r.code, address: r.address };
         }
         else if(r instanceof Error) {
-          return { message: r.message };
+          return { message: r.message, address: r.address };
         }
 
         return r;
@@ -170,7 +184,7 @@ module.exports.provideRegistration = node => {
       !masters.length && (masters = [{ address: node.address }]);      
       let results;
 
-      try {
+      try {        
         results = await node.provideGroupStructure(masters, { timeout: timer() });
       }
       catch(err) {
