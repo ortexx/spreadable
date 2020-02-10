@@ -493,7 +493,7 @@ When you create an instance of the node you can pass options below:
 
 * {number} __[behavior.failSuspicionLevel=10]__ - suspicious level of the failed node.
 
-* {number|string} __[behavior.failLifetime="1d"]__ - node fail information retention period
+* {number|string} __[behavior.failLifetime="1d"]__ - node fail information retention period.
 
 * {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.
 
