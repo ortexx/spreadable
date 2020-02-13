@@ -132,7 +132,7 @@ module.exports = (Parent) => {
         this.options.showCompletionLogs && this.node.logger.info(`Task "${task.name}" has been completed`);
       }
       catch(err) {
-        this.options.showFailLogs && this.node.logger.error(`Task "${task.name}",`, err.stack);
+        this.options.showFailLogs && this.node.logger.error(`Task "${task.name}", ${ err.stack }`);
       }
 
       task.isRun = false;

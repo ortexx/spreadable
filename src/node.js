@@ -751,6 +751,7 @@ module.exports = (Parent) => {
       const syncAvgTime = this.getSyncAvgTime();
       
       return { 
+        version: this.getVersion(),
         availability: pretty? availability.toFixed(2): availability,
         syncAvgTime: pretty? ms(syncAvgTime): syncAvgTime,
         isMaster: await this.isMaster(),
