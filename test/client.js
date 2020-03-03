@@ -1,6 +1,7 @@
 const assert = require('chai').assert;
 const Node = require('../src/node')();
 const Client = require('../src/client')();
+const ApprovalClient = require('../src/approval/transports/client')();
 const tools = require('./tools');
 
 describe('Client', () => {
@@ -9,6 +10,7 @@ describe('Client', () => {
 
   before(async function() {
     node = new Node(await tools.createNodeOptions());
+    await node.addApproval('test', new ApprovalClient(node));
     await node.init();
   });
 
@@ -35,6 +37,13 @@ describe('Client', () => {
     it('should set the worker address', async function () {
       assert.equal(client.workerAddress, node.address);
     });
+  });
+
+  describe('.getApprovalQuestion()', () => {
+    it('should return approval info', async () => {
+      const info = await client.getApprovalQuestion('test');
+      assert.isDefined(info.question);
+    });      
   });
   
   describe('.deinit()', function () {

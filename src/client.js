@@ -72,7 +72,8 @@ module.exports = (Parent) => {
       this.options = merge({
         request: {
           pingTimeout: '1s',
-          clientTimeout: '10s'
+          clientTimeout: '10s',
+          approvalQuestionTimeout: '20s'
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
@@ -113,7 +114,6 @@ module.exports = (Parent) => {
       }
 
       this.workerAddress = availableAddress;
-      await this.changeWorker();
       super.init.apply(this, arguments);
     }
 
@@ -201,10 +201,8 @@ module.exports = (Parent) => {
      */
     async changeWorker() {
       const lastAddress = this.workerAddress;
-
-      const address = (await this.request('get-available-node', {
-        useInitialAddress: true
-      })).address;
+      const result = await this.request('get-available-node', { address: this.address });
+      const address = result.address;
 
       if(address == lastAddress) {
         return;
@@ -224,6 +222,97 @@ module.exports = (Parent) => {
     }
 
     /**
+     * Get the approval question
+     * 
+     * @param {string} action
+     * @param {object} [info]
+     * @param {object} [options]
+     * @returns {object}
+     */
+    async getApprovalQuestion(action, info, options = {}) {
+      const timeout = options.timeout || this.options.request.approvalQuestionTimeout;
+      const timer = this.createRequestTimer(timeout);            
+      const result = await this.request('request-approval-key', Object.assign({}, options, {        
+        body: { action },
+        timeout: timer()
+      }));
+      
+      const approvers = result.approvers;
+      const key = result.key; 
+      const startedAt = result.startedAt;
+      const clientIp = result.clientIp;
+      const confirmedAddresses = [];
+      const targets = approvers.map(address => ({ address }));
+      const results = await this.requestGroup(targets, 'add-approval-info', Object.assign({}, options, { 
+        includeErrors: true,
+        timeout: timer(),
+        body: {
+          action,
+          key,
+          info,
+          startedAt
+        }
+      }));
+
+      for(let i = 0; i < results.length; i++) {
+        const result = results[i];
+
+        if(result instanceof Error) {
+          continue;
+        }
+
+        confirmedAddresses.push(targets[i].address);
+      }
+
+      const res = await this.request('request-approval-question', Object.assign({}, options, {     
+        body: { 
+          action,
+          key,
+          info,
+          confirmedAddresses
+        },
+        timeout: timer()
+      }));
+
+      return { 
+        action,
+        key, 
+        question: res.question, 
+        approvers: confirmedAddresses, 
+        startedAt,
+        clientIp
+      };
+    }
+
+    /**
+     * Make a group request
+     * 
+     * @async
+     * @param {aray} arr 
+     * @param {string} action
+     * @param {object} [options]
+     * @returns {object}
+     */
+    async requestGroup(arr, action, options = {}) {
+      const requests = [];
+
+      for(let i = 0; i < arr.length; i++) {
+        const item = arr[i];
+        const address = item.address;
+
+        requests.push(new Promise(resolve => {
+          this.request(action, merge({ address }, options, item.options))
+          .then(resolve)
+          .catch(resolve)
+        }));
+      }
+
+      let results = await Promise.all(requests);
+      !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));     
+      return results;
+    }
+
+    /**
      * Make a request to the api
      * 
      * @async
@@ -236,6 +325,17 @@ module.exports = (Parent) => {
       let body = options.formData || options.body || {};
       body.timeout = options.timeout;
       body.timestamp = Date.now();
+
+      if(options.approvalInfo) {
+        const approvalInfo = options.approvalInfo;
+        delete approvalInfo.question;
+
+        if(!approvalInfo.hasOwnProperty('answer')) {
+          throw new Error('Request "approvalInfo" option must include "answer" property');
+        }
+
+        body.approvalInfo = options.formData? JSON.stringify(approvalInfo): approvalInfo;
+      }
 
       if(options.formData) {
         const form = new FormData();
@@ -259,7 +359,7 @@ module.exports = (Parent) => {
         options.body = JSON.stringify(body);
       } 
       
-      options.url = this.createRequestUrl(endpoint, { useInitialAddress: options.useInitialAddress });
+      options.url = this.createRequestUrl(endpoint, options);
       const start = Date.now();
 
       try {        
@@ -297,7 +397,7 @@ module.exports = (Parent) => {
      */
     createRequestUrl(endpoint, options = {}) {
       const query = options.query? qs.stringify(options.query): null;
-      const address = options.useInitialAddress? this.address: this.workerAddress;
+      const address = options.address || this.workerAddress;
       let url = `${this.getRequestProtocol()}://${address}/client/${endpoint}`;
       query && (url += '?' + query);
       return url;
@@ -360,8 +460,10 @@ module.exports = (Parent) => {
     /**
      * Prepare the options
      */
-    prepareOptions() {    
-      this.options.request.clientTimeout = utils.getMs(this.options.request.clientTimeout);     
+    prepareOptions() {  
+      this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);   
+      this.options.request.clientTimeout = utils.getMs(this.options.request.clientTimeout);
+      this.options.request.approvalQuestionTimeout = utils.getMs(this.options.request.approvalQuestionTimeout);           
     }
 
     /**

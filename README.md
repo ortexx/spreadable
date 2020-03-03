@@ -467,15 +467,19 @@ When you create an instance of the node you can pass options below:
 
 * {integer} __[network.serverMaxFails=3]__ - number of failed requests to some node after which it will be removed from the lists.
 
-* {string[]} __[network.whitelist=[]]__ - list of node addresses or IP addresses that can work with the network. If the list is empty the node is accessible to everyone.
+* {string[]} __[network.blacklist=[]]__ - list of node addresses or IP addresses that can't work with the network.
 
-* {string[]} __[network.blacklist=[]]__ - list of node addresses or IP addresses that can't work with the network. The blacklist has priority over the whitelist.
+* {string[]} __[network.whitelist=[]]__ - list of node addresses or IP addresses that can only work with the network. The whitelist has priority over the blacklist.
+
+* {string[]} __[network.trustlist=[]]__ - list of node addresses or IP addresses that is trusted. The trustlist has priority over the whitelist.
 
 * {object} __[server]__ - section that responds for the server settings.
 
 * {boolean} __[server.https=false]__ - use https or not.
 
 * {number|string} __[server.maxBodySize="500kb"]__ - maximum body size.
+
+* {number} __[server.compressionLevel=6]__ - response compression level.
 
 * {string} __[server.key]__ - ssl key.
 
@@ -485,15 +489,7 @@ When you create an instance of the node you can pass options below:
 
 * {object} __[behavior]__ - section that responds for the behavior settings. If the "network.isTrusted" is false then the behavior of the node is monitored to block nodes that disrupt the network.
 
-* {boolean} __[behavior.ban=true]__ - ban suspicious nodes or not.
-
-* {number|string} __[behavior.banLifetime="27d"]__ - ban period.
-
 * {number} __[behavior.candidateSuspicionLevel=5]__ - suspicious level of the candidate node.
-
-* {number} __[behavior.failSuspicionLevel=10]__ - suspicious level of the failed node.
-
-* {number|string} __[behavior.failLifetime="1d"]__ - node fail information retention period.
 
 * {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.
 
@@ -517,7 +513,7 @@ When you create an instance of the client you can pass options below:
 
 * __[request.pingTimeout]__ - look at _node.options.request.pingTimeout_.
 
-* {number|string} __[request.clientTimeout="10s"]__ - default timeout for a typical client request for any purpose.
+* {number|string} __[request.clientTimeout="3s"]__ - default timeout for a typical client request for any purpose.
 
 * {boolean|object} __[https=false]__ - use https or not.
 
@@ -541,4 +537,4 @@ async __Client.prototype.request()__ - request to some client endpoint
 
 ## Contribution
 
-If you face a bug or have an idea how to improve the library create an issue on github. In order to fix something or add new code yourself fork the library, make changes and create a pull request to the master branch. Don't forget about tests in this case. Also you can join [the project on github](https://github.com/ortexx/spreadable/projects/1).
+If you face a bug or have an idea how to improve the library, create an issue on github. In order to fix something or add new code yourself fork the library, make changes and create a pull request to the master branch. Don't forget about tests in this case. Also you can join [the project on github](https://github.com/ortexx/spreadable/projects/1).

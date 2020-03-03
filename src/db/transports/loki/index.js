@@ -20,7 +20,6 @@ module.exports = (Parent) => {
 
       super(node, options);
       this.col = {};
-      this.__behaviorFailOptions = {};
     }
 
     /**
@@ -119,18 +118,19 @@ module.exports = (Parent) => {
     /**
      * Initialize all collections
      */
-    initCollections() {      
+    initCollections() {
       this.initCollectionCache();
       this.initCollectionData();
       this.initCollectionServers();
       this.initCollectionBanlist();
+      this.initCollectionApproval();
       this.initCollectionBehaviorCandidates();
       this.initCollectionBehaviorDelays();
       this.initCollectionBehaviorFails();   
     }
 
     /**
-     * Initialize cache collection
+     * Initialize the cache collection
      */
     initCollectionCache() {
       this.col.cache = this.loki.getCollection("cache");
@@ -155,14 +155,13 @@ module.exports = (Parent) => {
           unique: ['name']
         });
       }
-
-      const masterRequestTime = this.col.data.findOne({ name: 'masterStatusTime' });
+  
+      const rootNetworkAddress = this.col.data.findOne({ name: 'rootNetworkAddress' });     
       const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
       const checkedMasterStructures = this.col.data.findOne({ name: 'checkedMasterStructures' });
-      const members = this.col.data.findOne({ name: 'members' });
-
-      if(!masterRequestTime) {
-        this.col.data.insert({ name: 'masterStatusTime', value: null });
+      
+      if(!rootNetworkAddress) {
+        this.col.data.insert({ name: 'rootNetworkAddress', value: '' });
       }
 
       if(!registrationTime) {
@@ -171,10 +170,6 @@ module.exports = (Parent) => {
 
       if(!checkedMasterStructures) {
         this.col.data.insert({ name: 'checkedMasterStructures', value: [] });
-      }
-
-      if(!members) {
-        this.col.data.insert({ name: 'members', value: [] });
       }
     }
 
@@ -202,6 +197,20 @@ module.exports = (Parent) => {
         this.col.banlist = this.loki.addCollection('banlist', { 
           disableMeta: true,
           unique: ['address']
+        });
+      }
+    }
+
+    /**
+     * Initialize the approval collection
+     */
+    initCollectionApproval() {
+      this.col.approval = this.loki.getCollection("approval");
+
+      if (this.col.approval === null) {
+        this.col.approval = this.loki.addCollection('approval', {
+          disableMeta: true,
+          indices: ['type', 'clientIp', 'action']
         });
       }
     }
@@ -262,12 +271,11 @@ module.exports = (Parent) => {
         createdAt: now,
         updatedAt: now,
         fails: 0,
-        availability: 0,
+        level: 0,
         isSlave: false,
         isBacklink: false,
         isMaster: false,
         isBroken: false,
-        chain: []
       }, obj);
 
       if(!fields.createdAt) {
@@ -452,25 +460,25 @@ module.exports = (Parent) => {
       return this.col.servers.insert(this.createServerFields({
         address,
         size,
-        isMaster: true
+        isMaster: true,
+        level: 1
       }));
     }
 
     /**
      * @see Database.prototype.addSlave
      */
-    async addSlave(address, availability) {
+    async addSlave(address) {
       let server = this.col.servers.findOne({ address });
 
       if(server) {
         server.isSlave = true;
-        availability !== undefined && (server.availability = availability);
         return this.col.servers.update(server);
       }
 
       server = this.col.servers.insert(this.createServerFields({
         address,
-        isSlave: true        
+        isSlave: true
       }));
 
       const master = await this.getMaster(this.node.address);
@@ -486,18 +494,16 @@ module.exports = (Parent) => {
     /**
      * @see Database.prototype.addBacklink
      */
-    async addBacklink(address, chain) {
+    async addBacklink(address) {
       let server = this.col.servers.findOne({ address });
 
       if(server) {
         server.isBacklink = true;
-        server.chain = chain;
         this.col.servers.update(server);
       }
       else {
         server = this.col.servers.insert(this.createServerFields({
           address,
-          chain,
           isBacklink: true        
         }));
       }
@@ -556,7 +562,6 @@ module.exports = (Parent) => {
 
       if(server.isMaster || server.isBacklink) {
         server.isSlave = false;
-        server.availability = 0;
         return this.col.servers.update(server);
       }
 
@@ -727,7 +732,7 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBehaviorCandidate
      */
     async addBehaviorCandidate(action, address) {
-      if(this.node.options.network.isTrusted) {
+      if(await this.node.isAddressTrusted(address)) {
         return;
       }
 
@@ -787,6 +792,77 @@ module.exports = (Parent) => {
     }
 
     /**
+     * @see Database.prototype.addApproval
+     */
+    async addApproval(action, clientIp, key, startedAt, info) {
+      if(!await this.node.getApproval(action)) {
+        throw new Error(`Approval ${ action } doesn't exist`);
+      }
+
+      const usedBy = [];
+      const updatedAt = Date.now();
+      clientIp = utils.isIpv6(clientIp)? utils.getFullIpv6(clientIp): utils.ipv4Tov6(clientIp);
+      const approval = this.col.approval.findOne({ action, clientIp });      
+
+      if(approval) {
+        Object.assign(approval, { key, info, clientIp, startedAt, usedBy, updatedAt });
+        return this.col.approval.update(approval);
+      }
+
+      return this.col.approval.insert({ action, clientIp, key, info, startedAt, usedBy, updatedAt });
+    }
+
+    /**
+     * @see Database.prototype.getApproval
+     */
+    async getApproval(key) {
+      const approval = this.col.approval.findOne({ key });
+      return approval || null;
+    }
+
+    /**
+     * @see Database.prototype.useApproval
+     */
+    async useApproval(key, address) {
+      const approval = this.col.approval.findOne({ key });
+
+      if(!approval.usedBy.includes(address)) {
+        approval.usedBy.push(address);
+        approval.updatedAt = Date.now();
+      }
+
+      this.col.approval.update(approval);
+    }
+
+    /**
+     * @see Database.prototype.startApproval
+     */
+    async startApproval(key, answer) {
+      const approval = this.col.approval.findOne({ key });
+      approval.answer = answer;
+      approval.updatedAt = Date.now();
+      this.col.approval.update(approval);
+    }
+
+    /**
+     * @see Database.prototype.normalizeApproval
+     */
+    async normalizeApproval() {
+      const data = this.col.approval.find();
+      const now = Date.now();
+
+      for(let i = 0; i < data.length; i++) {
+        const approver = data[i];
+        const approval = await this.node.getApproval(approver.action);
+       
+        if(approver.updatedAt < now - approval.period) {
+          this.col.approval.remove(approver);
+          continue;
+        }
+      }
+    }
+
+    /**
      * @see Database.prototype.addBehaviorDelay
      */
     async addBehaviorDelay(action, address) {
@@ -836,10 +912,14 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBehaviorFail
      */
     async addBehaviorFail(action, address, step = 1) {
-      if(address == this.node.address || this.node.options.network.isTrusted) {
+      if(!await this.node.getBehavior(action)) {
+        throw new Error(`Behavior ${ action } doesn't exist`);
+      }
+
+      if(await this.node.isAddressTrusted(address)) {
         return;
       }
-      
+
       const behavior = this.col.behaviorFails.findOne({ address, action });
       typeof step == 'function' && (step = step(behavior));
 
@@ -889,34 +969,18 @@ module.exports = (Parent) => {
     }
 
     /**
-     * @see Database.prototype.addBehaviorFailOptions
-     */
-    async addBehaviorFailOptions(action, options) {
-      options = Object.assign({}, options);
-      options.banLifetime !== undefined && (options.banLifetime = utils.getMs(options.banLifetime));
-      options.failLifetime !== undefined && (options.failLifetime = utils.getMs(options.failLifetime));
-      return this.__behaviorFailOptions[action] = options;
-    }
-
-    /**
-     * @see Database.prototype.getBehaviorFailOptions
-     */
-    async getBehaviorFailOptions(action) {
-      return _.merge({}, this.node.options.behavior, this.__behaviorFailOptions[action] || {});
-    }
-
-    /**
      * @see Database.prototype.normalizeBehaviorFails
      */
     async normalizeBehaviorFails() {
       const data = this.col.behaviorFails.find();
+      const failLifetime = await this.node.getFailLifetime();
       const now = Date.now();
 
       for(let i = 0; i < data.length; i++) {
         const behavior = data[i];
-        const options = await this.getBehaviorFailOptions(behavior.action);
+        const options = await this.node.getBehavior(behavior.action);
        
-        if(behavior.updatedAt < now - options.failLifetime) {
+        if(behavior.updatedAt < now - failLifetime) {
           this.col.behaviorFails.remove(behavior);
           continue;
         }
@@ -946,7 +1010,7 @@ module.exports = (Parent) => {
      * @see Database.prototype.addBanlistAddress
      */
     async addBanlistAddress(address, lifetime, reason) {
-      if(address == this.node.address || this.node.options.network.isTrusted) {
+      if(await this.node.isAddressTrusted(address)) {
         return;
       }
 

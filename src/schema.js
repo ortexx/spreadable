@@ -9,33 +9,25 @@ schema.getAddress = function () {
   };
 };
 
-schema.getMember = function () {
+schema.getClientIp = function () {
   return {
-    address: this.getAddress(),
-    availability: 'number'
-  };
-};
-
-schema.getMembers = function () {
-  return {
-    type: 'array',
-    items: {
-      type: 'object',
-      props: this.getMember(),
-      strict: true
-    }
+    type: 'string',
+    value: utils.isValidIp.bind(utils)
   }
 };
 
-schema.getMembersResponse = function () {
-  return this.getMembers();
+schema.getApprovers = function () {
+  return {
+    type: 'array',
+    uniq: true,
+    items: this.getAddress()
+  }
 };
 
 schema.getStatusResponse = function () {
   return {
     type: 'object',
     props: {
-      version: 'string',
       availability: 'number',
       syncAvgTime: 'number',
       isMaster: 'boolean',
@@ -66,6 +58,19 @@ schema.getAvailableNodeResponse = function () {
   }
 };
 
+schema.getRequestApprovalKeyResponse = function () {
+  return {
+    type: 'object',
+    props: {
+      key: 'string',
+      startedAt: 'number',
+      clientIp: this.getClientIp(),
+      approvers: this.getApprovers()
+    },
+    strict: true
+  }
+};
+
 schema.getStructureResponse = function () {
   const address = this.getAddress();
 
@@ -77,6 +82,7 @@ schema.getStructureResponse = function () {
         type: 'array',
         items: {
           type: 'object',
+          uniq: 'address',
           props: {
             address,
             size: 'number'         
@@ -86,11 +92,11 @@ schema.getStructureResponse = function () {
       },
       slaves: {
         type: 'array',
+        uniq: 'address',
         items: {
           type: 'object',
           props: {
-            address,
-            availability: 'number'      
+            address
           },
           strict: true
         }
@@ -98,37 +104,10 @@ schema.getStructureResponse = function () {
       backlink: {
         type: 'object',
         props: {
-          address,
-          chain: {
-            type: 'array',
-            items: address
-          }
+          address
         },
         canBeNull: true,
         strict: true
-      },
-      members: this.getMembers(),
-      availability: 'number'
-    },
-    strict: true
-  }
-};
-
-schema.getProvideStructureResponse = function () {
-  return this.getStructureResponse();
-}
-
-schema.getProvideGroupStructureResponse = function () {
-  return {
-    type: 'object',
-    props: {
-      address: this.getAddress(),
-      results: {
-        type: 'array',
-        items: {
-          type: 'object',
-          canBeNull: false
-        }
       }
     },
     strict: true
@@ -153,6 +132,7 @@ schema.getProvideRegistrationResponse = function() {
             address,
             candidates: {
               type: 'array',
+              uniq: 'address',
               items: {
                 type: 'object',
                 props: {
@@ -177,11 +157,7 @@ schema.getRegisterResponse = function () {
     type: 'object',
     props: {
       address,
-      size: 'number',
-      chain: {
-        type: 'array',
-        items: address
-      }
+      size: 'number'
     },
     strict: true
   }
@@ -204,6 +180,34 @@ schema.getInterviewSummaryResponse = function() {
     },
     strict: true
   }
-}
+};
+
+schema.getApprovalApproverInfoResponse = function(infoSchema) {
+  const address = this.getAddress();
+
+  return {
+    type: 'object',
+    props: {
+      address,
+      info: infoSchema
+    },
+    strict: true
+  }
+};
+
+schema.getApprovalInfoRequest = function(answerSchema) {
+  return {
+    type: 'object',
+    props: {
+      action: 'string',
+      key: 'string',
+      startedAt: 'number',
+      clientIp: this.getClientIp(),
+      approvers: this.getApprovers(),
+      answer: answerSchema
+    },
+    strict: true
+  }
+};
 
 module.exports = schema;

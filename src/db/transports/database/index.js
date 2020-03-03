@@ -388,35 +388,66 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Set the behavior fail options
-     * 
-     * @async
-     * @param {string} action
-     * @param {object} options
-     * @returns {object}
-     */
-    async addBehaviorFailOptions() {
-      throw new Error('Method "addBehaviorFailOptions" is required for database transport');
-    }
-
-    /**
-     * Get the behavior fail options
-     * 
-     * @async
-     * @param {string} action
-     * @returns {object}
-     */
-    async getBehaviorFailOptions() {
-      throw new Error('Method "getBehaviorFailOptions" is required for database transport');
-    }
-
-    /**
      * Normalize the behavior fails
      * 
      * @async
      */
     async normalizeBehaviorFails() {
       throw new Error('Method "normalizeBehaviorFails" is required for database transport');
+    }
+
+    /**
+     * Add the approval
+     * 
+     * @async
+     * @param {string} action 
+     * @param {string} clientIp
+     * @param {string} key
+     * @param {number} startedAt
+     * @param {*} [info]
+     * @returns {object}
+     */
+    async addApproval() {
+      throw new Error('Method "addApproval" is required for database transport');
+    }
+
+    /**
+     * Get the approval
+     * 
+     * @param {string} key
+     * @returns {object}
+     */
+    async getApproval() {
+      throw new Error('Method "getApproval" is required for database transport');
+    }
+
+    /**
+     * Use the approval
+     * 
+     * @param {string} key
+     * @param {string} address
+     */
+    async useApproval() {
+      throw new Error('Method "useApproval" is required for database transport');
+    }
+
+    /**
+     * Start the approval
+     * 
+     * @param {string} key
+     * @param {*} answer
+     */
+    async startApproval() {
+      throw new Error('Method "startApproval" is required for database transport');
+    }
+
+    /**
+     * Normalize the approval
+     * 
+     * @async
+     */
+    async normalizeApproval() {
+      throw new Error('Method "normalizeApproval" is required for database transport');
     }
 
     /**

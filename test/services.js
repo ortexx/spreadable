@@ -16,6 +16,17 @@ describe('services', () => {
     require('./db/loki');    
   });
 
+  describe('behavior', () => {
+    require('./behavior/behavior');
+    require('./behavior/fail'); 
+  });
+
+  describe('approval', () => {
+    require('./approval/approval');
+    require('./approval/client'); 
+    require('./approval/captcha'); 
+  });
+
   describe('cache', () => {
     require('./cache/cache');
     require('./cache/database');

@@ -1,6 +1,9 @@
 const assert = require('chai').assert;
 const tools = require('../tools');
+const utils = require('../../src/utils');
 const DatabaseLoki = require('../../src/db/transports/loki')();
+const BehaviorFail = require('../../src/behavior/transports/fail')();
+const Approval = require('../../src/approval/transports/approval')();
 const fse = require('fs-extra');
 
 describe('DatabaseLoki', () => {
@@ -50,11 +53,9 @@ describe('DatabaseLoki', () => {
 
     it('should edit the slave', async function () {
       const address = 'localhost:1';
-      await loki.addSlave(address, 50);
+      await loki.addSlave(address);
       const servers = await loki.col.servers.find({ address, isSlave: true });
-      const obj = servers[0];
-      assert.equal(servers.length, 1, 'check the servers count');
-      assert.equal(obj.availability, 50, 'check the availability');
+      assert.equal(servers.length, 1);
     });
   });
 
@@ -84,13 +85,13 @@ describe('DatabaseLoki', () => {
   describe('.addBacklink()', function () {
     it('should add the backlink', async function () {
       const address = 'localhost:3';
-      await loki.addBacklink(address, ['localhost:10']);
+      await loki.addBacklink(address);
       assert.isObject(await loki.col.servers.findOne({ address, isBacklink: true }));
     });
 
     it('should change the backlink and add it into the existent slave', async function () {
       const address = 'localhost:1';
-      await loki.addBacklink(address, ['localhost:11']);
+      await loki.addBacklink(address);
       const servers = await loki.col.servers.find({ address, isBacklink: true });
       assert.equal(servers.length, 1, 'check servers count');
       assert.isTrue(servers[0].isSlave, 'check the backlink is a slave');
@@ -98,11 +99,9 @@ describe('DatabaseLoki', () => {
 
     it('should edit the slave', async function () {
       const address = 'localhost:1';
-      await loki.addBacklink(address, ['localhost:12']);
+      await loki.addBacklink(address);
       const servers = await loki.col.servers.find({ address });
-      const obj = servers[0];
-      assert.equal(servers.length, 1, 'check servers count');
-      assert.equal(obj.chain[0], 'localhost:12', 'check the chain');
+      assert.equal(servers.length, 1);
     });
   });
 
@@ -354,7 +353,7 @@ describe('DatabaseLoki', () => {
     });
 
     it('should remove the backlink with the current node address', async function () {
-      await loki.addBacklink(this.node.address, 0);
+      await loki.addBacklink(this.node.address);
       assert.isObject(await loki.getServer(this.node.address), 'check before');
       await loki.normalizeServers();
       assert.isNull(await loki.getServer(this.node.address), 'check after');
@@ -422,7 +421,7 @@ describe('DatabaseLoki', () => {
   describe('.normalizeBanlist()', function () { 
     it('check the lifetime', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
+      await loki.addBanlistAddress(address, 1000 * 60);
       const count = loki.col.banlist.count();
       await loki.normalizeBanlist();
       const data = loki.col.banlist.find();
@@ -612,6 +611,110 @@ describe('DatabaseLoki', () => {
     });
   });
 
+  describe('approval', function () { 
+    let action;
+    let key;
+
+    before(function () {
+      action = 'test';
+      key = 'key'
+    });
+
+    describe('.addBehaviorFail()', function () { 
+      it('should throw an error', async function () {
+        try {
+          await loki.addBehaviorFail(action, '127.0.0.1', 'key', Date.now());  
+          throw new Error('Fail');
+        }
+        catch(err) {
+          assert.isOk(err.message.includes("doesn't exist"));
+        }
+      });
+
+      it('should add the approval', async function () {
+        await this.node.addApproval(action, new Approval());
+        const ip = '127.0.0.1';
+        const clientIp = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
+        const startedAt = Date.now();
+        const info = 1;
+        await loki.addApproval(action, ip, key, startedAt, info);
+        const approval = loki.col.approval.findOne({ action, clientIp, key, startedAt, info });
+        assert.containsAllKeys(approval, ['usedBy', 'updatedAt']);       
+      });
+
+      it('should replace the approval', async function () {
+        const ip = '127.0.0.1';
+        const clientIp = utils.isIpv6(ip)? utils.getFullIpv6(ip): utils.ipv4Tov6(ip);
+        key = 'newKey';
+        const startedAt = Date.now();
+        const info = 2;
+        await loki.addApproval(action, ip, key, startedAt, info);
+        const approval = loki.col.approval.findOne({ action, clientIp, key, startedAt, info });
+        assert.isNotNull(approval, 'check the new one');
+        assert.lengthOf(loki.col.approval.find(), 1, 'check the count');
+      });
+    });
+
+    describe('.getApproval()', function () { 
+      it('should get the approval', async function () {
+        const approval = await loki.getApproval(key);
+        assert.isNotNull(approval);
+      });
+
+      it('should not get the wrong approval', async function () {
+        assert.isNull(await loki.getApproval('wrong key'));
+      });
+    });
+
+    describe('.startApproval()', function () { 
+      it('should start the approval', async function () {
+        const answer = 1;
+        await loki.startApproval(key, answer);
+        const approval = await loki.getApproval(key);
+        assert.equal(approval.answer, answer);
+      });
+    });
+
+    describe('.useApproval()', function () { 
+      it('should use the approval', async function () {
+        const address = 'localhost:1'
+        let approval = await loki.getApproval(key);
+        const date = approval.updatedAt;
+        await loki.useApproval(key, address);
+        approval = await loki.getApproval(key);
+        assert.equal(approval.usedBy[0], address, 'check the user');
+        assert.isOk(approval.updatedAt > date, 'check the date');
+      });
+
+      it('should add the new user', async function () {
+        const address = 'localhost:2';
+        await loki.useApproval(key, address);
+        const approval = await loki.getApproval(key);
+        assert.equal(approval.usedBy[1], address);
+      });
+
+      it('should not add the same user', async function () {
+        const address = 'localhost:2';
+        await loki.useApproval(key, address);
+        const approval = await loki.getApproval(key);
+        assert.lengthOf(approval.usedBy, 2);
+      });
+    });
+
+    describe('.normalizeApproval()', function () { 
+      it('check the lifetime', async function () {
+        const count = loki.col.approval.count({ action });
+        await loki.normalizeApproval();
+        const data = loki.col.approval.find({ action });
+        assert.equal(count, data.length, 'check before');
+        const approval = await this.node.getApproval(action);
+        data[0].updatedAt = Date.now() - approval.period - 1;
+        await loki.normalizeApproval();
+        assert.equal(count - 1, loki.col.approval.count({ action }), 'check after');
+      });
+    });
+  });
+
   describe('fails behavior', function () { 
     let action;
 
@@ -620,11 +723,23 @@ describe('DatabaseLoki', () => {
     });
  
     describe('.addBehaviorFail()', function () { 
+      it('should throw an error', async function () {
+        const address = 'localhost:1';
+        try {
+          await loki.addBehaviorFail(action, address);  
+          throw new Error('Fail');
+        }
+        catch(err) {
+          assert.isOk(err.message.includes("doesn't exist"));
+        }         
+      });
+
       it('should add the behavior', async function () {
+        await this.node.addBehavior(action, new BehaviorFail());
         const address = 'localhost:1';
         await loki.addBehaviorFail(action, address);
         const behavior = loki.col.behaviorFails.findOne({ action, address });
-        assert.equal(behavior.address, address);        
+        assert.isNotNull(behavior);       
       });
 
       it('should have the expected suspicion and balance', async function () {
@@ -661,7 +776,7 @@ describe('DatabaseLoki', () => {
       });
 
       it('should not get the wrong behavior', async function () {
-        assert.isNull(await loki.getBehaviorDelay(action, 'wrong'));
+        assert.isNull(await loki.getBehaviorFail(action, 'wrong'));
       });
     });
     
@@ -705,8 +820,7 @@ describe('DatabaseLoki', () => {
         await loki.normalizeBehaviorFails();
         const data = loki.col.behaviorFails.find({ action });
         assert.equal(count, data.length, 'check before');
-        const options = await loki.getBehaviorFailOptions(action);
-        data[0].updatedAt = Date.now() - options.failLifetime - 1;
+        data[0].updatedAt = Date.now() - await loki.node.getFailLifetime() - 1;
         await loki.normalizeBehaviorFails();
         assert.equal(count - 1, loki.col.behaviorFails.count({ action }), 'check after');
       });
@@ -717,7 +831,7 @@ describe('DatabaseLoki', () => {
         const behavior = await loki.addBehaviorFail(action, address);
         await loki.normalizeBehaviorFails();
         assert.equal(loki.col.banlist.count(), 0, 'check the banlist before');
-        const options = await loki.getBehaviorFailOptions(action);
+        const options = await loki.node.getBehavior(action);
         behavior.suspicion = options.failSuspicionLevel + 1;
         loki.col.behaviorFails.update(behavior);
         await loki.normalizeBehaviorFails();

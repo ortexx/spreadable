@@ -101,6 +101,22 @@ describe('utils', () => {
           }, [1, 2])
         );
       });
+
+      it('should not verify wrong array "uniq"', () => { 
+        assert.throws(() => 
+          utils.validateSchema({
+            type: 'array',
+            uniq: true
+          }, [1, 1, 2]),
+        '', 'check without the key');
+
+        assert.throws(() => 
+          utils.validateSchema({
+            type: 'array',
+            uniq: 'x'
+          }, [{ x: 1 }, { x: 1 }, { x: 2 }]),
+        '', 'check with the key');
+      });
     });
 
     describe('object', () => {
@@ -586,6 +602,64 @@ describe('utils', () => {
       const res = utils.splitAddress(utils.createAddress(host, port));
       assert.equal(res[0], host);
       assert.equal(res[1], port);
+    });
+  });
+
+  describe('.createDataHash()', () => {
+    let data;
+    let result;
+
+    before(() => data = ['1', '2']);
+
+    it('should return a string', () => {
+      result = utils.createDataHash(data);
+      assert.isString(result);
+    });
+
+    it('should return the same string', () => {
+      assert.equal(result, utils.createDataHash(data));
+    });
+
+    it('should return the another string', () => {
+      assert.notDeepPropertyVal(result, utils.createDataHash(['3']));
+    });
+  });
+
+  describe('.getClosestPeriodTime()', () => {
+    it('should return the right time for 5 minutes', () => {
+      const date = utils.getClosestPeriodTime(new Date('2011-10-10T14:48:00').getTime(), 1000 * 60 * 5);
+      assert.equal(date, new Date('2011-10-10T14:45:00').getTime());
+    });
+
+    it('should return the right time for an hour', () => {
+      const date = utils.getClosestPeriodTime(new Date('2011-10-10T14:48:00').getTime(), 1000 * 60 * 60);
+      assert.equal(date, new Date('2011-10-10T14:00:00').getTime());
+    });
+  });
+
+  describe('.isHexColor()', () => {
+    it('should return false', () => {
+      assert.isFalse(utils.isHexColor(1, 'check a number'));
+      assert.isFalse(utils.isHexColor({}, 'check an object'));
+      assert.isFalse(utils.isHexColor('#000', 'check a bad color'));
+      assert.isFalse(utils.isHexColor('#000TT1', 'check a wrong color'));
+    });
+
+    it('should return true', () => {
+      assert.isTrue(utils.isHexColor('#FFFFDD'));
+    });
+  });
+
+  describe('.getRandomHexColor()', () => {
+    it('should return a random color', () => {
+      const color = utils.getRandomHexColor();
+      assert.isTrue(utils.isHexColor(color));
+    });
+  });
+
+  describe('.invertHexColor()', () => {
+    it('should invert the color', () => {
+      assert.equal(utils.invertHexColor('#ffffdd'), '#000022');
     });
   });
 });

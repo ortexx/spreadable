@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const Service = require('../../../service')();
+const utils = require('../../../utils');
 
 module.exports = (Parent) => {
   /**
@@ -23,6 +24,10 @@ module.exports = (Parent) => {
       this.options = _.merge({
         limit: 50000
       }, options);
+
+      if(this.options.lifetime !== undefined) {
+        this.options.lifetime = utils.getMs(this.options.lifetime);
+      }
     }
 
     /**

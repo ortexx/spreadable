@@ -1,8 +1,10 @@
 const validateIP = require('validate-ip-node');
 const bytes = require('bytes');
 const ms = require('ms');
+const uniqBy = require('lodash/uniqBy');
 const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
+const crypto = require('crypto');
 const ip6addr = require('ip6addr'); 
 const errors = require('./errors'); 
 
@@ -28,7 +30,7 @@ utils.validateSchema = function (schema, data) {
 
   if(schemaType.indexOf(dataType) == -1) {
     const msg = `Wrong data type "${dataType}" instead of "${schemaType}" ${getHumanData()} for ${getHumanSchema()}`;
-    throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
+    throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
   }
 
   if(dataType == 'array') {
@@ -37,12 +39,21 @@ utils.validateSchema = function (schema, data) {
 
     if(minLength && data.length < minLength) {
       const msg = `Wrong array min length ${getHumanData()} for ${getHumanSchema()}`;
-      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
+      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
     }
 
     if(maxLength && data.length > maxLength) {
       const msg = `Wrong array max length ${getHumanData()} for ${getHumanSchema()}`;
-      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
+      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
+    }
+
+    if(schema.uniq) {
+      const arr = schema.uniq === true? uniqBy(data): uniqBy(data, schema.uniq);
+
+      if(arr.length != data.length) {
+        const msg = `Wrong array uniqueness ${getHumanData()} for ${getHumanSchema()}`;
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');
+      }
     }
 
     if(schema.items) {
@@ -63,7 +74,7 @@ utils.validateSchema = function (schema, data) {
 
     if(schema.canBeNull === false && data === null) {
       const msg = `Data for ${getHumanSchema()} can't be null`;
-      throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_NULL');
+      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_NULL');
     }
     
     if(schema.strict) {
@@ -72,7 +83,7 @@ utils.validateSchema = function (schema, data) {
 
       if(schemaKeys.toString() != dataKeys.toString()) {
         const msg = `Wrong strict object structure ${getHumanData()} for ${getHumanSchema()}`;
-        throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_STRICT');
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_STRICT');
       }     
     }
 
@@ -80,7 +91,7 @@ utils.validateSchema = function (schema, data) {
       for(let key in data) {
         if(!props.hasOwnProperty(key)) {
           const msg = `Wrong expected object structure ${getHumanData()} for ${getHumanSchema()}`;
-          throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_EXPECTED');
+          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_EXPECTED');
         }   
       }
     }
@@ -92,7 +103,7 @@ utils.validateSchema = function (schema, data) {
       if(!data.hasOwnProperty(prop)) {        
         if(required && requiredKeys[prop]) {
           const msg = `Property "${prop}" is required in ${getHumanData()} for ${getHumanSchema()}`;
-          throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
+          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
         }
 
         continue;
@@ -121,7 +132,7 @@ utils.validateSchema = function (schema, data) {
 
   if(!valid) {
     const msg = `Validation is failed for ${getHumanData()}`;
-    throw new errors.WorkError(msg, 'ERR_STORACLE_VALIDATE_SCHEMA_VALUE');
+    throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_VALUE');
   }
 }
 
@@ -442,6 +453,60 @@ utils.splitAddress = function (address) {
   sp = address.split(':');
   return [sp[0], +sp[1]];
 };
+
+/**
+ * Create the data hash
+ * 
+ * @param {string[]} data
+ * @return {string} 
+ */
+utils.createDataHash = function (data) {
+  return crypto.createHash('md5').update(data.join('+')).digest('hex');
+};
+
+/**
+ * Get the closest period time
+ * 
+ * @param {integer} time
+ * @param {integer} period
+ * @return {integer}
+ */
+utils.getClosestPeriodTime = function (time, period) {
+  return Math.floor(time / period) * period;
+};
+
+/**
+ * Check the string is hex color
+ * 
+ * @param {string} str
+ * @return {boolean}
+ */
+utils.isHexColor = function (str) {
+  if(typeof str != 'string') {
+    return false;
+  }
+
+  return /^#[0-9A-F]{6}$/i.test(str);
+};
+
+/**
+ * Get a random hex color
+ * 
+ * @return {string}
+ */
+utils.getRandomHexColor = function () {
+  return '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, 0);
+};
+
+
+/**
+ * Invert the hex color
+ * 
+ * @return {string}
+ */
+utils.invertHexColor = function (color) {
+  return '#'+ (Number(`0x1${ color.substr(1) }`) ^ 0xFFFFFF).toString(16).substr(1).toUpperCase();
+}
 
 /**
  * Create a request timeout error

@@ -2,6 +2,7 @@ const assert = require('chai').assert;
 const fetch = require('node-fetch');
 const Node = require('../src/node')();
 const Client = require('../src/client')();
+const ApprovalClient = require('../src/approval/transports/client')();
 const utils = require('../src/utils');
 const schema = require('../src/schema');
 const tools = require('./tools');
@@ -16,8 +17,10 @@ describe('routes', () => {
         auth: { username: 'username', password: 'password' }
       } 
     }));
+    await node.addApproval('test', new ApprovalClient(node));
     await node.init();
-    client = new Client(await tools.createClientOptions({ 
+    await node.sync();
+    client = new Client(await tools.createClientOptions({
       address: node.address, 
       auth: { username: 'username', password: 'password' }
     }));
@@ -28,10 +31,14 @@ describe('routes', () => {
     await node.deinit();
     await client.deinit();
   });
+
   describe('/ping', function () {
     it('should return the right address', async function () { 
       const res = await fetch(`http://${node.address}/ping`);
-      assert.equal((await res.json()).address, node.address);
+      const json = await res.json();
+      assert.equal(json.address, node.address);
+      assert.equal(json.root, node.getRoot());
+      assert.equal(json.version, node.getVersion());
     });
   });
 
@@ -60,24 +67,7 @@ describe('routes', () => {
         utils.validateSchema(schema.getStatusPrettyResponse(), json);
       });
     });
-  });
-
-  describe('/members', function () {
-    it('should return an auth error', async function () { 
-      const res = await fetch(`http://${node.address}/members`);
-      assert.equal(await res.status, 401);
-    });
-
-    it('should return the members', async function () { 
-      const options = client.createDefaultRequestOptions({ method: 'get' });
-      const res = await fetch(`http://${node.address}/members`, options);
-      const json = await res.json();
-
-      assert.doesNotThrow(() => {
-        utils.validateSchema(schema.getMembersResponse(), json);
-      });
-    });
-  });
+  });  
 
   describe('/client/get-available-node', function () {
     it('should return an auth error', async function () { 
@@ -96,22 +86,133 @@ describe('routes', () => {
     });
   });
 
-  describe('/api/master/walk', function () {
+  describe('/client/request-approval-key', function () {
     it('should return an auth error', async function () { 
-      const res = await fetch(`http://${node.address}/api/master/walk`, { method: 'post' });
+      const res = await fetch(`http://${node.address}/client/request-approval-key`, { method: 'post' });
       assert.equal(await res.status, 401);
     });
 
-    it('should return a master acception error', async function () { 
-      const res = await fetch(`http://${node.address}/api/master/walk`, node.createDefaultRequestOptions());
-      assert.equal(await res.status, 422);
+    it('should return a data error', async function () { 
+      const options = client.createDefaultRequestOptions();  
+      const res = await fetch(`http://${node.address}/client/request-approval-key`, options);
+      assert.equal(res.status, 422);
     });
 
-    it('should return a success message', async function () { 
-      const body = { ignoreAcception: true };
+    it('should return the right schema', async function () {
+      const body = { action: 'test' };
+      const options = client.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
+      const res = await fetch(`http://${node.address}/client/request-approval-key`, options);
+      const json = await res.json();
+
+      assert.doesNotThrow(() => {
+        utils.validateSchema(schema.getRequestApprovalKeyResponse(), json);
+      });
+    });
+  });
+
+  describe('/client/add-approval-info', function () {
+    it('should return an auth error', async function () { 
+      const res = await fetch(`http://${node.address}/client/add-approval-info`, { method: 'post' });
+      assert.equal(await res.status, 401);
+    });
+
+    it('should return a data error', async function () { 
+      const options = client.createDefaultRequestOptions();  
+      const res = await fetch(`http://${node.address}/client/add-approval-info`, options);
+      assert.equal(res.status, 422);
+    });
+
+    it('should return the success message', async function () {
+      const approval = await node.getApproval('test')
+      const body = { 
+        action: 'test',
+        key: 'key',
+        startedAt: utils.getClosestPeriodTime(Date.now(), approval.period)
+      };
+      const options = client.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
+      const res = await fetch(`http://${node.address}/client/add-approval-info`, options);
+      const json = await res.json();
+      assert.isTrue(json.success);
+    });
+  });
+
+  describe('/client/request-approval-question', function () {
+    it('should return an auth error', async function () { 
+      const res = await fetch(`http://${node.address}/client/request-approval-question`, { method: 'post' });
+      assert.equal(await res.status, 401);
+    });
+
+    it('should return a data error', async function () { 
+      const options = client.createDefaultRequestOptions();  
+      const res = await fetch(`http://${node.address}/client/request-approval-question`, options);
+      assert.equal(res.status, 422);
+    });
+
+    it('should return the question', async function () {
+      const body = { 
+        action: 'test',
+        key: 'key',
+        confirmedAddresses: [node.address]
+      };
+      const options = client.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
+      const res = await fetch(`http://${node.address}/client/request-approval-question`, options);
+      const json = await res.json();
+      assert.isDefined(json.question);
+    });
+  });
+
+  describe('/api/node/get-approval-info', function () {
+    it('should return an auth error', async function () { 
+      const options = tools.createJsonRequestOptions();         
+      const res = await fetch(`http://${node.address}/api/node/get-approval-info`, options);
+      assert.equal(await res.status, 401);
+    });
+
+    it('should return a data error', async function () { 
+      const options = node.createDefaultRequestOptions();  
+      const res = await fetch(`http://${node.address}/api/node/get-approval-info`, options);
+      assert.equal(res.status, 422);
+    });
+
+    it('should return the info', async function () {
+      const body = { 
+        action: 'test',
+        key: 'key'
+      };
       const options = node.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
-      const res = await fetch(`http://${node.address}/api/master/walk`, options);
-      assert.isTrue((await res.json()).success);
+      const res = await fetch(`http://${node.address}/api/node/get-approval-info`, options);
+      const json = tools.createServerResponse(node.address, await res.json());
+      assert.isDefined(json.info);
+    });
+  });
+
+  describe('/api/node/check-approval-answer', function () {
+    it('should return an auth error', async function () { 
+      const options = tools.createJsonRequestOptions();         
+      const res = await fetch(`http://${node.address}/api/node/check-approval-answer`, options);
+      assert.equal(await res.status, 401);
+    });
+
+    it('should return a data error', async function () { 
+      const options = node.createDefaultRequestOptions();  
+      const res = await fetch(`http://${node.address}/api/node/check-approval-answer`, options);
+      assert.equal(res.status, 422);
+    });
+
+    it('should return the success message', async function () {
+      const approver = await node.db.getApproval('key');
+      const body = { 
+        action: 'test',
+        key: 'key',
+        clientIp: approver.clientIp,
+        approvers: [node.address],
+        answer: approver.answer
+      };
+      
+      const options = node.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
+      const res = await fetch(`http://${node.address}/api/node/check-approval-answer`, options);
+      const json = tools.createServerResponse(node.address, await res.json());
+      assert.isTrue(json.success);
     });
   });
 
@@ -119,8 +220,12 @@ describe('routes', () => {
     let targetNode;
 
     before(async () => {
-      targetNode = new Node(await tools.createNodeOptions({ network: node.options.network }));
+      targetNode = new Node(await tools.createNodeOptions({ 
+        initialNetworkAddress: node.address,
+        network: node.options.network 
+      }));
       await targetNode.init();
+      await targetNode.sync();
     });
 
     after(async () => {
@@ -163,60 +268,6 @@ describe('routes', () => {
       const json = tools.createServerResponse(node.address, await res.json());
       assert.doesNotThrow(() => {
         utils.validateSchema(schema.getStructureResponse(), json);
-      });
-    });
-  });
-
-  describe('/api/node/provide-structure', function () {
-    let body;
-
-    before(function () {
-      body = { 
-        target: node.address,
-        timeout: 1000,
-        timestamp: Date.now() 
-      };
-    });
-
-    it('should return an auth error', async function () { 
-      const options = tools.createJsonRequestOptions({ body });         
-      const res = await fetch(`http://${node.address}/api/node/provide-structure`, options);
-      assert.equal(await res.status, 401);
-    });
-
-    it('should return the right schema', async function () {
-      const options = node.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
-      const res = await fetch(`http://${node.address}/api/node/provide-structure`, options);      
-      const json = tools.createServerResponse(node.address, await res.json());
-      assert.doesNotThrow(() => {
-        utils.validateSchema(schema.getProvideStructureResponse(), json);
-      });
-    });
-  });
-
-  describe('/api/node/provide-group-structure', function () {
-    let body;
-
-    before(function () {
-      body = { 
-        target: node.address,
-        timeout: 1000,
-        timestamp: Date.now() 
-      };
-    });
-
-    it('should return an auth error', async function () { 
-      const options = tools.createJsonRequestOptions({ body });         
-      const res = await fetch(`http://${node.address}/api/node/provide-group-structure`, options);
-      assert.equal(await res.status, 401);
-    });
-
-    it('should return the right schema', async function () {
-      const options = node.createDefaultRequestOptions(tools.createJsonRequestOptions({ body }));
-      const res = await fetch(`http://${node.address}/api/node/provide-group-structure`, options);      
-      const json = tools.createServerResponse(node.address, await res.json());
-      assert.doesNotThrow(() => {
-        utils.validateSchema(schema.getProvideGroupStructureResponse(), json);
       });
     });
   });

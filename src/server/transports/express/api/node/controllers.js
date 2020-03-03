@@ -19,11 +19,10 @@ module.exports.register = node => {
         throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
       } 
       
-      const chain = await node.getBacklinkChain();
       let size = await node.db.getSlavesCount();
 
       if(await node.db.hasSlave(target)) {
-        return res.send({ chain, size });
+        return res.send({ size });
       }
 
       const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
@@ -47,7 +46,7 @@ module.exports.register = node => {
       await node.interview(result.summary);
       await node.db.addSlave(target);
       size++;      
-      res.send({ size, chain });
+      res.send({ size });
     }
     catch(err) {
       next(err);
@@ -61,13 +60,7 @@ module.exports.register = node => {
 module.exports.structure = node => {
   return async (req, res, next) => {
     try { 
-      let backlink = await node.db.getBacklink();
-      backlink && (backlink = _.pick(backlink, ['address', 'chain']));
-      const masters = (await node.db.getMasters()).map(m => _.pick(m, ['address', 'size']));      
-      const slaves = (await node.db.getSlaves()).map(s => _.pick(s, ['address', 'availability']));      
-      const members = await node.db.getData('members');
-      const availability = await node.getAvailability();
-      return res.send({ slaves, masters, backlink, members, availability });
+      return res.send(await node.createStructure());
     }
     catch(err) {
       next(err);
@@ -90,84 +83,6 @@ module.exports.getInterviewSummary = node => {
 };
 
 /**
- * Provide the node structure
- */
-module.exports.provideStructure = node => {
-  return async (req, res, next) => {
-    try {
-      const target = req.body.target;
-
-      if(!utils.isValidAddress(target)) {
-        throw new errors.WorkError('"target" field is invalid', 'ERR_SPREADABLE_INVALID_TARGET_FIELD');
-      }
-
-      const options = { 
-        responseSchema: schema.getStructureResponse(),
-        timeout: node.createRequestTimeout(req.body)
-      };
-
-      try {
-        const result = await node.requestNode(target, 'structure', options); 
-        res.send(result);
-      }
-      catch(err) {
-        let result;
-
-        if(result instanceof errors.WorkError) {
-          result = { message: err.message, code: err.code };
-        }
-        else if(result instanceof Error) {
-          result = { message: err.message };
-        }
-
-        res.send(result);
-      }
-    }
-    catch(err) {
-      next(err);
-    }
-  }
-};
-
-/**
- * Provide the node structure group
- */
-module.exports.provideGroupStructure = node => {
-  return async (req, res, next) => {
-    try {      
-      const targets = req.body.targets || [];  
-      
-      if(!Array.isArray(targets) || targets.find(t => !utils.isValidAddress(t))) {
-        throw new errors.WorkError('"targets" field is invalid', 'ERR_SPREADABLE_INVALID_TARGETS_FIELD');
-      }
-      
-      const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
-      const options = { 
-        responseSchema: schema.getStructureResponse(),
-        timeout: timer(),
-        includeErrors: true
-      };
-      let results = await node.requestGroup(targets.map(t => ({ address: t })), 'structure', options);      
-      results = results.map(r => {
-        if(r instanceof errors.WorkError) {
-          return { message: r.message, code: r.code, address: r.address };
-        }
-        else if(r instanceof Error) {
-          return { message: r.message, address: r.address };
-        }
-
-        return r;
-      });
-
-      res.send({ results });
-    }
-    catch(err) {
-      next(err);
-    }
-  }
-};
-
-/**
  * Provide the node registration
  */
 module.exports.provideRegistration = node => {
@@ -182,15 +97,7 @@ module.exports.provideRegistration = node => {
       const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       let masters = await node.db.getMasters();
       !masters.length && (masters = [{ address: node.address }]);      
-      let results;
-
-      try {        
-        results = await node.provideGroupStructure(masters, { timeout: timer() });
-      }
-      catch(err) {
-        node.logger.warn(err.stack);
-        throw new errors.WorkError('Provider failed', 'ERR_SPREADABLE_PROVIDER_FAIL');
-      }
+      let results = await node.provideGroupStructure(masters, { timeout: timer() });
 
       for(let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
@@ -210,6 +117,64 @@ module.exports.provideRegistration = node => {
       const syncLifetime = await node.getSyncLifetime();
       const networkSize = await node.getNetworkSize();
       res.send({ results, syncLifetime, networkSize });
+    }
+    catch(err) {
+      next(err);
+    }
+  }
+};
+
+/**
+ * Get the approval info
+ */
+module.exports.getApprovalInfo = node => {
+  return async (req, res, next) => {
+    try {
+      const action = req.body.action;
+      const key = req.body.key;
+      await node.approvalActionTest(action);
+      const approval = await node.getApproval(action);
+      const approver = await node.db.getApproval(key);
+      
+      if(!approver) {
+        throw new errors.WorkError(`Unsuitable approval key "${ key }"`, 'ERR_SPREADABLE_UNSUITABLE_APPROVAL_KEY');
+      }
+      
+      const result = await approval.createInfo(approver);
+      await node.db.startApproval(key, result.answer);
+      res.send({ info: result.info });
+    }
+    catch(err) {
+      next(err);
+    }
+  }
+};
+
+/**
+ * Check the approval answer
+ */
+module.exports.checkApprovalAnswer = node => {
+  return async (req, res, next) => {
+    try {
+      const answer = req.body.answer;
+      const key = req.body.key;
+      const clientIp = req.body.clientIp;
+      const approvers = req.body.approvers;      
+      const approver = await node.db.getApproval(key);           
+      
+      if(!approver || approver.usedBy.includes(req.clientAddress) || !utils.isIpEqual(approver.clientIp, clientIp)) {
+        throw new errors.WorkError(`Unsuitable approval key "${ key }"`, 'ERR_SPREADABLE_UNSUITABLE_APPROVAL_KEY');
+      }
+
+      const approval = await node.getApproval(approver.action); 
+      const result = await approval.checkAnswer(approver, answer, approvers);
+      await node.db.useApproval(key, req.clientAddress);
+
+      if(!result) {
+        throw new errors.WorkError(`Wrong approval answer`, 'ERR_SPREADABLE_WRONG_APPROVAL_ANSWER');
+      }
+
+      res.send({ success: true });
     }
     catch(err) {
       next(err);

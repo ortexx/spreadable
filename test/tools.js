@@ -173,7 +173,7 @@ tools.nodesSync = async function (nodes, count = 1) {
         await nodes[k].sync();
       }
       catch(err) {
-        if(err.code != 'ERR_SPREADABLE_REQUEST_TIMEDOUT') {
+        if(['ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code)) {
           throw err;
         }
       }

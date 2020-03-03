@@ -1,4 +1,7 @@
 const bodyParser = require('body-parser');
+const fetch = require('node-fetch');
+const compression = require('compression')
+const cors = require('cors');
 const errors = require('../../../errors');
 const utils = require('../../../utils');
 
@@ -11,6 +14,55 @@ module.exports.clientInfo = () => {
     req.clientAddress = req.headers['original-address'] || `${req.clientIp}:0`;
     next();
   };
+};
+
+/**
+ * Response compression
+ */
+module.exports.compression = (node) => compression({ level: node.options.server.compressionLevel });
+
+/**
+ * Cors control
+ */
+module.exports.cors = () => cors();
+
+/**
+ * Provide the request
+ */
+module.exports.provideRequest = node => {
+  return  async (req, res, next) => {
+    try {
+      let headers = Object.assign({}, req.headers);
+      const url = req.headers['provider-url'];        
+      const timeout = node.createRequestTimeout({ 
+        timeout: req.headers['provider-timeout'], 
+        timestamp: req.headers['provider-timestamp'] 
+      });      
+
+      for(let key in headers) {
+        if(key.match(/^provider/i)) {
+          delete headers[key];
+        }
+      }
+
+      try {
+        const response = await fetch(url, { body: req, method: req.method, headers, timeout });
+        headers = response.headers.raw();
+        headers['provider-target'] = 'true';
+        res.writeHead(response.status, headers);
+        response.body.pipe(res).on('error', next);
+      }
+      catch(err) {        
+        res.setHeader('provider-target', 'true');
+        throw err;
+      }
+    }
+    catch(err) {
+      //eslint-disable-next-line no-ex-assign
+      utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
+      next(err);
+    }
+  }
 };
 
 /**
@@ -34,7 +86,11 @@ module.exports.bodyParser = node => {
  * Answer to ping requests
  */
 module.exports.ping = node => {
-  return (req, res) => res.send({ success: true, address: node.address });
+  return (req, res) => res.send({
+    version: node.getVersion(),
+    address: node.address,
+    root: node.getRoot()
+  });
 };
 
 /**
@@ -44,20 +100,6 @@ module.exports.status = node => {
   return async (req, res, next) => {
     try {
       res.send(await node.getStatusInfo(req.query.pretty !== undefined));
-    }
-    catch(err) {
-      next(err);
-    }
-  };
-};
-
-/**
- * Get the network members
- */
-module.exports.members = node => {
-  return async (req, res, next) => {
-    try {
-      res.send(await node.db.getData('members'));
     }
     catch(err) {
       next(err);
@@ -96,7 +138,7 @@ module.exports.handleErrors = node => {
     }
     
     node.logger.error(err.stack);    
-    res.status(500);      
+    res.status(500);
     res.send({ message: err.message });
   }
 };

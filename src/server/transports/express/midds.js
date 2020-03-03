@@ -1,34 +1,68 @@
 const errors = require('../../../errors');
 const utils = require('../../../utils');
+const schema = require('../../../schema');
 const _ = require('lodash');
 const crypto = require('crypto');
 const Cookies = require('cookies');
 const basicAuth = require('basic-auth');
-const cors = require('cors');
 const midds = {};
 
 /**
- * Cors control
+ * Handle the approval request
  */
-midds.cors = () => cors();
+midds.approval = node => {
+  return async (req, res, next) => {     
 
-/**
- * Accept the node is master
- */
-midds.checkMasterAcception = node => {
-  return async (req, res, next) => {
     try {
-      const size = await node.db.getSlavesCount();
-      
-      if(!size && !req.body.ignoreAcception) {
-        throw new errors.WorkError('Master is not accepted', 'ERR_SPREADABLE_MASTER_NOT_ACCEPTED');
+      const timeout = node.createRequestTimeout(req.body);   
+      const timer = node.createRequestTimer(timeout); 
+      let info = req.body.approvalInfo || req.query.approvalInfo;
+
+      if(!info) {
+        throw new errors.WorkError(`Request to "${ req.originalUrl }" requires confirmation`, 'ERR_SPREADABLE_APPROVAL_INFO_REQUIRED');
       }
 
-      res.setHeader('spreadable-master-size', size);
+      try {
+        typeof info == 'string' && (info = JSON.parse(info));        
+      }
+      catch(err) {
+        throw new errors.WorkError(err.message, 'ERR_SPREADABLE_INVALID_APPROVAL_INFO');
+      }
+
+      const action = info.action;
+      const startedAt = info.startedAt;
+      const key = info.key;
+      const clientApprovers = info.approvers;
+      const clientIp = info.clientIp;
+      const answer = info.answer;
+      await node.approvalActionTest(action);
+      const approval = await node.getApproval(action);
+      await approval.startTimeTest(startedAt); 
+      const answerSchema = approval.getClientAnswerSchema();
+      utils.validateSchema(schema.getApprovalInfoRequest(answerSchema), info);     
+      const time = utils.getClosestPeriodTime(startedAt, approval.period);      
+      const approversCount = await approval.calculateApproversCount();    
+      let approvers = await node.getApprovalApprovers(time, approversCount, { timeout: timer() });
+      const targets = _.intersection(clientApprovers, approvers).map(address => ({ address }));
+      await approval.approversDecisionCountTest(targets.length);
+      const results = await node.requestGroup(targets, 'check-approval-answer', {
+        includeErrors: false,        
+        timeout: timer(await node.getRequestServerTimeout()),
+        body: { key, answer, approvers: clientApprovers, clientIp }
+      });
+      
+      try {
+        await approval.approversDecisionCountTest(results.length);
+      }
+      catch(err) {
+        throw new errors.WorkError('Wrong answer, try again', 'ERR_SPREADABLE_WRONG_APPROVAL_ANSWER');
+      }
+     
+      req.approvalInfo = info;
       next();
     }
     catch(err) {
-      next(err)
+      next(err);
     }
   }
 };
@@ -54,6 +88,7 @@ midds.updateClientInfo = node => {
 midds.networkAccess = (node, checks = {}) => {
   checks = _.merge({ 
     auth: true, 
+    root: false,
     address: false, 
     version: false, 
   }, checks);
@@ -105,6 +140,14 @@ midds.networkAccess = (node, checks = {}) => {
 
         if(req.headers['node-version'] != version) {
           throw new errors.AccessError(`Node version is different: "${ req.headers['node-version'] }" instead of "${ version }"`);
+        }
+      }
+
+      if(checks.root) {
+        const root = node.getRoot();
+
+        if(req.headers['node-root'] != root) {
+          throw new errors.AccessError(`Node root is different: "${ req.headers['node-root'] }" instead of "${ root }"`);
         }
       }
       

@@ -4,6 +4,7 @@ const routes = require('./routes');
 const routesClient = require('./client/routes');
 const routesApi = require('./api/routes');
 const routesApiMaster = require('./api/master/routes');
+const routesApiButler = require('./api/butler/routes');
 const routesApiSlave = require('./api/slave/routes');
 const routesApiNode = require('./api/node/routes');
 
@@ -56,6 +57,15 @@ module.exports = (Parent) => {
      */
     getApiMasterRoutes() {
       return [...routesApiMaster];
+    }
+
+    /**
+     * Get the api butler routes
+     * 
+     * @returns {array}
+     */
+    getApiButlerRoutes() {
+      return [...routesApiButler];
     }
   
     /**
