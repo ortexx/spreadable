@@ -72,8 +72,8 @@ module.exports = (Parent) => {
       this.options = merge({
         request: {
           pingTimeout: '1s',
-          clientTimeout: '10s',
-          approvalQuestionTimeout: '20s'
+          clientTimeout: '6s',
+          approvalQuestionTimeout: '15s'
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
@@ -245,7 +245,7 @@ module.exports = (Parent) => {
       const targets = approvers.map(address => ({ address }));
       const results = await this.requestGroup(targets, 'add-approval-info', Object.assign({}, options, { 
         includeErrors: true,
-        timeout: timer(),
+        timeout: timer(this.options.request.clientTimeout),
         body: {
           action,
           key,

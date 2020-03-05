@@ -5,6 +5,7 @@ const urlib = require('url');
 const path = require('path');
 const fse = require('fs-extra');
 const _ = require('lodash');
+const http = require('http');
 const https = require('https');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
@@ -68,7 +69,7 @@ module.exports = (Parent) => {
         },
         server: {
           https: false,
-          maxBodySize: '1000kb',
+          maxBodySize: '500kb',
           compressionLevel: 6
         },
         behavior: {          
@@ -984,7 +985,7 @@ module.exports = (Parent) => {
       }
       else {
         const timeout = timer(this.options.request.pingTimeout);
-        const result = await this.requestServer(this.initialNetworkAddress, 'ping', { timeout });  
+        const result = await this.requestServer(this.initialNetworkAddress, 'ping', { method: 'GET', timeout });  
         newRoot = result.root;
       }
 
@@ -1017,7 +1018,7 @@ module.exports = (Parent) => {
       }
 
       try {
-        await this.requestServer('ping', { timeout: timer() });
+        await this.requestServer(server.address, 'ping', { method: 'GET', timeout: timer() });
       }
       catch(err) {
         this.logger.warn(err.stack);
@@ -1297,9 +1298,10 @@ module.exports = (Parent) => {
       const timer = this.createRequestTimer(options.timeout);
       
       try {
+        const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();
         return await this.requestNode(target, 'structure', {
           responseSchema: schema.getStructureResponse(),
-          timeout: timer(await this.getRequestServerTimeout()),
+          timeout: timer(timeout),
           provider
         });
       }
@@ -1331,9 +1333,10 @@ module.exports = (Parent) => {
 
       try {
         provider != this.address && await this.checkNodeAddress(provider);
+        const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();        
         return await this.requestGroup(targets, 'structure', {
           responseSchema: schema.getStructureResponse(),
-          timeout: timer(await this.getRequestServerTimeout()),
+          timeout: timer(timeout),
           includeErrors: options.includeErrors,
           provider
         });
@@ -1415,6 +1418,7 @@ module.exports = (Parent) => {
         this.logger.info(`Request from "${this.address}" to "${options.url}": ${ms(Date.now() - start)}`);
 
         if(response.ok) {
+          response.provider = provider;
           return options.getFullResponse? response: await response.json();
         }
 
@@ -1510,12 +1514,14 @@ module.exports = (Parent) => {
      */
     async requestGroup(arr, url, options = {}) {
       const requests = [];
+      const timer = this.createRequestTimer(options.timeout);
 
       for(let i = 0; i < arr.length; i++) {
         const item = arr[i];
 
         requests.push(new Promise(resolve => {
           const opts = _.merge({ requestType: 'node' }, options, item.options);
+          opts.timeout = timer(opts.timeout);
           const requestType = _.capitalize(opts.requestType);
           const p = requestType? this[`request${ requestType }`](item.address, url, opts): this.request(url, opts);
           p.then(resolve).catch(resolve);
@@ -1542,12 +1548,17 @@ module.exports = (Parent) => {
       options.timeout = timeout;
 
       try {
-        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), options);
-        let body = result;
+        const opts = Object.assign({}, options, { getFullResponse: true });
+        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);
+        await this.db.subBehaviorFail('requestDelays', address);
+        result.provider && await this.db.subBehaviorFail('requestDelays', result.provider);
+        let body = await result.json();      
         
-        if(options.getFullResponse) {
-          body = await result.json();
+        if(options.getFullResponse) {          
           result.__json = body;
+        }
+        else {
+          result = body;
         }
 
         if(body && typeof body == 'object' && !Array.isArray(body)) {
@@ -1565,8 +1576,8 @@ module.exports = (Parent) => {
             throw err;
           }
         }
-
-        await this.db.subBehaviorFail('requestDelays', address);
+        
+        result.provider && this.db.successServerAddress(result.provider);
         await this.db.successServerAddress(address);
         return result;
       }
@@ -2095,7 +2106,7 @@ module.exports = (Parent) => {
         }
 
         const timeout = timer(this.options.request.pingTimeout);
-        const opts = { timeout, requestType: 'server', includeErrors: true };
+        const opts = { method: 'GET', timeout, requestType: 'server', includeErrors: true };
         const results = await this.requestGroup(targets, 'ping', opts);
         
         for(let k = 0; k < results.length; k++) {
@@ -2154,12 +2165,18 @@ module.exports = (Parent) => {
         defaults.headers.authorization = `Basic ${ Buffer.from(user + ":" + pass).toString('base64') }`;
       }
 
+      if(!options.agent) {
+        options.agent = new (this.options.server.https? https: http).Agent();
+      }
+
+      options.agent.keepAlive = true;
+      options.agent.maxSockets = Infinity;
+
       if(options.timeout) {
         options.timeout = utils.getMs(options.timeout);
       }
 
       if(typeof this.options.server.https == 'object' && this.options.server.https.ca) {
-        options.agent = options.agent || new https.Agent();
         options.agent.options.ca = this.options.server.https.ca;
       }
 
