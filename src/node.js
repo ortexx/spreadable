@@ -2169,7 +2169,6 @@ module.exports = (Parent) => {
         options.agent = new (this.options.server.https? https: http).Agent();
       }
 
-      options.agent.keepAlive = true;
       options.agent.maxSockets = Infinity;
 
       if(options.timeout) {
