@@ -1019,6 +1019,7 @@ module.exports = (Parent) => {
 
       try {
         await this.requestServer(server.address, 'ping', { method: 'GET', timeout: timer() });
+        return server.address;
       }
       catch(err) {
         this.logger.warn(err.stack);
