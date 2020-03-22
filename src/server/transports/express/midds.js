@@ -14,6 +14,7 @@ midds.approval = node => {
   return async (req, res, next) => {     
 
     try {
+      const invErrCode = 'ERR_SPREADABLE_INVALID_APPROVAL_INFO';
       const timeout = node.createRequestTimeout(req.body);   
       const timer = node.createRequestTimer(timeout); 
       let info = req.body.approvalInfo || req.query.approvalInfo;
@@ -26,7 +27,7 @@ midds.approval = node => {
         typeof info == 'string' && (info = JSON.parse(info));        
       }
       catch(err) {
-        throw new errors.WorkError(err.message, 'ERR_SPREADABLE_INVALID_APPROVAL_INFO');
+        throw new errors.WorkError(err.message, invErrCode);
       }
 
       const action = info.action;
@@ -39,7 +40,14 @@ midds.approval = node => {
       const approval = await node.getApproval(action);
       await approval.startTimeTest(startedAt); 
       const answerSchema = approval.getClientAnswerSchema();
-      utils.validateSchema(schema.getApprovalInfoRequest(answerSchema), info);     
+
+      try {
+        utils.validateSchema(schema.getApprovalInfoRequest(answerSchema), info);
+      }
+      catch(err) {
+        throw new errors.WorkError(err.message, invErrCode);
+      }
+         
       const time = utils.getClosestPeriodTime(startedAt, approval.period);      
       const approversCount = await approval.calculateApproversCount();    
       let approvers = await node.getApprovalApprovers(time, approversCount, { timeout: timer() });

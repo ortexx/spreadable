@@ -1,5 +1,5 @@
 const chalk = require('chalk');
-const argv = require('optimist').argv;
+const argv = require('yargs').argv;
 const path = require('path');
 const _ = require('lodash');
 const Spinner = require('cli-spinner').Spinner;
