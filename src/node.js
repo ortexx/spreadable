@@ -2297,7 +2297,7 @@ module.exports = (Parent) => {
       return `${ this.constructor.codename }-${ this.constructor.version.split('.').slice(0, -1).join('.') }`;
     }
 
-     /**
+    /**
      * Get the node root address
      * 
      * @returns {string}

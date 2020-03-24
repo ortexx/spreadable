@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -76,7 +76,7 @@
     "text-to-svg": "^3.1.5",
     "validate-ip-node": "^1.0.6",
     "yargs": "^15.3.1"
-  },
+  },  
   "repository": {
     "type": "git",
     "url": "https://github.com/ortexx/spreadable"
