@@ -33,5 +33,12 @@ module.exports = (Parent) => {
     async normalize() {
       return await this.node.db.normalizeCache(this.type, this.options);
     }
+
+    /**
+     * @see Cache.prototype.flush
+     */
+    async flush() {
+      return await this.node.db.flushCache(this.type);
+    }
   }
 };

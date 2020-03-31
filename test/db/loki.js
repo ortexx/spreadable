@@ -947,6 +947,17 @@ describe('DatabaseLoki', () => {
         assert.equal(1, loki.col.cache.chain().find({ type }).count());
       });
     });
+
+    describe('.flushCache()', function () { 
+      it('should remove all cache', async function () {
+        for(let i = 1; i < 5; i++) {
+          await loki.setCache(type, i);
+        }
+        
+        await loki.flushCache(type); 
+        assert.equal(loki.col.cache.count({ type }), 0);
+      });
+    });
   });
 
   describe('.deinit()', function () { 

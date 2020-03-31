@@ -1073,14 +1073,15 @@ module.exports = (Parent) => {
      */
     async setCache(type, key, value, options = {}) {
       let cache = this.col.cache.findOne({ type, key });
+      const now = Date.now();
 
       if(cache) {
         cache.value = value;
-        cache.accessedAt = Date.now();
+        cache.accessedAt = now;
         return this.col.cache.update(cache);
       }
 
-      cache = this.col.cache.insert({ type, key, value, accessedAt: Date.now() });
+      cache = this.col.cache.insert({ type, key, value, accessedAt: now, createdAt: now });
       options.limit && this.col.cache.chain().find({ type }).simplesort('accessedAt', true).offset(options.limit).remove();
       return cache;
     }
@@ -1098,7 +1099,14 @@ module.exports = (Parent) => {
      */
     async normalizeCache(type, options = {}) {
       options.limit && this.col.cache.chain().find({ type }).simplesort('accessedAt', true).offset(options.limit).remove();
-      options.lifetime && this.col.cache.chain().find({ type, accessedAt: { $lt: Date.now() - options.lifetime } }).remove();      
+      options.lifetime && this.col.cache.chain().find({ type, createdAt: { $lt: Date.now() - options.lifetime } }).remove(); 
+    }
+
+    /**
+     * @see Database.prototype.flushCache
+     */
+    async flushCache(type) {
+      this.col.cache.chain().find({ type }).remove();      
     }
   }
 };

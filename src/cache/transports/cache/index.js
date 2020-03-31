@@ -69,5 +69,14 @@ module.exports = (Parent) => {
     async normalize() {
       throw new Error('Method "normalize" is required for cache transport');
     }
+
+    /**
+     * Flush the cache
+     * 
+     * @async
+     */
+    async flush() {
+      throw new Error('Method "flush" is required for cache transport');
+    }
   }
 };

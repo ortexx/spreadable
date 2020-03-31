@@ -49,6 +49,15 @@ describe('CacheDatabase', () => {
     });
   });
 
+  describe('.flush()', function () {
+    it('should remove the cache', async function () {
+      const key = 'key';
+      await cache.set(key, 1);
+      await cache.flush();
+      assert.isNull(await cache.get(key));
+    });
+  });
+
   describe('.deinit()', function () { 
     it('should not throw an exception', async function () {
       await cache.deinit();

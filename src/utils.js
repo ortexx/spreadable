@@ -526,6 +526,10 @@ utils.createRequestTimeoutError = function () {
  * @returns {boolean}
  */
 utils.isRequestTimeoutError = function (err) {
+  if(!(err instanceof Error)) {
+    return false;
+  }
+  
   return (
     ['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) || 
     ['request-timeout', 'body-timeout'].includes(err.type)

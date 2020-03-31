@@ -36,7 +36,7 @@ module.exports = (Parent) => {
     /**
      * @param {object} options
      * @param {object} options.port
-     * @param {object} options.initialNetworkAddress
+     * @param {object} [options.initialNetworkAddress]
      */
     constructor(options = {}) {
       super(...arguments);
@@ -59,7 +59,7 @@ module.exports = (Parent) => {
           autoSync: true,
           isTrusted: false,
           syncInterval: '16s',
-          syncTimeCalculationPeriod: '1d',          
+          syncTimeCalculationPeriod: '1d',
           auth: null,
           authCookieMaxAge: '7d',
           serverMaxFails: 3,
@@ -597,7 +597,13 @@ module.exports = (Parent) => {
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
 
-        if(result instanceof Error || !result.backlink || result.backlink.address != address) {
+        if(
+          !utils.isRequestTimeoutError(result) && (
+            result instanceof Error ||
+            !result.backlink || 
+            result.backlink.address != address
+          )
+        ) {
           suspicious++;
           continue;
         }
