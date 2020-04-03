@@ -55,26 +55,36 @@ module.exports = (Parent) => {
         return;
       }
 
-      const fn = async () => {
-        let lastFile = await this.getLastFile();
-        message = this.prepareMessage(message, level);
+      return new Promise((resolve, reject) => {
+        const fn = async () => {
+          let err;
 
-        if(!lastFile) {
-          lastFile = await this.addNewFile();
-        }
+          try {
+            let lastFile = await this.getLastFile();
+            message = this.prepareMessage(message, level);
+    
+            if(!lastFile) {
+              lastFile = await this.addNewFile();
+            }
+    
+            if(lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
+              lastFile = await this.addNewFile();
+            }
+    
+            await this.addNewMessage(message, lastFile.filePath);
+            await this.normalizeFilesCount();
+          }
+          catch(e) {
+            err = e;
+          }
 
-        if(lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
-          lastFile = await this.addNewFile();
-        }
-
-        await this.addNewMessage(message, lastFile.filePath);
-        await this.normalizeFilesCount();
-        this.__queue.shift();
-        this.__queue.length && await this.__queue[0]();
-      }; 
-
-      this.__queue.push(fn);
-      this.__queue.length <= 1 && await fn();      
+          err? reject(err): resolve();
+          this.__queue.shift();
+          this.__queue.length && this.__queue[0]();
+        }; 
+        this.__queue.push(fn);
+        this.__queue.length <= 1 && fn();
+      });    
     }
 
     /**

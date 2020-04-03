@@ -11,8 +11,7 @@ const midds = {};
  * Handle the approval request
  */
 midds.approval = node => {
-  return async (req, res, next) => {     
-
+  return async (req, res, next) => {
     try {
       const invErrCode = 'ERR_SPREADABLE_INVALID_APPROVAL_INFO';
       const timeout = node.createRequestTimeout(req.body);   

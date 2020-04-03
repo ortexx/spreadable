@@ -126,6 +126,17 @@ import Client from 'spreadable/dist/spreadable.client.js';
 ### 3. Build it by yourself
 You can use webpack or something else to build the client for the browser with entry point __spreadable/src/browser/client/index.js__. Then you import / require it in your application and use as usually.
 
+## How to use it via the command line
+You need to install the library globally:
+
+``` npm install -g spreadable --unsafe-perm=true --allow-root ```
+
+Now you perform various actions running it from your project root folder:
+
+``` spreadable -a status -c ./config.js ```
+
+You can skip the config argument passing if you have file with the name **spreadable.config.js** in the root. To see all actions and commands just look at [spreadable/bin](https://github.com/ortexx/spreadable/tree/master/bin) folder.
+
 ## How the network works
 For the network working all nodes must be able to interact with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it or the old one will leave. After a while, another server will take over this role.
 
