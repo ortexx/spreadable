@@ -454,9 +454,14 @@ module.exports = (Parent) => {
      */
     async sync() {
       const startTime = Date.now();      
-      const timer = this.createRequestTimer(this.options.network.syncInterval);
-      await this.normalizeRoot({ timeout: timer() });
+      const timer = this.createRequestTimer(this.options.network.syncInterval);      
+      await this.db.normalizeBanlist();
+      await this.db.normalizeApproval();
+      await this.db.normalizeBehaviorFails();
+      await this.db.normalizeBehaviorCandidates();
+      await this.db.normalizeServers();
       await this.cleanUpServers();
+      await this.normalizeRoot({ timeout: timer() });
       const slaves = await this.db.getSlaves();
       const size = slaves.length;
       size? await this.db.addMaster(this.address, size): await this.db.removeMaster(this.address);      
@@ -499,13 +504,8 @@ module.exports = (Parent) => {
         else {
           throw err;
         }
-      }      
+      }
       
-      await this.db.normalizeApproval();
-      await this.db.normalizeBehaviorFails();
-      await this.db.normalizeBanlist();
-      await this.db.normalizeBehaviorCandidates();
-      await this.db.normalizeServers();
       const time = Date.now() - startTime;
       this.__syncList.push({ time });
       this.__syncList.length > this.getSyncListSize() && this.__syncList.shift();
