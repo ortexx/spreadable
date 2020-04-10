@@ -146,6 +146,19 @@ The node ID is called __address__ and written as __hostname:port__. Hostname mig
 ## What are the limitations
 To implement various features it is often required to go through the entire network to find the necessary information. The protocol allows to do this in a sequence of 3 http requests. The first query from the starting point goes from the client to the entry node, the next goes to all masters simultaneously each of which goes through nodes from its list in parallel as well. The number of simultaneous requests always strive to the square root of the network size. Therefore, with a larger network size each node must be configured to be able to work with a large number of tcp connections simultaneously. For example, take a network of 10,000 nodes. For maximum network performance each node must be able to make 100 simultaneous requests and handle 1 per client. Apart from various system requests that occur from time to time to normalize the network.
 
+## What are the requirements
+You must have [node-gyp](https://github.com/nodejs/node-gyp) to install dependencies.
+
+If you run the node in a cointainer (virtual machine), then be sure that client ip addresses are forwarding to the node server.
+Some virtualization tools don't do it, by default. You have to set it up if possible or just use a proxy server in front of this with filling **x-forwarded-for** header.
+Let's say we use **2079** port for public access and **2078** to link it with the virtual machine. All the process would be like that:
+
+`client -> proxy:2079 -> local machine:2078 -> virtual machine:2079`
+
+Currently, the proxy server must have the same ip address as the node has.
+
+If you don't pass the real client ip address to the virtual machine or your node ip address is different from the proxy server address, the node will ban all external servers due to vulnerabilities control system working.
+
 ## How to control the time of requests
 When making requests the client can always specify a timeout.
 

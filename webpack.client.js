@@ -11,9 +11,11 @@ module.exports = (options = {}) => {
   plugins.push(BannerPlugin);
 
   const mock = merge({
+    "os": true,
     "crypto": true,
     "chalk": true,
-    "ip6address": true,
+    "ip6address": true,    
+    "external-ip": true,
     "tcp-port-used": true,
     "validate-ip-node": true,
     "lookup-dns-cache": true

@@ -363,20 +363,21 @@ module.exports = (Parent) => {
       const start = Date.now();
 
       try {        
-        const result = await fetch(options.url, options);    
+        const response = await fetch(options.url, options);    
         this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);
-        const body = (result.headers.get('content-type') || '').match('application/json')? await result.json(): null;
 
-        if(result.ok) {
-          return body;
+        if(response.ok) {
+          return options.getFullResponse? response: await response.json();
         }
+
+        const body = (response.headers.get('content-type') || '').match('application/json')? await response.json(): await response.text();
 
         if(!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
         }
 
         if(!body.code) {
-          throw new Error(body.message);
+          throw new Error(body.message || body);
         }
         
         throw new errors.WorkError(body.message, body.code);

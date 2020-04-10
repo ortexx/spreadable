@@ -451,6 +451,16 @@ module.exports = (Parent) => {
     }
 
     /**
+     * Get all banlist
+     * 
+     * @async
+     * @returns {object[]}
+     */
+    async getBanlist() {
+      throw new Error('Method "getBanlist" is required for database transport');
+    }
+
+    /**
      * Get the banlist address
      * 
      * @async
@@ -492,6 +502,15 @@ module.exports = (Parent) => {
      */
     async removeBanlistAddress() {
       throw new Error('Method "removeBanlistAddress" is required for database transport');
+    }
+
+    /**
+     * Empty the banlist
+     * 
+     * @async
+     */
+    async emptyBanlist() {
+      throw new Error('Method "emptyBanlist" is required for database transport');
     }
 
     /**

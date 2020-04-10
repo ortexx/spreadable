@@ -8,9 +8,10 @@ const utils = require('../../../utils');
 /**
  * Set http request client info
  */
-module.exports.clientInfo = () => {
+module.exports.clientInfo = (node) => {
   return (req, res, next) => {
-    req.clientIp = utils.getRemoteIp(req);
+    const trusted = [...new Set([node.ip, node.externalIp, node.localIp])];
+    req.clientIp = utils.getRemoteIp(req, { trusted });
     req.clientAddress = req.headers['original-address'] || `${req.clientIp}:0`;
     next();
   };
@@ -30,7 +31,7 @@ module.exports.cors = () => cors();
  * Provide the request
  */
 module.exports.provideRequest = node => {
-  return  async (req, res, next) => {
+  return async (req, res, next) => {
     try {
       let headers = Object.assign({}, req.headers);
       const url = req.headers['provider-url'];        

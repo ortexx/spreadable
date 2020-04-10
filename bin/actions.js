@@ -12,6 +12,46 @@ module.exports.status = async node => {
 };
 
 /**
+ * Get all banlist
+ */
+module.exports.getBanlist = async node => {
+  const fullInfo = argv.f || argv.fullInfo;
+  const list = await node.db.getBanlist();
+
+  if(!list.length) {
+    //eslint-disable-next-line no-console
+    console.log(chalk.cyan(`The banlist is empty`));
+    return;
+  }
+
+  for(let i = 0; i < list.length; i++) {
+    const result = list[i];
+    //eslint-disable-next-line no-console
+    console.log(chalk.cyan(fullInfo? JSON.stringify(result, null, 2): result.address));
+  }
+}
+
+/**
+ * Get the banlist address info
+ */
+module.exports.getBanlistAddress = async node => {
+  const address = argv.n || argv.address;
+
+  if(!address) {
+    throw new Error(`Address is required`);
+  }
+
+  const result = await node.db.getBanlistAddress(address);
+
+  if(!result) {
+    throw new Error(`Address "${ address }" not found`);
+  }
+  
+  //eslint-disable-next-line no-console
+  console.log(chalk.cyan(JSON.stringify(result, null, 2)));
+}
+
+/**
  * Add the address to the banlist
  */
 module.exports.addBanlistAddress = async node => {
@@ -47,4 +87,14 @@ module.exports.removeBanlistAddress = async node => {
   
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(`Address "${address}" has been removed from the banlist`));
+};
+
+/**
+ * Empty the banlist
+ */
+module.exports.emptyBanlist = async node => {
+  await node.db.emptyBanlist();
+  
+  //eslint-disable-next-line no-console
+  console.log(chalk.cyan(`The banlist has been cleaned`));
 };

@@ -1,5 +1,4 @@
 const ms = require('ms');
-const os = require('os');
 const v8 = require('v8');
 const urlib = require('url');
 const path = require('path');
@@ -9,7 +8,6 @@ const http = require('http');
 const https = require('https');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
-const externalIp = require('external-ip');
 const DatabaseLoki = require('./db/transports/loki')();
 const ServerExpress = require('./server/transports/express')();
 const LoggerConsole = require('./logger/transports/console')();
@@ -111,8 +109,10 @@ module.exports = (Parent) => {
      * @async
      */
     async init() {
-      this.storagePath = this.options.storage.path || path.join(process.cwd(), this.constructor.codename, `storage-${this.port}`);
-      this.hostname = this.options.hostname || (await this.getExternalIp()) || (await this.getLocalIp());
+      this.storagePath = this.options.storage.path || path.join(process.cwd(), this.constructor.codename, `storage-${this.port}`);      
+      this.externalIp = await utils.getExternalIp();
+      this.localIp = utils.getLocalIp();
+      this.hostname = this.options.hostname || this.externalIp || this.localIp;
       this.address = utils.createAddress(this.hostname, this.publicPort);
       this.initialNetworkAddress = this.options.initialNetworkAddress || this.address;
       this.ip = await utils.getHostIp(this.hostname);
@@ -209,14 +209,14 @@ module.exports = (Parent) => {
     async prepareBehavior() {
       await this.addBehavior('requestDelays', new BehaviorFail(this, { banLifetime: '5m', failSuspicionLevel: 200 }));
       await this.addBehavior('authentication', new BehaviorFail(this, { banLifetime: '15m', failSuspicionLevel: 10 }));
+      await this.addBehavior('registration', new BehaviorFail(this, { banLifetime: '10m' }));
       await this.addBehavior('slaveMasters', new BehaviorFail(this));
       await this.addBehavior('slaveBacklink', new BehaviorFail(this));
       await this.addBehavior('backlinkMasters', new BehaviorFail(this));
       await this.addBehavior('backlinkSlaves', new BehaviorFail(this));
       await this.addBehavior('masterMasters', new BehaviorFail(this));
       await this.addBehavior('masterSlaves', new BehaviorFail(this));
-      await this.addBehavior('masterNetworkSize', new BehaviorFail(this));
-      await this.addBehavior('registration', new BehaviorFail(this));
+      await this.addBehavior('masterNetworkSize', new BehaviorFail(this));      
       await this.addBehavior('requestBacklinkMasters', new BehaviorFail(this));
       await this.addBehavior('responseSchema', new BehaviorFail(this));
     }
@@ -295,44 +295,7 @@ module.exports = (Parent) => {
       if(result.address != this.address) {
         throw new Error(`Host ${this.address} is wrong`);
       }
-    }
-
-    /**
-     * Get an external ip address of the host
-     * 
-     * @async
-     * @returns {string}
-     */
-    async getExternalIp() {
-      try {
-        return await new Promise((resolve, reject) => externalIp()(((err, ip) => err? reject(err): resolve(ip))));
-      }
-      catch(err) {
-        return null;
-      }
-    }
-
-    /**
-     * Get a local ip address of the host
-     * 
-     * @async
-     * @returns {string}
-     */
-    async getLocalIp() {
-      const interfaces = os.networkInterfaces();
-      let ip;
-      
-      for (let k in interfaces) {
-        for (let p in interfaces[k]) {
-          var address = interfaces[k][p];
-          if (address.family === 'IPv4' && !address.internal) {
-            ip = address.address;
-          }
-        }
-      }
-
-      return ip;
-    }
+    }    
 
     /**
      * Check the node is a master
@@ -1363,16 +1326,16 @@ module.exports = (Parent) => {
      * Make a request
      * 
      * @async
-     * @param {string} url - url without protocol
+     * @param {string} url - url without a protocol
      * @param {object} [options]
-     * @param {object} [options.url] - with protocol
+     * @param {object} [options.url] - with a protocol
      * @returns {object}
      */
     async request(url, options = {}) { 
       options = _.merge({}, options);
 
       if(typeof url == 'object') {
-        options = url;        
+        options = url;
       } 
       else {
         options.url = `${this.getRequestProtocol()}://${url}`;
@@ -1429,14 +1392,14 @@ module.exports = (Parent) => {
           return options.getFullResponse? response: await response.json();
         }
 
-        const body = (response.headers.get('content-type') || '').match('application/json')? await response.json(): null;
-
+        const body = (response.headers.get('content-type') || '').match('application/json')? await response.json(): await response.text();
+       
         if(!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
         }
 
         if(!body.code) {
-          throw new Error(body.message);
+          throw new Error(body.message || body);
         }
         
         throw new errors.WorkError(body.message, body.code);

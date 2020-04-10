@@ -2,7 +2,7 @@ const assert = require('chai').assert;
 const utils = require('../src/utils');
 const getPort = require('get-port');
 const http = require('http');
-const fetch = require('node-fetch');
+const mocks = require('node-mocks-http');
 
 describe('utils', () => {
   describe('.validateSchema()', () => {
@@ -425,20 +425,64 @@ describe('utils', () => {
   });
 
   describe('.getRemoteIp()', () => {
-    let port;
-
-    before(async () => {
-      port = await getPort();
+    it('should return the right ip', () => {
+      const remoteAddress = '127.0.0.1';
+      const req = mocks.createRequest({ connection: { remoteAddress } });
+      assert.equal(utils.getRemoteIp(req), remoteAddress);
     });
 
-    it('should return the percentage', done => {
-      const server = http.createServer((req, res) => {
-        res.end();
-        server.close(done);
-        assert.isTrue(utils.isValidIp(utils.getRemoteIp(req)));        
-      }).listen(port);
+    it('should return the forwarded ip', () => {
+      const remoteAddress = '127.0.0.1';
+      const clientAddress = '1.1.1.1';
+      const req = mocks.createRequest({ 
+        connection: { remoteAddress },
+        headers: { 'x-forwarded-for': clientAddress }
+      });
+      assert.equal(utils.getRemoteIp(req), clientAddress);
+    });
 
-      fetch(`http://localhost:${port}`);
+    it('should return the remote ip with the trustlist', () => {
+      const remoteAddress = '127.0.0.1';
+      const clientAddress = '1.1.1.1';
+      const req = mocks.createRequest({ 
+        connection: { remoteAddress },
+        headers: { 'x-forwarded-for': clientAddress }
+      });
+      assert.equal(utils.getRemoteIp(req, { trusted: ['2.2.2.2'] }), remoteAddress);
+    });
+
+    it('should return the client ip with the trustlist', () => {
+      const remoteAddress = '127.0.0.1';
+      const clientAddress = '1.1.1.1';
+      const trusted = [remoteAddress, '2.2.2.2']
+      const req = mocks.createRequest({ 
+        connection: { remoteAddress },
+        headers: { 'x-forwarded-for': `${clientAddress}, ${ trusted[0] }, ${ trusted[1] }` }
+      });
+      assert.equal(utils.getRemoteIp(req, { trusted }), clientAddress);
+    });
+
+    it('should return the remote ip with the trustlist broken chain', () => {
+      const remoteAddress = '127.0.0.1';
+      const clientAddress = '1.1.1.1';
+      const trusted = [remoteAddress, '2.2.2.2']
+      const req = mocks.createRequest({ 
+        connection: { remoteAddress },
+        headers: { 'x-forwarded-for': `${clientAddress}, ${ trusted[0] }, ${ trusted[1] }, 3.3.3.3` }
+      });
+      assert.equal(utils.getRemoteIp(req, { trusted: ['2.2.2.2'] }), remoteAddress);
+    });
+  });
+
+  describe('.getExternalIp()', () => {
+    it('should return a right ip', async () => {
+      assert.isTrue(utils.isValidIp(await utils.getExternalIp()));  
+    });
+  });
+
+  describe('.getLocalIp()', () => {
+    it('should return a right ip', async () => {
+      assert.isTrue(utils.isValidIp(await utils.getLocalIp()));  
     });
   });
 

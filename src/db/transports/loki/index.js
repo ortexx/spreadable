@@ -993,6 +993,13 @@ module.exports = (Parent) => {
     }
 
     /**
+     * @see Database.prototype.getBanlist
+     */
+    async getBanlist() {
+      return this.col.banlist.find();
+    }
+
+    /**
      * @see Database.prototype.getBanlistAddress
      */
     async getBanlistAddress(address) {
@@ -1040,6 +1047,13 @@ module.exports = (Parent) => {
       if(server) {
         return this.col.banlist.remove(server);
       }
+    }
+
+    /**
+     * @see Database.prototype.emptyBanlist
+     */
+    async emptyBanlist() {
+      return this.col.banlist.chain().find().remove();
     }
 
     /**

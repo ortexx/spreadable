@@ -1,9 +1,11 @@
 const validateIP = require('validate-ip-node');
 const bytes = require('bytes');
 const ms = require('ms');
+const os = require('os');
 const uniqBy = require('lodash/uniqBy');
 const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
+const externalIp = require('external-ip');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr'); 
 const errors = require('./errors'); 
@@ -304,20 +306,91 @@ utils.getRequestTimer = function (timeout, options = {}) {
 };
 
 /**
+ * Get an external ip address of the host
+ * 
+ * @async
+ * @returns {string}
+ */
+utils.getExternalIp = async function () {
+  try {
+    return await new Promise((resolve, reject) => externalIp()(((err, ip) => err? reject(err): resolve(ip))));
+  }
+  catch(err) {
+    return null;
+  }
+}
+
+/**
+ * Get a local ip address of the host
+ * 
+ * @returns {string}
+ */
+utils.getLocalIp = function () {
+  const interfaces = os.networkInterfaces();
+  let ip;
+  
+  for (let k in interfaces) {
+    for (let p in interfaces[k]) {
+      const address = interfaces[k][p];
+
+      if (address.family === 'IPv4' && !address.internal) {
+        ip = address.address;
+      }
+    }
+  }
+
+  return ip;
+}
+
+/**
  * Get the client remote ip address
  * 
  * @param {http.ClientRequest} req 
+ * @param {object} [options]
+ * @param {string[]} [options.trusted]
  * @returns {string}
  */
-utils.getRemoteIp = function (req) {
-  let ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+utils.getRemoteIp = function (req, options = {}) {
+  let ip = req.connection.remoteAddress;
+  let isTrusted = true;
+
+  const check = ip => {
+    if(!options.trusted || !options.trusted.length) {
+      return true;
+    }
+
+    for(let i = 0; i < options.trusted.length; i++) {
+      if(this.isIpEqual(ip, options.trusted[i])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   if(ip.match(':')) {
     ip = ip.replace('::1', '127.0.0.1');
     ip.match('.') && (ip = ip.replace(/^::ffff:/, ''));
-    this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
+  }
+  
+  if(options.trusted && req.headers['x-forwarded-for']) {
+    isTrusted = check(ip);
   }
 
+  if(req.headers['x-forwarded-for'] && isTrusted) {
+    const list = req.headers['x-forwarded-for'].split(',').map(ip => ip.trim());
+    const proxies = list.slice(1);
+
+    if(options.trusted) {
+      const matches = proxies.reduce((p, c) => check(c)? p + 1: p, 0);
+      matches === proxies.length && (ip = list[0]);
+    }
+    else {
+      ip = list[0];
+    }
+  }
+
+  this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
   return ip;
 };
 

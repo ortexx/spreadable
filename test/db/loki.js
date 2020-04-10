@@ -375,14 +375,23 @@ describe('DatabaseLoki', () => {
   describe('.addBanlistAddress()', function () { 
     it('should add the address', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
+      await loki.addBanlistAddress(address, '1d');
       assert.isOk(loki.col.banlist.count({ address }));        
     });
 
     it('should not create the same address', async function () {
       const address = 'localhost:1';
-      await loki.addBanlistAddress(address, this.node.options.behavior.banLifetime);
+      await loki.addBanlistAddress(address, '1d');
       assert.equal(loki.col.banlist.count({ address }), 1);        
+    });
+  });
+
+  describe('.getBanlist()', function () { 
+    it('should return the list', async function () {
+      const address = 'localhost:1';
+      const list = await loki.getBanlist();
+      assert.lengthOf(list, 1, 'check the count');
+      assert.equal(list[0].address, address, 'check the address');
     });
   });
 
@@ -430,6 +439,17 @@ describe('DatabaseLoki', () => {
       await loki.normalizeBanlist();
       assert.equal(count - 1, loki.col.banlist.count(), 'check after');
     }); 
+  });
+
+  describe('.emptyBanlist()', function () { 
+    it('should empty the list', async function () {
+      for(let i = 1; i < 10; i++) {
+        await loki.addBanlistAddress(`localhost:${i}`, '1d');
+      }
+
+      await loki.emptyBanlist();      
+      assert.lengthOf(await loki.getBanlist(), 0);
+    });
   });
 
   describe('candidates behavior', function () { 

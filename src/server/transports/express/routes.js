@@ -1,7 +1,7 @@
 const controllers = require('./controllers');
 const midds = require('./midds');
 
-module.exports = [ 
+module.exports = [
  { name: 'clientInfo', fn: controllers.clientInfo }, 
  { name: 'timeout', fn: controllers.timeout }, 
  { name: 'provide-request', url: '/provide-request', fn: controllers.provideRequest }, 
