@@ -10,7 +10,7 @@ const utils = require('../../../utils');
  */
 module.exports.clientInfo = (node) => {
   return (req, res, next) => {
-    const trusted = [...new Set([node.ip, node.externalIp, node.localIp])];
+    const trusted = [...new Set(['127.0.0.1', node.ip, node.externalIp, node.localIp])];
     req.clientIp = utils.getRemoteIp(req, { trusted });
     req.clientAddress = req.headers['original-address'] || `${req.clientIp}:0`;
     next();
