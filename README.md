@@ -155,9 +155,9 @@ Let's say we use **2079** port for public access and **2078** to link it with th
 
 `client -> proxy:2079 -> local machine:2078 -> virtual machine:2079`
 
-Currently, the proxy server must have the same ip address as the node has.
+If you don't pass the real client ip address to the virtual machine, the node will ban all external servers due to vulnerabilities control system working.
 
-If you don't pass the real client ip address to the virtual machine or your node ip address is different from the proxy server address, the node will ban all external servers due to vulnerabilities control system working.
+Currently, the proxy server must have the same ip address as the node has. If your node ip address is different from the proxy server address, then other nodes will ban you.
 
 ## How to control the time of requests
 When making requests the client can always specify a timeout.
@@ -168,7 +168,7 @@ const hash = 'someFileHash';
 
 (async () => {
   try {
-    const client = new Client({      
+    const client = new Client({
       address: 'localhost:4000',
       request: {
         clientTimeout: '10s'
