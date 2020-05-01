@@ -1596,7 +1596,7 @@ module.exports = (Parent) => {
         serverOptions = _.merge({}, options, serverOptions || {});
 
         if(serverOptions.formData) {
-          servers.slice(1).forEach((val, i) => serverOptions.formData[`dublicates[${i}]`] = val);
+          servers.slice(1).forEach((val, i) => serverOptions.formData[`duplicates[${i}]`] = val);
         }
         else {
           serverOptions.body.duplicates = servers.slice(1);
