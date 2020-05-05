@@ -10,9 +10,9 @@ module.exports = [
  { name: 'compression', fn: controllers.compression },
  { name: 'api', url: '/api', fn: node => node.server.createRouter(node.server.getApiRoutes()) },
  { name: 'client', url: '/client', fn: node => node.server.createRouter(node.server.getClientRoutes()) },
- { name: 'ping', mehtod: 'get', url: '/ping', fn: controllers.ping },
- { name: 'status', mehtod: 'get', url: '/status', fn: [midds.networkAccess, controllers.status] },
- { name: 'indexPage', mehtod: 'get', url: '*', fn: [midds.networkAccess, controllers.indexPage] },
+ { name: 'ping', method: 'get', url: '/ping', fn: controllers.ping },
+ { name: 'status', method: 'get', url: '/status', fn: [midds.networkAccess, controllers.status] },
+ { name: 'indexPage', method: 'get', url: '*', fn: [midds.networkAccess, controllers.indexPage] },
  { name: 'notFound', fn: controllers.notFound },
  { name: 'handleErrors', fn: controllers.handleErrors }
 ];

@@ -15,7 +15,7 @@ module.exports.status = async node => {
  * Get all banlist
  */
 module.exports.getBanlist = async node => {
-  const fullInfo = argv.f || argv.fullInfo;
+  const fullInfo = argv.fullInfo || argv.f;
   const list = await node.db.getBanlist();
 
   if(!list.length) {
@@ -35,7 +35,7 @@ module.exports.getBanlist = async node => {
  * Get the banlist address info
  */
 module.exports.getBanlistAddress = async node => {
-  const address = argv.n || argv.address;
+  const address = argv.address || argv.n;
 
   if(!address) {
     throw new Error(`Address is required`);
@@ -55,9 +55,9 @@ module.exports.getBanlistAddress = async node => {
  * Add the address to the banlist
  */
 module.exports.addBanlistAddress = async node => {
-  const address = argv.n || argv.address;
-  const lifetime = srcUtils.getMs(argv.t || argv.lifetime);
-  const reason = argv.r || argv.reason;
+  const address = argv.address || argv.n;
+  const lifetime = srcUtils.getMs(argv.lifetime || argv.t);
+  const reason = argv.reason || argv.r;
 
   if(!srcUtils.isValidAddress(address)) {
     throw new Error(`Address is invalid`);
@@ -77,7 +77,7 @@ module.exports.addBanlistAddress = async node => {
  * Remove the address from the banlist
  */
 module.exports.removeBanlistAddress = async node => {
-  const address = argv.n || argv.address;
+  const address = argv.address || argv.n;
 
   if(!address) {
     throw new Error(`Address is required`);
