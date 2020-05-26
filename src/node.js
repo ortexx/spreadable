@@ -171,7 +171,8 @@ module.exports = (Parent) => {
      * @async
      */
     async initBeforeSync() {
-      this.initialNetworkAddress = await this.getAvailableAddress(this.options.initialNetworkAddress);
+      const initialNetworkAddress = this.options.initialNetworkAddress || this.address;
+      this.initialNetworkAddress = await this.getAvailableAddress(initialNetworkAddress);
       
       if(!this.initialNetworkAddress) {
         throw new Error('Provided initial network addresses are not available');
