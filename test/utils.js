@@ -1,8 +1,11 @@
 const assert = require('chai').assert;
-const utils = require('../src/utils');
 const getPort = require('get-port');
 const http = require('http');
+const path = require('path');
+const fse = require('fs-extra');
 const mocks = require('node-mocks-http');
+const utils = require('../src/utils');
+const tools = require('./tools');
 
 describe('utils', () => {
   describe('.validateSchema()', () => {
@@ -704,6 +707,43 @@ describe('utils', () => {
   describe('.invertHexColor()', () => {
     it('should invert the color', () => {
       assert.equal(utils.invertHexColor('#ffffdd'), '#000022');
+    });
+  });
+
+  describe('.FilesQueue', () => {
+    let queue;
+    let folderPath;
+
+    before(() => {
+      folderPath = path.join(tools.tmpPath, 'queue');
+    });
+    
+    it('should create an instance', () => {
+      queue = new utils.FilesQueue(folderPath, { limit: 3, ext: 'db' });
+      assert.equal(queue.folderPath, folderPath);
+    });
+
+    it('should initialize it', async () => {
+      await queue.init();
+      assert.isTrue(await fse.pathExists(folderPath))
+    });
+
+    it('should normalize the queue', async () => {
+      for(let i = queue.options.limit; i >= 0; i--) {
+        await fse.ensureFile(path.join(folderPath, queue.createName(i + 1)));
+      }
+
+      await queue.normalize();
+      assert.lengthOf(queue.files, queue.options.limit, 'check the size');
+      let index = 0;
+      let date = 0;
+      
+      for(let i = 0; i < queue.files.length; i++) {
+        const file = queue.files[i];
+        assert.isOk(file.index > index && file.stat.birthtimeMs > date, 'check the info');
+        index = file.index;
+        date = file.stat.birthtimeMs;
+      }
     });
   });
 });

@@ -98,3 +98,24 @@ module.exports.emptyBanlist = async node => {
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(`The banlist has been cleaned`));
 };
+
+/**
+ * Create a backup
+ */
+module.exports.backup = async node => {
+  await node.db.backup();
+  
+  //eslint-disable-next-line no-console
+  console.log(chalk.cyan(`The backup has been created`));
+};
+
+/**
+ * Restore the database
+ */
+module.exports.restore = async node => {
+  const index = argv.index || argv.i;
+  await node.db.restore(index);
+  
+  //eslint-disable-next-line no-console
+  console.log(chalk.cyan(`The database has been restored`));
+};

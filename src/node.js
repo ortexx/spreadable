@@ -71,7 +71,7 @@ module.exports = (Parent) => {
           compressionLevel: 6
         },
         behavior: {          
-          candidateSuspicionLevel: 5,          
+          candidateSuspicionLevel: 5,
         },
         logger: {
           level: 'info'
@@ -113,8 +113,7 @@ module.exports = (Parent) => {
       this.externalIp = await utils.getExternalIp();
       this.localIp = utils.getLocalIp();
       this.hostname = this.options.hostname || this.externalIp || this.localIp;
-      this.address = utils.createAddress(this.hostname, this.publicPort);
-      this.initialNetworkAddress = this.options.initialNetworkAddress || this.address;
+      this.address = utils.createAddress(this.hostname, this.publicPort);      
       this.ip = await utils.getHostIp(this.hostname);
 
       if(!this.ip) {
@@ -172,13 +171,19 @@ module.exports = (Parent) => {
      * @async
      */
     async initBeforeSync() {
+      this.initialNetworkAddress = await this.getAvailableAddress(this.options.initialNetworkAddress);
+      
+      if(!this.initialNetworkAddress) {
+        throw new Error('Provided initial network addresses are not available');
+      }
+
       this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress'); 
 
       if(!this.options.server) {
         return;
       }
       
-      await this.checkNodeAddress(this.address);
+      await this.nodeAddressTest(this.address);
     }
 
     /**
@@ -282,20 +287,50 @@ module.exports = (Parent) => {
     }
 
     /**
+     * Get an available address
+     * 
+     * @async
+     * @param {string|string[]} addresses
+     * @returns {string}
+     */
+    async getAvailableAddress(addresses) {
+      !Array.isArray(addresses) && (addresses = [addresses]);
+      let availableAddress;
+
+      for(let i = 0; i < addresses.length; i++) {
+        const address = addresses[i];
+
+        if(address == this.address) {
+          return address;
+        }
+        
+        try {
+          await this.nodeAddressTest(address);
+          return address;
+        }
+        catch(err) {
+          this.logger.warn(err.stack);
+        }
+      }
+
+      return availableAddress || null;
+    }
+
+    /**
      * Check the node address
      * 
      * @async
      */
-    async checkNodeAddress(address) {
+    async nodeAddressTest(address) {
       const result = await this.requestServer(address, 'ping', {
         method: 'GET',
         timeout: this.options.request.pingTimeout
       });
 
-      if(result.address != this.address) {
-        throw new Error(`Host ${this.address} is wrong`);
+      if(!result.address) {
+        throw new Error(`Host ${ address } is wrong`);
       }
-    }    
+    }
 
     /**
      * Check the node is a master
@@ -1302,7 +1337,7 @@ module.exports = (Parent) => {
       const timer = this.createRequestTimer(options.timeout);      
 
       try {
-        provider != this.address && await this.checkNodeAddress(provider);
+        provider != this.address && await this.nodeAddressTest(provider);
         const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();        
         return await this.requestGroup(targets, 'structure', {
           responseSchema: schema.getStructureResponse(),

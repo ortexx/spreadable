@@ -53,7 +53,7 @@ describe('LoggerConsole', function () {
       const message = 'test info';
       const prepared = logger.prepareMessage(message, 'info');
       await logger.info(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isNotOk(content.toString().match(prepared));
     }); 
@@ -63,7 +63,7 @@ describe('LoggerConsole', function () {
       const message = 'test info';
       const prepared = logger.prepareMessage(message, 'info');
       await logger.info(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isOk(content.toString().match(prepared));
     });     
@@ -75,7 +75,7 @@ describe('LoggerConsole', function () {
       const message = 'test warn';
       const prepared = logger.prepareMessage(message, 'warn');
       await logger.warn(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isNotOk(content.toString().match(prepared));
     }); 
@@ -85,7 +85,7 @@ describe('LoggerConsole', function () {
       const message = 'test warn';
       const prepared = logger.prepareMessage(message, 'warn');
       await logger.warn(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isOk(content.toString().match(prepared));
     }); 
@@ -97,7 +97,7 @@ describe('LoggerConsole', function () {
       const message = 'test error';
       const prepared = logger.prepareMessage(message, 'error');
       await logger.error(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isNotOk(content.toString().match(prepared));
     }); 
@@ -107,7 +107,7 @@ describe('LoggerConsole', function () {
       const message = 'test error';
       const prepared = logger.prepareMessage(message, 'error');
       await logger.error(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.isOk(content.toString().match(prepared));
     }); 
@@ -117,11 +117,11 @@ describe('LoggerConsole', function () {
     it('should write in a new file', async function () {
       logger.level = 'info';
       const message = 'test';
-      const first = await logger.getLastFile();
+      const first = logger.getLastFile();
       logger.options.fileMaxSize = first.stat.size;
       const prepared = logger.prepareMessage(message, 'info');
       await logger.info(message);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = await fse.readFile(last.filePath);
       assert.notEqual(first.filePath, last.filePath, 'check the file');
       assert.equal(content.toString(), prepared + '\n', 'check the content');
@@ -138,7 +138,7 @@ describe('LoggerConsole', function () {
       }
 
       await Promise.all(p);
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       const content = (await fse.readFile(last.filePath)).toString();
       
       for(let i = 0; i < messages.length; i++) {
@@ -150,9 +150,9 @@ describe('LoggerConsole', function () {
   describe('.addNewFile()', function () { 
     it('should create a new file', async function () {
       const files = await fse.readdir(folder);
-      const prev = await logger.getLastFile();
+      const prev = logger.getLastFile();
       const file = await logger.addNewFile();
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       assert.equal(files.length + 1, (await fse.readdir(folder)).length, 'check the count');
       assert.equal(file.index, prev.index + 1, 'check the index');
       assert.isTrue(file.filePath != prev.filePath && file.filePath == last.filePath, 'check the path');
@@ -170,10 +170,10 @@ describe('LoggerConsole', function () {
         index > max && (max = index);
       }
 
-      const first = await logger.getLastFile();
+      const first = logger.getLastFile();
       assert.equal(first.index, max, 'check before addition');
       await logger.addNewFile();
-      const last = await logger.getLastFile();
+      const last = logger.getLastFile();
       assert.equal(first.index + 1, last.index, 'check after addition');
     }); 
   });

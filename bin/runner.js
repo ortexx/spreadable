@@ -24,7 +24,7 @@ module.exports = async (name, Node, actions) => {
 
   try {
     const action = argv.action || argv.a;
-    const log = argv.log === undefined? argv.l: argv.log;
+    const logger = argv.logger === undefined? argv.l: argv.logger;
     const server = argv.server === undefined? argv.s: argv.server;  
     let configPath = argv.configPath || argv.c;
     let config;
@@ -41,11 +41,11 @@ module.exports = async (name, Node, actions) => {
       config = require(configPath);
     }
     catch(err) {
-      throw new Error(`Not found the config file ${configPath}`);
+      throw new Error(`Not found the config file ${ configPath }`);
     }
 
     config = _.merge(config, {
-      logger: log === false? false: config.logger,
+      logger: logger === false? false: config.logger,
       server: server === false? false: config.server
     });
   

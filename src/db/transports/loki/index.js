@@ -1,5 +1,5 @@
 const Database = require('../database')();
-const fs = require('fs-extra');
+const fse = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 const loki = require('lokijs');
@@ -17,17 +17,20 @@ module.exports = (Parent) => {
         filename: path.join(node.storagePath, 'loki.db'),
         autosaveInterval: 3000
       }, options);
-
       super(node, options);
       this.col = {};
+      this.__backupQueue = new utils.FilesQueue(this.options.backups.folder, {
+        limit: this.options.backups.limit,
+        ext: 'db'
+      });
     }
 
     /**
      * @see Database.prototype.init
      */
     async init() {
-      await fs.ensureFile(this.options.filename);
-
+      await fse.ensureFile(this.options.filename);
+      await this.__backupQueue.normalize();
       await new Promise((resolve, reject) => {     
         this.loki = new loki(this.options.filename, _.merge(this.options, {
           autoload: true,
@@ -74,6 +77,28 @@ module.exports = (Parent) => {
     }
 
     /**
+     * @see Database.prototype.backup
+     */
+    async backup() {
+      const filePath = path.join(this.__backupQueue.folderPath, this.__backupQueue.createNewName());
+      await fse.copy(this.options.filename, filePath);
+      await this.__backupQueue.normalize();
+    }
+
+    /**
+     * @see Database.prototype.restore
+     */
+    async restore(index) {
+      const file = !index? this.__backupQueue.getLast(): this.__backupQueue.files[index - 1];
+      
+      if(!file) {
+        throw new Error('Not found anything to restore the database');
+      }
+
+      await fse.copy(file.filePath, this.options.filename);
+    }
+
+    /**
      * Save the database
      * 
      * @async
@@ -100,7 +125,7 @@ module.exports = (Parent) => {
      * @async
      */
     async deleteDatabase() {
-      if(!this.loki || !(await fs.pathExists(this.loki.filename))) {
+      if(!this.loki || !(await fse.pathExists(this.loki.filename))) {
         return;
       }
 

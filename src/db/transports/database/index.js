@@ -1,4 +1,6 @@
 const Service = require('../../../service')();
+const _ = require('lodash');
+const path = require('path');
 
 module.exports = (Parent) => {
   /**
@@ -12,7 +14,32 @@ module.exports = (Parent) => {
     constructor(node, options = {}) {
       super(...arguments);
       this.node = node;
-      this.options = options;
+      this.options = _.merge({
+        backups: {
+          limit: 3,
+          folder: path.join(node.storagePath, 'backups', 'db')
+        }
+      }, options);
+    }
+    
+    /**
+     * Get the current database path
+     * 
+     * @async
+     * @returns {string}
+     */
+    async backup() {
+      throw new Error('Method "backup" is required for database transport');
+    }
+
+    /**
+     * Restore the database
+     * 
+     * @async
+     * @param {number} index
+     */
+    async restore() {
+      throw new Error('Method "restore" is required for database transport');
     }
 
     /**

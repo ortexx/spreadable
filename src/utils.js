@@ -2,6 +2,8 @@ const validateIP = require('validate-ip-node');
 const bytes = require('bytes');
 const ms = require('ms');
 const os = require('os');
+const fse = require('fs-extra');
+const path = require('path');
 const uniqBy = require('lodash/uniqBy');
 const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
@@ -31,7 +33,7 @@ utils.validateSchema = function (schema, data) {
   const dataType = Array.isArray(data)? 'array': typeof data;
 
   if(schemaType.indexOf(dataType) == -1) {
-    const msg = `Wrong data type "${dataType}" instead of "${schemaType}" ${getHumanData()} for ${getHumanSchema()}`;
+    const msg = `Wrong data type "${ dataType }" instead of "${ schemaType }" ${ getHumanData() } for ${ getHumanSchema() }`;
     throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
   }
 
@@ -40,12 +42,12 @@ utils.validateSchema = function (schema, data) {
     const maxLength = typeof schema.maxLength == 'function'? maxLength(data): schema.maxLength;
 
     if(minLength && data.length < minLength) {
-      const msg = `Wrong array min length ${getHumanData()} for ${getHumanSchema()}`;
+      const msg = `Wrong array min length ${ getHumanData() } for ${ getHumanSchema() }`;
       throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
     }
 
     if(maxLength && data.length > maxLength) {
-      const msg = `Wrong array max length ${getHumanData()} for ${getHumanSchema()}`;
+      const msg = `Wrong array max length ${ getHumanData() } for ${ getHumanSchema() }`;
       throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
     }
 
@@ -53,7 +55,7 @@ utils.validateSchema = function (schema, data) {
       const arr = schema.uniq === true? uniqBy(data): uniqBy(data, schema.uniq);
 
       if(arr.length != data.length) {
-        const msg = `Wrong array uniqueness ${getHumanData()} for ${getHumanSchema()}`;
+        const msg = `Wrong array uniqueness ${ getHumanData() } for ${ getHumanSchema() }`;
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');
       }
     }
@@ -67,7 +69,7 @@ utils.validateSchema = function (schema, data) {
     const required = schema.required;  
 
     if(required && !Array.isArray(required)) {
-      throw new Error(`Option "required" for ${getHumanSchema()} must be an array`);
+      throw new Error(`Option "required" for ${ getHumanSchema() } must be an array`);
     }
 
     if(schema.canBeNull && data === null) {
@@ -75,7 +77,7 @@ utils.validateSchema = function (schema, data) {
     }
 
     if(schema.canBeNull === false && data === null) {
-      const msg = `Data for ${getHumanSchema()} can't be null`;
+      const msg = `Data for ${ getHumanSchema() } can't be null`;
       throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_NULL');
     }
     
@@ -84,7 +86,7 @@ utils.validateSchema = function (schema, data) {
       const dataKeys = Object.keys(data).sort();
 
       if(schemaKeys.toString() != dataKeys.toString()) {
-        const msg = `Wrong strict object structure ${getHumanData()} for ${getHumanSchema()}`;
+        const msg = `Wrong strict object structure ${ getHumanData() } for ${ getHumanSchema() }`;
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_STRICT');
       }     
     }
@@ -92,7 +94,7 @@ utils.validateSchema = function (schema, data) {
     if(schema.expected) {
       for(let key in data) {
         if(!props.hasOwnProperty(key)) {
-          const msg = `Wrong expected object structure ${getHumanData()} for ${getHumanSchema()}`;
+          const msg = `Wrong expected object structure ${ getHumanData() } for ${ getHumanSchema() }`;
           throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_EXPECTED');
         }   
       }
@@ -104,7 +106,7 @@ utils.validateSchema = function (schema, data) {
     for(let prop in props) {
       if(!data.hasOwnProperty(prop)) {        
         if(required && requiredKeys[prop]) {
-          const msg = `Property "${prop}" is required in ${getHumanData()} for ${getHumanSchema()}`;
+          const msg = `Property "${prop}" is required in ${ getHumanData() } for ${ getHumanSchema() }`;
           throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
         }
 
@@ -133,7 +135,7 @@ utils.validateSchema = function (schema, data) {
   }  
 
   if(!valid) {
-    const msg = `Validation is failed for ${getHumanData()}`;
+    const msg = `Validation is failed for ${ getHumanData() }`;
     throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_VALUE');
   }
 }
@@ -571,7 +573,6 @@ utils.getRandomHexColor = function () {
   return '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, 0);
 };
 
-
 /**
  * Invert the hex color
  * 
@@ -607,6 +608,162 @@ utils.isRequestTimeoutError = function (err) {
     ['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) || 
     ['request-timeout', 'body-timeout'].includes(err.type)
   );
+};
+
+/**
+ * Manage files queue
+ */
+utils.FilesQueue = class {
+  /**
+   * @param {string} folderPath
+   * @param {object} [options]
+   * @param {number} [options.limit]
+   * @param {string} [options.ext]
+   */
+  constructor(folderPath, options = {}) {
+    this.folderPath = folderPath;
+    this.options = Object.assign({
+      limit: 5, 
+      ext: ''
+    }, options);
+    this.files = [];
+    this.__queue = [];
+  }
+
+  /**
+   * Initialize the queue
+   * 
+   * @async
+   */
+  async init() {
+    await this.normalize();    
+  }
+
+  /**
+   * Sort the queue
+   * 
+   * @async
+   */
+  async sort() {
+    return this.files.sort((a, b) => a.index - b.index);
+  }
+
+  /**
+   * Get the file info
+   * 
+   * @async
+   * @returns {object}
+   */
+  async info(filePath) {
+    const stat = await fse.stat(filePath);
+    const index = parseInt(path.basename(filePath));
+    return { filePath, stat, index };
+  }
+
+  /**
+   * Normalize the queue
+   * 
+   * @async
+   */
+  async normalize() {
+    await fse.ensureDir(this.folderPath);
+    this.files = await fse.readdir(this.folderPath);
+
+    for(let i = 0; i < this.files.length; i++) {
+      this.files[i] = await this.info(path.join(this.folderPath, this.files[i]));
+    }
+
+    if(this.files.length <= this.options.limit) {
+      return;
+    }
+
+    await this.sort(); 
+    const diff = this.files.length - this.options.limit;
+    const excess = this.files.slice(0, diff);
+    const rest = this.files.slice(diff);
+    
+    for(let i = 0; i < excess.length; i++) {
+      const file = excess[i];
+      await fse.remove(file.filePath);
+      this.files.splice(i, 1);
+    }
+
+    for(let i = 0; i < rest.length; i++) {
+      const file = rest[i];
+      const filePath = path.join(this.folderPath, this.createName(i + 1));
+      await fse.rename(file.filePath, filePath);
+      this.files[i] = await this.info(filePath);
+    }
+  }
+
+  /**
+   * Run the function blocking the queue
+   * 
+   * @async
+   * @param {function} fn 
+   * @returns {*}
+   */
+  async blocking(fn) {
+    return new Promise((resolve, reject) => {
+      const handler = async () => {
+        let err;
+        let res;
+
+        try {
+          res = await fn();
+        }
+        catch(e) {
+          err = e;
+        }
+
+        err? reject(err): resolve(res);
+        this.__queue.shift();
+        this.__queue.length && this.__queue[0]();
+
+      };
+      this.__queue.push(handler);
+      this.__queue.length <= 1 && handler();
+    });
+  }
+
+  /**
+   * Get the last item
+   * 
+   * @returns {object|null}
+   */
+  getLast() {
+    return this.files[this.files.length - 1] || null;
+  }
+
+  /**
+   * Get the first item
+   * 
+   * @returns {object|null}
+   */
+  getFirst() {
+    return this.files[0] || null;
+  }
+
+  /**
+   * Create a name by the index
+   * 
+   * @param {number} index
+   * @returns {string}
+   */
+  createName(index) {
+    return `${ index }${ this.options.ext? ('.' + this.options.ext): '' }`;
+  }
+
+  /**
+   * Create a new name
+   * 
+   * @returns {string}
+   */
+  createNewName() {
+    const last = this.getLast();
+    const index = last? last.index + 1: 1;
+    return this.createName(index);
+  }
 };
 
 module.exports = utils;

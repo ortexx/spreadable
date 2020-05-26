@@ -24,7 +24,7 @@ describe('Node', () => {
     });
 
     it('should create the db file', async () => {
-      assert.isTrue(await fse.exists(tools.getDbFilePath(node.port)));
+      assert.isTrue(await fse.exists(tools.getDbFilePath(node)));
     });
   });
 
@@ -67,7 +67,7 @@ describe('Node', () => {
     });
 
     it('should not remove the db file', async () => {
-      assert.isTrue(await fse.exists(tools.getDbFilePath(node.port)));
+      assert.isTrue(await fse.exists(tools.getDbFilePath(node)));
     });
   });
 
@@ -77,7 +77,7 @@ describe('Node', () => {
     });
 
     it('should create the db file', async () => {
-      assert.isTrue(await fse.exists(tools.getDbFilePath(node.port)));
+      assert.isTrue(await fse.exists(tools.getDbFilePath(node)));
     });
   });
 
@@ -87,7 +87,7 @@ describe('Node', () => {
     });
 
     it('should remove the db file', async () => {
-      assert.isFalse(await fse.exists(tools.getDbFilePath(node.port)));
+      assert.isFalse(await fse.exists(tools.getDbFilePath(node)));
     });
   });
 });

@@ -1,5 +1,3 @@
-
-
 const controllers = require('./controllers');
 const midds = require('../midds');
 

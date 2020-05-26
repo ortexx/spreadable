@@ -47,7 +47,7 @@ describe('group communication', () => {
   before(async () => {
     nodes = [];
     nodes.push(new Node(await tools.createNodeOptions()));
-    nodes.push(new Node(await tools.createNodeOptions({ initialNetworkAddress: `localhost:${nodes[0].port}` })));
+    nodes.push(new Node(await tools.createNodeOptions({ initialNetworkAddress: [`localhost:${nodes[0].port}`] })));
   });
 
   after(async () => {

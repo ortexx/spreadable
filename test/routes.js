@@ -11,7 +11,7 @@ describe('routes', () => {
   let node;
   let client;
 
-  before(async function() {
+  before(async function () {
     node = new Node(await tools.createNodeOptions({ 
       network: { 
         auth: { username: 'username', password: 'password' }
@@ -27,7 +27,7 @@ describe('routes', () => {
     await client.init();
   });
 
-  after(async function() {
+  after(async function () {
     await node.deinit();
     await client.deinit();
   });

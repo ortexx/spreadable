@@ -455,7 +455,7 @@ When you create an instance of the node you can pass options below:
 
 * {integer} __port__ - port on which the server will be run.  
 
-* {string} __[initialNetworkAddress]__ - input node address to connect to the network. By default, it is the node own address.
+* {string|string[]} __[initialNetworkAddress]__ - input node address to connect to the network. You can pass a list of addresses. By default, it is the node own address.
 
 * {string} __[hostname]__ - node hostname. By default, the system tries to find the external ip address. If it can't, then it chooses the internal one. Therefore, if you want to test something locally it is better to pass "localhost" manually.
 

@@ -13,8 +13,8 @@ tools.tmpPath = path.join(process.cwd(), 'test/tmp');
  * @param {number} port
  * @returnss {string}
  */
-tools.getDbFilePath = function (port) {
-  return path.join(this.tmpPath, `loki-${port}.db`);
+tools.getDbFilePath = function (node) {
+  return path.join(node.storagePath, 'loki.db');
 };
 
 /**
@@ -127,8 +127,8 @@ tools.createNodeOptions = async function (options = {}) {
     logger: false,
     initialNetworkAddress: `localhost:${port}`,
     hostname: 'localhost',
-    db: {
-      filename: this.getDbFilePath(port)
+    storage: {
+      path: path.join(this.tmpPath, 'node-' + port)
     }
   }, options);
 };

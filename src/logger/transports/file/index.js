@@ -18,7 +18,10 @@ module.exports = (Parent) => {
       
       super(node, options);
       this.defaultLevel = 'warn';
-      this.__queue = [];
+      this.__filesQueue = new utils.FilesQueue(this.options.folder, {
+        limit: this.options.filesCount,
+        ext: 'log'
+      });
       this.prepareOptions();
     }
 
@@ -26,7 +29,6 @@ module.exports = (Parent) => {
      * @see Logger.prototype.init
      */
     async init() {
-      await fse.ensureDir(this.options.folder);
       await this.normalizeFilesCount();
       return await super.init.apply(this, arguments);
     }
@@ -55,36 +57,20 @@ module.exports = (Parent) => {
         return;
       }
 
-      return new Promise((resolve, reject) => {
-        const fn = async () => {
-          let err;
+      return await this.__filesQueue.blocking(async () => {
+        let lastFile = this.getLastFile();
+        message = this.prepareMessage(message, level);
 
-          try {
-            let lastFile = await this.getLastFile();
-            message = this.prepareMessage(message, level);
-    
-            if(!lastFile) {
-              lastFile = await this.addNewFile();
-            }
-    
-            if(lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
-              lastFile = await this.addNewFile();
-            }
-    
-            await this.addNewMessage(message, lastFile.filePath);
-            await this.normalizeFilesCount();
-          }
-          catch(e) {
-            err = e;
-          }
+        if(!lastFile) {
+          lastFile = await this.addNewFile();
+        }
 
-          err? reject(err): resolve();
-          this.__queue.shift();
-          this.__queue.length && this.__queue[0]();
-        }; 
-        this.__queue.push(fn);
-        this.__queue.length <= 1 && fn();
-      });    
+        if(lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
+          lastFile = await this.addNewFile();
+        }
+
+        await this.addNewMessage(message, lastFile.filePath);
+      });     
     }
 
     /**
@@ -94,45 +80,21 @@ module.exports = (Parent) => {
      * @param {string} filePath
      */
     async addNewMessage(message, filePath) {     
-      await fse.appendFile(filePath, message + '\n');       
+      await fse.appendFile(filePath, message + '\n');
     }
 
     /**
      * Add a new file
      * 
      * @async
-     * @returns { object }
+     * @returns {Object}
      */
-    async addNewFile() {       
-      const last = await this.getLastFile();
-      const index = last? last.index + 1: 1;
-      const filePath = path.join(this.options.folder, `${ index }.log`);
+    async addNewFile() {
+      const filePath = path.join(this.__filesQueue.folderPath, this.__filesQueue.createNewName());
       await fse.ensureFile(filePath);
-      return { filePath, stat: await fse.stat(filePath), index };
-    }
-
-    /**
-     * Get the last file
-     * 
-     * @async
-     * @returns {object}
-     */
-    async getLastFile() {
-      const files = await fse.readdir(this.options.folder);
-      const stats = [];
-      
-      for(let i = 0; i < files.length; i++) {
-        const filePath = path.join(this.options.folder, files[i]);
-        const stat = await fse.stat(filePath);
-        stats.push({
-          filePath,
-          index: parseInt(path.basename(filePath)),
-          stat
-        });
-      }
-
-      return _.orderBy(stats, 'index', 'desc')[0] || null;
-    }
+      await this.__filesQueue.normalize();
+      return this.getLastFile();
+    }    
 
     /**
      * Normalize the files count
@@ -140,37 +102,20 @@ module.exports = (Parent) => {
      * @async
      */
     async normalizeFilesCount() {
-      let files = await fse.readdir(this.options.folder);
+      await this.__filesQueue.normalize();
 
-      if(!files.length) {
+      if(!this.__filesQueue.files.length) {
         return await this.addNewFile();
       }
+    }
 
-      if(files.length <= this.options.filesCount) {
-        return;
-      }
-
-      const diff = files.length - this.options.filesCount;
-      const stats = [];
-      
-      for(let i = 0; i < files.length; i++) {
-        const filePath = path.join(this.options.folder, files[i]);
-        stats.push({ filePath, index: parseInt(path.basename(filePath)) });
-      }
-      
-      const ordered = _.orderBy(stats, 'index', 'asc');
-      const excess = ordered.slice(0, diff);
-      const rest = ordered.slice(diff);
-
-      for(let i = 0; i < excess.length; i++) {
-        const file = excess[i];
-        await fse.remove(file.filePath);
-      }
-
-      for(let i = 0; i < rest.length; i++) {
-        const file = rest[i];
-        await fse.rename(file.filePath, path.join(this.options.folder, `${ i + 1 }.log`));
-      }
+    /**
+     * Get the last file
+     * 
+     * @returns {object}
+     */
+    getLastFile() {
+      return this.__filesQueue.getLast();
     }
 
     /**

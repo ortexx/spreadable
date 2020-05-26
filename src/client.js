@@ -106,8 +106,7 @@ module.exports = (Parent) => {
     async init() {
       await this.prepareServices();
       await this.initServices();
-      const addresses = Array.isArray(this.address)? this.address: [this.address];
-      const availableAddress = await this.getAvailableAddress(addresses);
+      const availableAddress = await this.getAvailableAddress(this.address);
       
       if(!availableAddress) {
         throw new Error('Provided addresses are not available');
@@ -169,10 +168,11 @@ module.exports = (Parent) => {
      * Get an available address from the list
      * 
      * @async
-     * @param {string[]} addresses
+     * @param {string|string[]} addresses
      * @returns {string}
      */
     async getAvailableAddress(addresses) {
+      !Array.isArray(addresses) && (addresses = [addresses]);
       let availableAddress;
 
       for(let i = 0; i < addresses.length; i++) {

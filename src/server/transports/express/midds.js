@@ -167,7 +167,7 @@ midds.networkAccess = (node, checks = {}) => {
 };
 
 /**
- * Control client requests queue
+ * Control the client requests queue
  */
 midds.requestQueueClient = (node, options = {}) => {
   options = _.merge({
@@ -185,17 +185,20 @@ midds.requestQueueClient = (node, options = {}) => {
  * Control parallel requests queue
  */
 midds.requestQueue = (node, keys, options) => { 
-  options = _.merge({ limit: 1 }, options);  
-
+  options = _.merge({ 
+    limit: 1,
+    fnHash: key => crypto.createHash('md5').update(key).digest("hex")
+  }, options);
+  
   return async (req, res, next) => {
     const createPromise = key => {
       return new Promise((resolve, reject) => {
         key = typeof key == 'function'? key(req): key;
-        const hash = crypto.createHash('md5').update(key).digest("hex"); 
+        const hash = options.fnHash(key);
         const obj = node.__requestQueue;
 
         if(!hash) {
-          throw new errors.WorkError('"hash" is invalid', 'ERR_STORACLE_INVALID_REQUEST_QUEUE_HASH');
+          throw new errors.WorkError('"hash" is invalid', 'ERR_SPREADABLE_INVALID_REQUEST_QUEUE_HASH');
         }      
     
         (!obj[hash] || !obj[hash].length) && (obj[hash] = []);

@@ -1,10 +1,11 @@
 const assert = require('chai').assert;
+const fse = require('fs-extra');
+const path = require('path');
 const tools = require('../tools');
 const utils = require('../../src/utils');
 const DatabaseLoki = require('../../src/db/transports/loki')();
 const BehaviorFail = require('../../src/behavior/transports/fail')();
 const Approval = require('../../src/approval/transports/approval')();
-const fse = require('fs-extra');
 
 describe('DatabaseLoki', () => {
   let loki;
@@ -13,7 +14,7 @@ describe('DatabaseLoki', () => {
   describe('instance creation', function () {
     it('should create an instance', function () { 
       assert.doesNotThrow(() => loki = new DatabaseLoki(this.node, {
-        filename: tools.getDbFilePath(this.node.port)
+        filename: tools.getDbFilePath(this.node)
       }));  
       lastNodeDb = this.node.db;
       this.node.db = loki;  
@@ -26,7 +27,7 @@ describe('DatabaseLoki', () => {
     });  
     
     it('should create the db file', async function () {    
-      assert.isTrue(await fse.exists(tools.getDbFilePath(this.node.port)));
+      assert.isTrue(await fse.exists(tools.getDbFilePath(this.node)));
     });
   });
   
@@ -474,7 +475,7 @@ describe('DatabaseLoki', () => {
 
       it('should add the second candidate behavior', async function () {  
         const address = 'localhost:2';
-        await loki.addBehaviorCandidate(action, address);      
+        await loki.addBehaviorCandidate(action, address);
         const behavior = loki.col.behaviorCandidates.findOne({ address, action });
         assert.equal(behavior.suspicion, 1, 'check the suspicion');
         assert.equal(behavior.excuse, 0, 'check the excuse');
@@ -980,6 +981,44 @@ describe('DatabaseLoki', () => {
     });
   });
 
+  describe('.backup()', function () { 
+    it('should create a backup', async function () {      
+      await loki.backup();
+      const files = await fse.readdir(loki.options.backups.folder);
+      const backupBuffer = await fse.readFile(path.join(loki.options.backups.folder, files[0]));
+      const dbBuffer = await fse.readFile(loki.options.filename);
+      assert.isTrue(backupBuffer.equals(dbBuffer));
+    });
+
+    it('should create the secong backup', async function () {      
+      await loki.backup();
+      const files = await fse.readdir(loki.options.backups.folder);
+      const backupBuffer = await fse.readFile(path.join(loki.options.backups.folder, files[1]));
+      const dbBuffer = await fse.readFile(loki.options.filename);
+      assert.isTrue(backupBuffer.equals(dbBuffer));
+    });
+  }); 
+
+  describe('.restore()', function () { 
+    it('should restore from the last backup', async function () {   
+      await loki.setData('restore', 1);
+      await loki.restore();
+      const files = await fse.readdir(loki.options.backups.folder);
+      const backupBuffer = await fse.readFile(path.join(loki.options.backups.folder, files[1]));
+      const dbBuffer = await fse.readFile(loki.options.filename);
+      assert.isTrue(backupBuffer.equals(dbBuffer));
+    });
+
+    it('should restore from the first backup', async function () {   
+      await loki.setData('restore', 2);
+      await loki.restore(1);
+      const files = await fse.readdir(loki.options.backups.folder);
+      const backupBuffer = await fse.readFile(path.join(loki.options.backups.folder, files[0]));
+      const dbBuffer = await fse.readFile(loki.options.filename);
+      assert.isTrue(backupBuffer.equals(dbBuffer));
+    });
+  }); 
+
   describe('.deinit()', function () { 
     it('should not throw an exception', async function () {
       await loki.deinit();
@@ -999,7 +1038,7 @@ describe('DatabaseLoki', () => {
     });
     
     it('should remove the db file', async function () {
-      assert.isFalse(await fse.exists(tools.getDbFilePath(this.node.port)));
+      assert.isFalse(await fse.exists(tools.getDbFilePath(this.node)));
     });
   });
 });
