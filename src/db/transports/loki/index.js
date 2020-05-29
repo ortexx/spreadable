@@ -141,6 +141,55 @@ module.exports = (Parent) => {
     }
 
     /**
+     * Prepare the collection
+     * 
+     * @param {string} name 
+     * @param {object} [options]
+     * @returns {object}
+     */
+    prepareCollection(name, options = {}) {
+      options = Object.assign({
+        disableMeta: true,
+      }, options);
+      let collection = this.loki.getCollection(name);
+
+      if(!collection) {
+        return this.loki.addCollection(name, options);
+      }
+
+      if(options.unique) {
+        !Array.isArray(options.unique) && (options.unique = [options.unique]);
+
+        for(const field of options.unique) {
+          collection.ensureUniqueIndex(field);
+        }
+      }
+
+      if(options.indices) {
+        !Array.isArray(options.indices) && (options.indices = [options.indices]);
+
+        for(const field of options.indices) {
+          collection.ensureIndex(field);
+        }
+      }
+
+      for(let key in collection.binaryIndices) {
+        if(!options.indices.includes(key)) {
+          delete collection.binaryIndices[key];
+        }
+      }
+
+      for(let key in collection.constraints.unique) {
+        if(!options.unique.includes(key)) {
+          delete collection.constraints.unique[key];
+          collection.uniqueNames = collection.uniqueNames.filter(v => v != key);
+        }
+      }
+
+      return collection;
+    }
+
+    /**
      * Initialize all collections
      */
     initCollections() {
@@ -158,29 +207,14 @@ module.exports = (Parent) => {
      * Initialize the cache collection
      */
     initCollectionCache() {
-      this.col.cache = this.loki.getCollection("cache");
-
-      if (this.col.cache === null) {
-        this.col.cache = this.loki.addCollection('cache', {
-          disableMeta: true,
-          indices: ['type']
-        });
-      }
+      this.col.cache = this.prepareCollection('cache', { indices: ['type'] });
     }
 
     /**
      * Initialize the data collection
      */
     initCollectionData() {
-      this.col.data = this.loki.getCollection("data");
-
-      if (this.col.data === null) {
-        this.col.data = this.loki.addCollection('data', {
-          disableMeta: true,
-          unique: ['name']
-        });
-      }
-  
+      this.col.data = this.prepareCollection('data', { unique: ['name'] });  
       const rootNetworkAddress = this.col.data.findOne({ name: 'rootNetworkAddress' });     
       const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
       const checkedMasterStructures = this.col.data.findOne({ name: 'checkedMasterStructures' });
@@ -202,84 +236,46 @@ module.exports = (Parent) => {
      * Initialize the servers collection
      */
     initCollectionServers() {
-      this.col.servers = this.loki.getCollection("servers");
-
-      if (this.col.servers === null) {
-        this.col.servers = this.loki.addCollection('servers', { 
-          disableMeta: true,
-          unique: ['address']
-        });
-      }
+      this.col.servers = this.prepareCollection('servers', { unique: ['address'] });
     }
 
     /**
      * Initialize the banlist collection
      */
     initCollectionBanlist() {
-      this.col.banlist = this.loki.getCollection("banlist");
-
-      if (this.col.banlist === null) {
-        this.col.banlist = this.loki.addCollection('banlist', { 
-          disableMeta: true,
-          unique: ['address']
-        });
-      }
+      this.col.banlist = this.prepareCollection('banlist', { unique: ['address'] });
     }
 
     /**
      * Initialize the approval collection
      */
     initCollectionApproval() {
-      this.col.approval = this.loki.getCollection("approval");
-
-      if (this.col.approval === null) {
-        this.col.approval = this.loki.addCollection('approval', {
-          disableMeta: true,
-          indices: ['type', 'clientIp', 'action']
-        });
-      }
+      const options = { indices: ['clientIp', 'action'] };
+      this.col.approval = this.prepareCollection('approval', options);
     }
 
     /**
      * Initialize the candidates behavior collection
      */
     initCollectionBehaviorCandidates() {
-      this.col.behaviorCandidates = this.loki.getCollection("behaviorCandidates");
-
-      if (this.col.behaviorCandidates === null) {
-        this.col.behaviorCandidates = this.loki.addCollection('behaviorCandidates', {
-          disableMeta: true,
-          indices: ['address', 'action']
-        });
-      }
+      const options = { indices: ['address', 'action'] };
+      this.col.behaviorCandidates = this.prepareCollection('behaviorCandidates', options);
     }
 
     /**
      * Initialize the delays behavior collection
      */
     initCollectionBehaviorDelays() {
-      this.col.behaviorDelays = this.loki.getCollection("behaviorDelays");
-
-      if (this.col.behaviorDelays === null) {
-        this.col.behaviorDelays = this.loki.addCollection('behaviorDelays', {
-          disableMeta: true,
-          indices: ['address', 'action']
-        });
-      }
+      const options = { indices: ['address', 'action'] };
+      this.col.behaviorDelays = this.prepareCollection('behaviorDelays', options);
     }
 
     /**
      * Initialize the fails behavior collection
      */
     initCollectionBehaviorFails() {
-      this.col.behaviorFails = this.loki.getCollection("behaviorFails");
-
-      if (this.col.behaviorFails === null) {
-        this.col.behaviorFails = this.loki.addCollection('behaviorFails', {
-          disableMeta: true,
-          indices: ['address', 'action']
-        });
-      }
+      const options = { indices: ['address', 'action'] };
+      this.col.behaviorFails = this.prepareCollection('behaviorFails', options);
     }    
 
     /**
@@ -290,7 +286,6 @@ module.exports = (Parent) => {
      */
     createServerFields(obj = {}) {
       const now = Date.now();
-
       const fields = _.merge({
         size: 0,
         createdAt: now,
@@ -318,7 +313,6 @@ module.exports = (Parent) => {
      */
     createBanlistFields(obj = {}) {
       const now = Date.now();
-
       return  _.merge({
         createdAt: now,
         updatedAt: now,
@@ -334,7 +328,6 @@ module.exports = (Parent) => {
      */
     createBehaviorCandidateFields(obj = {}) {
       const now = Date.now();
-
       return  _.merge({
         createdAt: now,
         updatedAt: now,
@@ -351,7 +344,6 @@ module.exports = (Parent) => {
      */
     createBehaviorDelaysFields(obj = {}) {
       const now = Date.now();
-
       return  _.merge({
         createdAt: now,
         updatedAt: now
@@ -366,7 +358,6 @@ module.exports = (Parent) => {
      */
     createBehaviorFailsFields(obj = {}) {
       const now = Date.now();
-
       return  _.merge({
         createdAt: now,
         updatedAt: now,

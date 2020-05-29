@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"

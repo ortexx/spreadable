@@ -14,8 +14,7 @@ module.exports = (Parent) => {
         filesCount: 5,
         fileMaxSize: '10mb',
         folder: path.join(node.storagePath, `logs`)
-      }, options);
-      
+      }, options);      
       super(node, options);
       this.defaultLevel = 'warn';
       this.__filesQueue = new utils.FilesQueue(this.options.folder, {
