@@ -719,7 +719,6 @@ utils.FilesQueue = class {
         err? reject(err): resolve(res);
         this.__queue.shift();
         this.__queue.length && this.__queue[0]();
-
       };
       this.__queue.push(handler);
       this.__queue.length <= 1 && handler();

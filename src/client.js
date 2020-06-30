@@ -370,7 +370,8 @@ module.exports = (Parent) => {
           return options.getFullResponse? response: await response.json();
         }
 
-        const body = (response.headers.get('content-type') || '').match('application/json')? await response.json(): await response.text();
+        const type = (response.headers.get('content-type') || '').match('application/json')? 'json': 'text';
+        const body = await response[type]();
 
         if(!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');

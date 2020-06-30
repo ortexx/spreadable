@@ -187,7 +187,7 @@ const hash = 'someFileHash';
 First, we set the default timeout, then for a specific request passed a unique one. 
 
 ## How exactly the library can be used
-You can extend the library code and add various interesting features. A detailed description will be later. For example, the [storacle](https://github.com/ortexx/storacle/) organizes file storage using the protocol.
+You can extend the library code and add various interesting features. A detailed description will be later. For example, [the storacle](https://github.com/ortexx/storacle/) organizes file storage using the protocol.
 
 ## How to use https
 

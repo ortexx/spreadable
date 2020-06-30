@@ -525,11 +525,12 @@ describe('DatabaseLoki', () => {
     describe('.normalizeBehaviorCandidates()', function () {
       it('should decrease the candidate suspicion', async function () {
         const address = 'localhost:2';
-        const behavior = loki.col.behaviorCandidates.findOne({ address, action });
+        let behavior = loki.col.behaviorCandidates.findOne({ address, action });
         const level = await this.node.getCandidateSuspicionLevel();
         assert.isOk(behavior.suspicion > level, 'check before');
         await loki.normalizeBehaviorCandidates();
-        assert.isOk(behavior.suspicion <= level, 'check adter');        
+        behavior = loki.col.behaviorCandidates.findOne({ address, action });
+        assert.isOk(behavior.suspicion <= level, 'check after');       
       });
 
       it('should remove the candidate', async function () {

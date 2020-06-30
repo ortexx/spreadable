@@ -62,7 +62,9 @@ module.exports = (Parent) => {
      * @async
      */
     async runHttpsServer() {
-      await new Promise((resolve, reject) => this.server = https.createServer(this.options.https, this.getServerHandler()).listen(this.port, err => {
+      const options = this.options.https;
+      const handler = this.getServerHandler();
+      await new Promise((resolve, reject) => this.server = https.createServer(options, handler).listen(this.port, err => {
         this.node.logger.info(`Node has been started on https://${this.node.address}`);
         err? reject(err): resolve();
       }));

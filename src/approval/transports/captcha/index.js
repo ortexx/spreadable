@@ -33,7 +33,18 @@ module.exports = (Parent) => {
      */
     async init() {
       this.approversCount = this.captchaLength;
-      this.svgHandler = await new Promise((resolve, reject) => {
+      this.svgHandler = await this.createSvgHandler();
+      super.init.apply(this, arguments);
+    }
+
+    /**
+     * Create SVG handler
+     * 
+     * @async
+     * @returns {object}
+     */
+    async createSvgHandler() {
+      return new Promise((resolve, reject) => {
         textToSvg.load(path.join(__dirname, '/fonts/ipag.ttf'), (err, handler) => {
           if(err) {
             return reject(err);
@@ -42,7 +53,6 @@ module.exports = (Parent) => {
           resolve(handler);
         })
       });
-      super.init.apply(this, arguments);
     }
 
     /**

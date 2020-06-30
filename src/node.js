@@ -717,7 +717,8 @@ module.exports = (Parent) => {
       }
 
       if(failed) {
-        throw new errors.WorkError(`Network hasn't been normalized yet, try later`, 'ERR_SPREADABLE_NETWORK_NOT_NORMALIZED');
+        const msg = `Network hasn't been normalized yet, try later`;
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_NETWORK_NOT_NORMALIZED');
       }
 
       for(let i = 0; i < results.length; i++) {
@@ -736,7 +737,8 @@ module.exports = (Parent) => {
       winner = utils.getRandomElement(freeMasters.length? freeMasters: candidates);               
       
       if(!winner) {
-        throw new errors.WorkError(`No available server to register the node`, 'ERR_SPREADABLE_NETWORK_NO_AVAILABLE_MASTER');
+        const msg = 'No available server to register the node';
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_NETWORK_NO_AVAILABLE_MASTER');
       }
 
       try {
@@ -771,11 +773,13 @@ module.exports = (Parent) => {
      */
     async interview(summary) {
       if(!summary || typeof summary != 'object') {
-        throw new errors.WorkError('Not found the interview summary', 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
+        const msg = 'Not found the interview summary';
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
       }
 
       if(!utils.isValidHostname(utils.splitAddress(summary.address)[0])) {
-        throw new errors.WorkError('Invalid interview summary address', 'ERR_SPREADABLE_INTERVIEW_INVALID_SUMMARY_ADDRESS');
+        const msg = 'Invalid interview summary address';
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_INTERVIEW_INVALID_SUMMARY_ADDRESS');
       }
     }
 
@@ -1428,7 +1432,8 @@ module.exports = (Parent) => {
           return options.getFullResponse? response: await response.json();
         }
 
-        const body = (response.headers.get('content-type') || '').match('application/json')? await response.json(): await response.text();
+        const type = (response.headers.get('content-type') || '').match('application/json')? 'json': 'text';
+        const body = await response[type]();
        
         if(!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
@@ -1988,7 +1993,8 @@ module.exports = (Parent) => {
      */
     async approvalActionTest(action) {
       if(!await this.getApproval(action)) {
-        throw new errors.WorkError(`invalid approval action "${ action }"`, 'ERR_SPREADABLE_INVALID_APPROVAL_ACTION');
+        const msg = `invalid approval action "${ action }"`;
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_INVALID_APPROVAL_ACTION');
       }      
     }
 
