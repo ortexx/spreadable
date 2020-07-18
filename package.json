@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -66,7 +66,7 @@
     "get-port": "^5.1.1",
     "ip6addr": "^0.2.3",
     "is-png": "^2.0.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "lokijs": "^1.5.9",
     "lookup-dns-cache": "^2.1.0",
     "ms": "^2.1.2",
@@ -76,7 +76,7 @@
     "tcp-port-used": "^1.0.1",
     "text-to-svg": "^3.1.5",
     "validate-ip-node": "^1.0.6",
-    "yargs": "^15.3.1"
+    "yargs": "^15.4.1"
   },
   "repository": {
     "type": "git",

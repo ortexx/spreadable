@@ -614,6 +614,26 @@ describe('utils', () => {
     });
   });
 
+  describe('.isValidDomain()', () => {
+    it('should return true', () => {
+      assert.isTrue(utils.isValidDomain('localhost'));
+      assert.isTrue(utils.isValidDomain('example.com'));
+      assert.isTrue(utils.isValidDomain('sub.example.com'));
+      assert.isTrue(utils.isValidDomain('sub.sub.example.com'));     
+    });
+
+    it('should return false', () => {
+      assert.isFalse(utils.isValidDomain(1));
+      assert.isFalse(utils.isValidDomain());
+      assert.isFalse(utils.isValidDomain(null));
+      assert.isFalse(utils.isValidDomain({}));
+      assert.isFalse(utils.isValidDomain([]));
+      assert.isFalse(utils.isValidDomain('192.0.0.1'));
+      assert.isFalse(utils.isValidDomain('0000:0000:0000:0000:0000:ffff:c000:0001'));
+      assert.isFalse(utils.isValidDomain('[0000:0000:0000:0000:0000:ffff:c000:0001]'));
+    });
+  });
+
   describe('.isValidHostname()', () => {
     it('should return true', () => {
       assert.isTrue(utils.isValidHostname('localhost'));

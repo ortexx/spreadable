@@ -9,11 +9,11 @@ const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
 const externalIp = require('external-ip');
 const crypto = require('crypto');
-const ip6addr = require('ip6addr'); 
-const errors = require('./errors'); 
+const ip6addr = require('ip6addr');
+const errors = require('./errors');
 
 const utils = {
-  hostValidationRegex: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/
+  domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu
 };
 
 /**
@@ -477,17 +477,27 @@ utils.isValidIp = function (ip) {
 };
 
 /**
+ * Check the domain is valid
+ * 
+ * @param {string} domain
+ * @returns {boolean}
+ */
+utils.isValidDomain = function (domain) {
+  if(typeof domain != 'string') {
+    return false;
+  }
+
+  return this.domainValidationRegex.test(domain);
+};
+
+/**
  * Check the hostname is valid
  * 
  * @param {string} hostname
  * @returns {boolean}
  */
-utils.isValidHostname = function (hostname) {
-  if(typeof hostname != 'string') {
-    return false;
-  }
-  
-  return this.hostValidationRegex.test(hostname) || this.isValidIp(hostname);
+utils.isValidHostname = function (hostname) {  
+  return this.isValidDomain(hostname) || this.isValidIp(hostname);
 };
 
 /**
