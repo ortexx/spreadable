@@ -2253,7 +2253,7 @@ module.exports = (Parent) => {
     createRequestTimer(timeout, options = {}) {
       options = Object.assign({
         min: this.options.request.pingTimeout
-      }, options)
+      }, options);
       return utils.getRequestTimer(timeout, options);
     }
 

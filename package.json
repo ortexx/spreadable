@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -46,7 +46,7 @@
     "node-mocks-http": "^1.8.1",
     "selfsigned": "^1.10.7",
     "terser-webpack-plugin": "^2.3.7",
-    "webpack": "^4.43.0",
+    "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
@@ -67,7 +67,7 @@
     "ip6addr": "^0.2.3",
     "is-png": "^2.0.0",
     "lodash": "^4.17.19",
-    "lokijs": "^1.5.9",
+    "lokijs": "^1.5.10",
     "lookup-dns-cache": "^2.1.0",
     "ms": "^2.1.2",
     "node-fetch": "^2.6.0",
