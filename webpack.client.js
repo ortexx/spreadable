@@ -6,10 +6,9 @@ const webpack = require('webpack');
 module.exports = (options = {}) => {
   const pack = require(options.packagePath || path.join(process.cwd(), 'package.json'));
   const banner = options.banner || `${pack.name} client\n@version ${pack.version}\n{@link ${pack.homepage}}`;
-  const plugins = options.plugins || [];
-  const BannerPlugin = new webpack.BannerPlugin({ banner });
-  plugins.push(BannerPlugin);
-
+  const plugins = [];
+  plugins.push(new webpack.BannerPlugin({ banner }));
+  plugins.concat(options.plugins || []);
   const mock = merge({
     "os": true,
     "crypto": true,
@@ -21,8 +20,7 @@ module.exports = (options = {}) => {
     "tcp-port-used": true,
     "validate-ip-node": true,
     "lookup-dns-cache": true
-  }, options.mock);
-  
+  }, options.mock);  
   const include = [path.resolve(__dirname, 'src/browser/client')].concat(options.include || []);
   const mockIndexPath = options.mockIndexPath || path.resolve(__dirname, 'src/browser/client/mock');
   const isProd = options.isProd === undefined? process.env.NODE_ENV == 'production': options.isProd;  
@@ -51,7 +49,7 @@ module.exports = (options = {}) => {
     output: {
       path: options.distPath || path.join(process.cwd(), '/dist'),
       filename: '[name].js',
-      library: options.library || ('Client' + pack.name[0].toUpperCase() + pack.name.slice(1)),      
+      library: options.library || ('Client' + pack.name[0].toUpperCase() + pack.name.slice(1)),
       libraryTarget: 'umd'
     },
     optimization: {

@@ -15,7 +15,7 @@ module.exports = (Parent) => {
     constructor(node, options = {}) {
       options = _.merge({
         filename: path.join(node.storagePath, 'loki.db'),
-        autosaveInterval: 3000
+        autosaveInterval: 10000
       }, options);
       super(node, options);
       this.col = {};
