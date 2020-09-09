@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.1.21",
+  "version": "0.1.23",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -15,7 +15,7 @@
     "eslint": "eslint src bin test",
     "test": "mocha ./test/index.js --timeout=12000",
     "build-client": "webpack --config=webpack.client.js",
-    "build-client-prod": "NODE_ENV=production webpack --config=webpack.client.js"
+    "build-client-prod": "cross-env NODE_ENV=production webpack --config=webpack.client.js"
   },
   "husky": {
     "hooks": {
@@ -40,6 +40,7 @@
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.7.0",
     "chai": "^4.2.0",
+    "cross-env": "^7.0.2",
     "eslint": "^5.16.0",
     "husky": "^4.2.5",
     "mocha": "^7.2.0",
