@@ -6,9 +6,9 @@ const webpack = require('webpack');
 module.exports = (options = {}) => {
   const pack = require(options.packagePath || path.join(process.cwd(), 'package.json'));
   const banner = options.banner || `${pack.name} client\n@version ${pack.version}\n{@link ${pack.homepage}}`;
-  const plugins = [];
+  let plugins = [];
   plugins.push(new webpack.BannerPlugin({ banner }));
-  plugins.concat(options.plugins || []);
+  plugins = plugins.concat(options.plugins || []);
   const mock = merge({
     "os": true,
     "crypto": true,
