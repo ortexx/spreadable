@@ -434,7 +434,7 @@ module.exports = (Parent) => {
       }
 
       if(!slaves.find(s => s.address == this.address)) {
-        await this.db.getBehaviorFail('backlinkSlaves') && await this.db.removeBacklink();
+        await this.db.getBehaviorFail('backlinkSlaves', backlink.address) && await this.db.removeBacklink();
         await this.db.addBehaviorFail('backlinkSlaves', backlink.address);
         return [];
       }
