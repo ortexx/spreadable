@@ -629,7 +629,6 @@ module.exports = (Parent) => {
 
       if(server.isSlave || server.isMaster) {
         server.isBacklink = false;
-        server.chain = [];
         this.col.servers.update(server);
       }
       else {
@@ -637,11 +636,11 @@ module.exports = (Parent) => {
       }
 
       this.col.servers.chain()
-      .find({
-        isBacklink: true, 
-        address: { $ne: server.address } 
-      })
-      .remove(); 
+        .find({
+          isBacklink: true, 
+          address: { $ne: server.address } 
+        })
+        .remove(); 
     }
 
     /**

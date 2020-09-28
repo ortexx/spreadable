@@ -28,6 +28,7 @@ schema.getStatusResponse = function () {
   return {
     type: 'object',
     props: {
+      root: 'string',
       availability: 'number',
       syncAvgTime: 'number',
       isMaster: 'boolean',

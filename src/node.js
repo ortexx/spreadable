@@ -434,7 +434,7 @@ module.exports = (Parent) => {
       }
 
       if(!slaves.find(s => s.address == this.address)) {
-        await this.db.removeBacklink();
+        await this.db.getBehaviorFail('backlinkSlaves') && await this.db.removeBacklink();
         await this.db.addBehaviorFail('backlinkSlaves', backlink.address);
         return [];
       }
@@ -806,7 +806,8 @@ module.exports = (Parent) => {
       const availability = await this.getAvailability();
       const syncAvgTime = this.getSyncAvgTime();
       
-      return {        
+      return {     
+        root: this.getRoot(),   
         availability: pretty? availability.toFixed(2): availability,
         syncAvgTime: pretty? ms(syncAvgTime): syncAvgTime,
         isMaster: await this.isMaster(),
@@ -994,8 +995,9 @@ module.exports = (Parent) => {
       }
       else {
         const timeout = timer(this.options.request.pingTimeout);
-        const result = await this.requestServer(this.initialNetworkAddress, 'ping', { method: 'GET', timeout });  
+        const result = await this.requestServer(this.initialNetworkAddress, 'status', { method: 'GET', timeout });  
         newRoot = result.root;
+        !result.isRegistered && await this.db.removeBacklink();
       }
 
       await this.db.setData('rootNetworkAddress', newRoot);

@@ -36,8 +36,7 @@ describe('routes', () => {
     it('should return the right address', async function () { 
       const res = await fetch(`http://${node.address}/ping`);
       const json = await res.json();
-      assert.equal(json.address, node.address);
-      assert.equal(json.root, node.getRoot());
+      assert.equal(json.address, node.address);      
       assert.equal(json.version, node.getVersion());
     });
   });

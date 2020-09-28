@@ -89,8 +89,7 @@ module.exports.bodyParser = node => {
 module.exports.ping = node => {
   return (req, res) => res.send({
     version: node.getVersion(),
-    address: node.address,
-    root: node.getRoot()
+    address: node.address    
   });
 };
 
