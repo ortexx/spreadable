@@ -124,7 +124,12 @@ module.exports = (Parent) => {
       await this.prepareServices();
       await this.prepareBehavior();
       await this.initServices(); 
-      await super.init.apply(this, arguments);      
+      await super.init.apply(this, arguments);  
+      
+      if(!this.options.server) {
+        return;
+      }
+      
       await this.initBeforeSync();     
 
       if(!this.options.network.autoSync) {
@@ -171,20 +176,13 @@ module.exports = (Parent) => {
      * @async
      */
     async initBeforeSync() {
+      this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress');
       const initialNetworkAddress = this.options.initialNetworkAddress || this.address;
       this.initialNetworkAddress = await this.getAvailableAddress(initialNetworkAddress);
       
       if(!this.initialNetworkAddress) {
         throw new Error('Provided initial network addresses are not available');
       }
-
-      this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress'); 
-
-      if(!this.options.server) {
-        return;
-      }
-      
-      await this.nodeAddressTest(this.address);
     }
 
     /**
@@ -547,7 +545,7 @@ module.exports = (Parent) => {
     async checkMasterStructure(master, options = {}) {
       await this.checkMasterStructureNetworkSize(master.address, master.masters, master.slaves); 
       await this.checkMasterStructureMasters(master.address, master.masters);
-      await this.checkMasterStructureSlaves(master.address, master.slaves, options);            
+      await this.checkMasterStructureSlaves(master.address, master.slaves, options);
     }
 
     /**
@@ -1162,8 +1160,8 @@ module.exports = (Parent) => {
       try {
         const info = await this.getAddressInfo(address);
         const trust = this.options.network.trustlist || [];
-        if(trust.length) {
-          
+
+        if(trust.length) {          
           for(let i = 0; i < trust.length; i++) {
             if(await this.compareAddressInfo(trust[i], info)) {
               return true;
