@@ -693,6 +693,7 @@ describe('DatabaseLoki', () => {
         const address = 'localhost:1'
         let approval = await loki.getApproval(key);
         const date = approval.updatedAt;
+        await tools.wait(10);
         await loki.useApproval(key, address);
         approval = await loki.getApproval(key);
         assert.equal(approval.usedBy[0], address, 'check the user');
@@ -881,8 +882,8 @@ describe('DatabaseLoki', () => {
         const key = 'key1';
 
         for(let i = 1; i < limit + 1; i++) {
-          await loki.setCache(type, i, i, { limit });
-          await tools.wait(100);
+          await tools.wait(10);
+          await loki.setCache(type, i, i, { limit });          
         }
 
         const data = loki.col.cache.find({ type });

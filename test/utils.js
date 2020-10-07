@@ -404,7 +404,7 @@ describe('utils', () => {
     let last;
 
     before(() => {
-      timeout = 200
+      timeout = 200;
       timer = utils.getRequestTimer(timeout);
     });
 
@@ -417,7 +417,7 @@ describe('utils', () => {
     it('should return the passed timeout', async () => {
       last = timeout;
       timeout = timer(last / 2);
-      assert.equal(timeout, Math.floor(last / 2));
+      assert.equal(timeout, last / 2);
     });
 
     it('should return cut timeout', async () => {
@@ -751,6 +751,7 @@ describe('utils', () => {
     it('should normalize the queue', async () => {
       for(let i = queue.options.limit; i >= 0; i--) {
         await fse.ensureFile(path.join(folderPath, queue.createName(i + 1)));
+        await tools.wait(10);
       }
 
       await queue.normalize();
@@ -760,7 +761,6 @@ describe('utils', () => {
       
       for(let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
-        console.log(file.index, index, file.stat.birthtimeMs, date)
         assert.isOk(file.index > index && file.stat.birthtimeMs > date, 'check the info');        
         index = file.index;
         date = file.stat.birthtimeMs;
