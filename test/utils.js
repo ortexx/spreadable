@@ -756,14 +756,11 @@ describe('utils', () => {
       await queue.normalize();
       assert.lengthOf(queue.files, queue.options.limit, 'check the size');
       let index = 0;
-      let date = 0;
       
       for(let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
-        console.log(file.index, index, file.stat.birthtimeMs, date)
-        assert.isOk(file.index > index && file.stat.birthtimeMs >= date, 'check the info');        
+        assert.isOk(file.index > index, 'check the info');        
         index = file.index;
-        date = file.stat.birthtimeMs;
       }
     });
   });
