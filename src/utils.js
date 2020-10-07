@@ -244,7 +244,7 @@ utils.getHostIp = async function (hostname) {
   return await new Promise((resolve, reject) => {
     lookup(hostname, (err, ip) => {      
       if(err) {
-        if(err.code == 'ENOTFOUND') {
+        if(err.code == 'ENOTFOUND' || err.code == 'ESERVFAIL') {
           return resolve(null);
         }
         
