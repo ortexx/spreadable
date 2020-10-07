@@ -882,6 +882,7 @@ describe('DatabaseLoki', () => {
 
         for(let i = 1; i < limit + 1; i++) {
           await loki.setCache(type, i, i, { limit });
+          await tools.wait(100);
         }
 
         const data = loki.col.cache.find({ type });

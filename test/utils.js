@@ -417,7 +417,7 @@ describe('utils', () => {
     it('should return the passed timeout', async () => {
       last = timeout;
       timeout = timer(last / 2);
-      assert.equal(timeout, last / 2);
+      assert.equal(timeout, Math.floor(last / 2));
     });
 
     it('should return cut timeout', async () => {
@@ -760,8 +760,8 @@ describe('utils', () => {
       
       for(let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
-        assert.isOk(file.index > index && file.stat.birthtimeMs > date, 'check the info');
         console.log(file.index, index, file.stat.birthtimeMs, date)
+        assert.isOk(file.index > index && file.stat.birthtimeMs > date, 'check the info');        
         index = file.index;
         date = file.stat.birthtimeMs;
       }
