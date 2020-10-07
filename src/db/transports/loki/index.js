@@ -151,7 +151,7 @@ module.exports = (Parent) => {
      */
     prepareCollection(name, options = {}) {
       options = Object.assign({
-        disableMeta: true,
+        disableMeta: true
       }, options);
       let collection = this.loki.getCollection(name);
 

@@ -121,7 +121,7 @@ module.exports = (Parent) => {
       
       await fse.ensureDir(this.storagePath);
       await this.prepareServices();      
-      await super.init.apply(this, arguments);  
+      await super.init.apply(this, arguments); 
       
       if(!this.options.server) {
         return;
@@ -147,13 +147,19 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Deinitialize the node
-     * 
-     * @async
+     * @see Service.prototype.deinit
      */
     async deinit() {
       this.__syncInterval && clearInterval(this.__syncInterval);
       await super.deinit.apply(this, arguments);
+    }
+
+    /**
+     * @see Service.prototype.destroy
+     */
+    async destroy() {
+      await fse.remove(this.storagePath);
+      await super.destroy.apply(this, arguments);
     }
 
     /**
