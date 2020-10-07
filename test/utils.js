@@ -760,6 +760,7 @@ describe('utils', () => {
       
       for(let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
+        console.log(file.index, index, file.stat.birthtimeMs, date)
         assert.isOk(file.index > index && file.stat.birthtimeMs >= date, 'check the info');        
         index = file.index;
         date = file.stat.birthtimeMs;
