@@ -6,7 +6,8 @@ describe('Behavior', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => behavior = new BehaviorFail(this.node));
+      assert.doesNotThrow(() => behavior = new BehaviorFail());
+      behavior.node = this.node;
     });
 
     it('should create the default properties', function () {

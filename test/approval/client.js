@@ -7,7 +7,8 @@ describe('ApprovalClient', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => approval = new ApprovalClient(this.node));
+      assert.doesNotThrow(() => approval = new ApprovalClient());
+      approval.node = this.node;
     });
   });
 

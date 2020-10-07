@@ -14,7 +14,8 @@ describe('LoggerConsole', function () {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => logger = new LoggerFile(this.node, { folder, level: 'info' }));
+      assert.doesNotThrow(() => logger = new LoggerFile({ folder, level: 'info' }));
+      logger.node = this.node;
     });
   });
 
@@ -220,7 +221,7 @@ describe('LoggerConsole', function () {
     });
 
     it('should remove the folder', async function () {
-      assert.isFalse(await fse.exists(folder));
+      assert.isFalse(await fse.pathExists(folder));
     }); 
   });
 });

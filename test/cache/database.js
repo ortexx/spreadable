@@ -10,12 +10,10 @@ describe('CacheDatabase', () => {
   });
   
   describe('instance creation', function () {
-    it('should not create an instance', function () { 
-      assert.throws(() => cache = new CacheDatabase(this.node));    
-    });
-
     it('should create an instance', function () { 
-      assert.doesNotThrow(() => cache = new CacheDatabase(this.node, type));    
+      assert.doesNotThrow(() => cache = new CacheDatabase()); 
+      cache.node = this.node;
+      cache.name = 'test';   
     });    
   });
 
@@ -38,7 +36,7 @@ describe('CacheDatabase', () => {
   describe('.get()', function () {
     it('should get the cache', async function () {
       const res = await cache.get('key1');
-      assert.equal(res.value, 1);
+      assert.equal(res.value, 1, 'check the value');
     });
   });
 

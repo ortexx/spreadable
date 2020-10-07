@@ -8,18 +8,10 @@ module.exports = (Parent) => {
    */
   return class Cache extends (Parent || Service) {
     /**
-     * @param {Node} node 
-     * @param {string} type 
      * @param {object} options
      */
-    constructor(node, type, options = {}) {
+    constructor(options = {}) {
       super(...arguments);
-      this.node = node;
-      this.type = type;
-
-      if(!this.type) {
-        throw new Error('You must pass the necessary cache type');
-      }
 
       this.options = _.merge({
         limit: 50000

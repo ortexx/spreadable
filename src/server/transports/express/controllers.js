@@ -12,6 +12,11 @@ module.exports.clientInfo = (node) => {
   return (req, res, next) => {
     const trusted = [...new Set(['127.0.0.1', node.ip, node.externalIp, node.localIp])];
     req.clientIp = utils.getRemoteIp(req, { trusted });
+
+    if(!req.clientIp) {
+      return next(new Error(`Client ip address can't be specified`));
+    }
+
     req.clientAddress = req.headers['original-address'] || `${req.clientIp}:0`;
     next();
   };
@@ -38,16 +43,18 @@ module.exports.provideRequest = node => {
       const timeout = node.createRequestTimeout({ 
         timeout: req.headers['provider-timeout'], 
         timestamp: req.headers['provider-timestamp'] 
-      });      
+      });  
 
       for(let key in headers) {
         if(key.match(/^provider/i)) {
           delete headers[key];
         }
       }
-
+      
       try {
-        const response = await fetch(url, { body: req, method: req.method, headers, timeout });
+        const options = { body: req, method: req.method, headers, timeout };
+        options.method.match(/head|get/i) && delete options.body;
+        const response = await fetch(url, options);
         headers = response.headers.raw();
         headers['provider-target'] = 'true';
         res.writeHead(response.status, headers);

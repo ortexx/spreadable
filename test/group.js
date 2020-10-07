@@ -97,7 +97,7 @@ describe('group communication', () => {
       await node.sync();
     }
     
-    await tools.nodesSync(nodes, nodes.length * 2);    
+    await tools.nodesSync(nodes, nodes.length * 2);
 
     for(let i = 0; i < nodes.length; i++) {
       assert.equal(await nodes[i].getNetworkSize(), nodes.length);
@@ -124,8 +124,8 @@ describe('group communication', () => {
 
   it('should prepare node and client for requests', async () => { 
     for(let i = 0; i < nodes.length; i++) {
-      await nodes[i].addApproval('client', new ApprovalClient(nodes[i]));
-      await nodes[i].addApproval('captcha', new ApprovalCaptcha(nodes[i]));
+      await nodes[i].addApproval('client', new ApprovalClient());
+      await nodes[i].addApproval('captcha', new ApprovalCaptcha());
       await nodes[i].sync();    
     }
 

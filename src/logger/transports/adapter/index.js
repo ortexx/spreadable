@@ -21,7 +21,8 @@ module.exports = (Parent) => {
       for(let i = 0; i < arr.length; i++) {
         const obj = arr[i];
         const CurrentLogger = typeof obj.transport == 'string'? transports[obj.transport]: obj.transport;       
-        const logger = new CurrentLogger(this.node, obj.options);
+        const logger = new CurrentLogger(obj.options);
+        logger.node = this.node;
         await logger.init();
         this.addTransport(logger);
       }

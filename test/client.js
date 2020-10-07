@@ -10,7 +10,7 @@ describe('Client', () => {
 
   before(async function() {
     node = new Node(await tools.createNodeOptions());
-    await node.addApproval('test', new ApprovalClient(node));
+    await node.addApproval('test', new ApprovalClient());
     await node.init();
   });
 

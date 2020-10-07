@@ -1,4 +1,4 @@
-# [Spreadable](https://github.com/ortexx/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable)
+# [Spreadable](https://github.com/ortexx/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable) [![Build status](https://github.com/ortexx/spreadable/workflows/build/badge.svg)](https://github.com/ortexx/spreadable/actions)
 
 Spreadable is a decentralized network mechanism.
 You can use it to combine servers in a public or private network for any purpose. The library consists of two parts:

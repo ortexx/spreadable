@@ -6,7 +6,8 @@ describe('Behavior', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => behavior = new Behavior(this.node));
+      assert.doesNotThrow(() => behavior = new Behavior());
+      behavior.node = this.node;
     });
   });
 

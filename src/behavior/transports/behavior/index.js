@@ -6,12 +6,10 @@ module.exports = (Parent) => {
    */
   return class Behavior extends (Parent || Service) {
     /**
-     * @param {Node} node 
      * @param {object} [options]
      */
-    constructor(node, options = {}) {
+    constructor(options = {}) {
       super(...arguments);
-      this.node = node; 
       Object.assign(this, options);
     }
   }

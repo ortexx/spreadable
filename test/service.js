@@ -11,7 +11,18 @@ describe('Service', () => {
   });
 
   describe('.init()', () => {
-    it('should initialize the service', async () => {
+    it('should not initialize the slave service without registration', async () => {
+      try {
+        await service.init();
+        throw new Error('Fail');
+      }
+      catch(err) {
+        assert.isOk(err.message.match('You have to register')); 
+      }      
+    });
+
+    it('should initialize the service', async () => {      
+      service.__isMasterService = true;
       await service.init();
       assert.typeOf(service.__initialized, 'number');
     });

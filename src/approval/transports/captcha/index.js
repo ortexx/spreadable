@@ -11,13 +11,11 @@ module.exports = (Parent) => {
    * Captcha approval transport
    */
   return class ApprovalCaptcha extends (Parent || Approval) {
-     /**
-     * @param {Node} node 
+    /**
      * @param {object} options
      */
-    constructor(node, options = {}) {
+    constructor(options = {}) {
       super(...arguments);
-      this.node = node;
       Object.assign(this, {
         decisionLevel: '75%',
         captchaShadows: 1,

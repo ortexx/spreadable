@@ -7,7 +7,8 @@ describe('TaskCron', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => task = new TaskCron(this.node));
+      assert.doesNotThrow(() => task = new TaskCron());
+      task.node = this.node;
     });
   });
 

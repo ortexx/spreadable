@@ -7,7 +7,8 @@ describe('TaskInterval', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => task = new TaskInterval(this.node));
+      assert.doesNotThrow(() => task = new TaskInterval());
+      task.node = this.node;
     });
   });
 

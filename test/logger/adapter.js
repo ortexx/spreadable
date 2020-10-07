@@ -38,12 +38,13 @@ describe('LoggerConsole', function () {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => logger = new LoggerAdapter(this.node, { 
+      assert.doesNotThrow(() => logger = new LoggerAdapter( { 
         transports: [
           { transport: LoggerInterface, options: { x: 1 } },
           { transport: 'LoggerInterface', options: { x: 2 } }
         ]
       }));
+      logger.node = this.node;
     });
   });
 
@@ -117,7 +118,7 @@ describe('LoggerConsole', function () {
 
   describe('.addTransport()', function () { 
     it('should add a new transport', async function () {
-      logger.addTransport(new LoggerInterface(this.node, { x: 3 }));
+      logger.addTransport(new LoggerInterface({ x: 3 }));
       assert.equal(logger.transports[2].options.x, 3);
     });  
   });

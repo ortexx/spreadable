@@ -9,25 +9,25 @@ module.exports = (Parent) => {
    * File logger transport
    */
   return class LoggerFile extends (Parent || Logger) {
-    constructor(node, options) {
+    constructor(options) {
       options = _.merge({
         filesCount: 5,
-        fileMaxSize: '10mb',
-        folder: path.join(node.storagePath, `logs`)
+        fileMaxSize: '10mb'
       }, options);      
-      super(node, options);
-      this.defaultLevel = 'warn';
-      this.__filesQueue = new utils.FilesQueue(this.options.folder, {
-        limit: this.options.filesCount,
-        ext: 'log'
-      });
+      super(options);
+      this.defaultLevel = 'warn';      
       this.prepareOptions();
     }
 
     /**
      * @see Logger.prototype.init
      */
-    async init() {
+    async init() {      
+      !this.options.folder && (this.options.folder = path.join(this.node.storagePath, 'logs'));
+      this.__filesQueue = new utils.FilesQueue(this.options.folder, {
+        limit: this.options.filesCount,
+        ext: 'log'
+      });
       await this.normalizeFilesCount();
       return await super.init.apply(this, arguments);
     }

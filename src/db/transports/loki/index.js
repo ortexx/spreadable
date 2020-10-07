@@ -12,23 +12,24 @@ module.exports = (Parent) => {
    * Lokijs database transport
    */
   return class DatabaseLoki extends (Parent || Database) {
-    constructor(node, options = {}) {
+    constructor(options = {}) {
       options = _.merge({
-        filename: path.join(node.storagePath, 'loki.db'),
         autosaveInterval: 10000
       }, options);
-      super(node, options);
-      this.col = {};
-      this.__backupQueue = new utils.FilesQueue(this.options.backups.folder, {
-        limit: this.options.backups.limit,
-        ext: 'db'
-      });
+      super(options);
+      this.col = {};     
     }
 
     /**
      * @see Database.prototype.init
      */
     async init() {
+      await super.init.apply(this, arguments);
+      !this.options.filename && (this.options.filename = path.join(this.node.storagePath, 'loki.db'));
+      this.__backupQueue = new utils.FilesQueue(this.options.backups.folder, {
+        limit: this.options.backups.limit,
+        ext: 'db'
+      });
       await fse.ensureFile(this.options.filename);
       await this.__backupQueue.normalize();
       await new Promise((resolve, reject) => {     
@@ -53,8 +54,6 @@ module.exports = (Parent) => {
           this.saveDatabase();
         }
       });
-
-      super.init.apply(this, arguments);
     }
 
     /**
@@ -62,18 +61,21 @@ module.exports = (Parent) => {
      */
     async deinit() {
       this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
-
-      if(this.isDestroying()) {
-        this.loki.autosaveDisable();
-        await this.deleteDatabase();          
-      }
-      else {
-        await this.saveDatabase(); 
-        this.loki && this.loki.close();
-      }
-
+      await this.saveDatabase(); 
+      this.loki && this.loki.close();
       delete this.loki;
       await super.deinit.apply(this, arguments);
+    }
+
+    /**
+     * @see Database.prototype.destroy
+     */
+    async destroy() {
+      this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
+      this.loki.autosaveDisable();
+      await this.deleteDatabase();
+      delete this.loki;
+      await super.destroy.apply(this, arguments);
     }
 
     /**

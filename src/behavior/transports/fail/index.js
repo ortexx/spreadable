@@ -7,16 +7,47 @@ module.exports = (Parent) => {
    */
   return class BehaviorlFail extends (Parent || Behavior) {
     /**
-     * @param {Node} node 
      * @param {object} [options]
      */
-    constructor(node, options) {
+    constructor(options) {
       super(...arguments);
       Object.assign(this, {
         ban: true,
         banLifetime: '27d',
-        failSuspicionLevel: 10
+        failSuspicionLevel: 20
       }, options);
+    }
+
+    /**
+     * Create a step
+     * 
+     * @param {boolean} add
+     * @param {number|boolean[]} step
+     * @param {object} [options]
+     * @param {boolean} [options.exp]
+     * @returns {number|function}
+     */
+    createStep(add, step = 1, options = {}) {
+      if(Array.isArray(step)) {
+        step = step.map(s => !!s).reduce((p, c, i, a) => !c? (p += 1 / a.length): p, 0);
+      }
+
+      if(typeof step == 'function') {
+        return step;
+      }
+
+      if(!options.exp) {
+        return step;
+      }
+
+      return behavior => {
+        if(!behavior) {
+          return step;
+        }
+
+        const coef = Math.sqrt(behavior.balance);
+        return add? step * coef: step / coef;
+      };
     }
 
     /**
@@ -25,6 +56,36 @@ module.exports = (Parent) => {
     async init() {
       typeof this.banLifetime == 'string' && (this.banLifetime = utils.getMs(this.banLifetime));
       super.init.apply(this, arguments);
+    }
+
+    /**
+     * Get the fail
+     * 
+     * @param {string} address
+     * @returns {object}
+     */
+    async get(address) {
+      return this.node.db.getBehaviorFail(this.action, address);
+    }
+    
+    /**
+     * Add the fail
+     * 
+     * @see BehaviorlFail.prototype.createStep
+     * @returns {object}
+     */
+    async add(address, step, options) {
+      return this.node.db.addBehaviorFail(this.name, address, this.createStep(true, step, options));
+    }
+
+    /**
+     * Subtract the fail
+     * 
+     * @see BehaviorlFail.prototype.createStep
+     * @returns {object}
+     */
+    async sub(address, step, options) {
+      return this.node.db.subBehaviorFail(this.name, address, this.createStep(false, step, options));
     }
   }
 };

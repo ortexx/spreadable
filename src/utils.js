@@ -353,8 +353,12 @@ utils.getLocalIp = function () {
  * @returns {string}
  */
 utils.getRemoteIp = function (req, options = {}) {
-  let ip = req.connection.remoteAddress;
+  let ip = req.connection.remoteAddress || req.socket.remoteAddress;
   let isTrusted = true;
+
+  if(!ip) {
+    return '';
+  }
 
   const check = ip => {
     if(!options.trusted || !options.trusted.length) {
@@ -392,7 +396,7 @@ utils.getRemoteIp = function (req, options = {}) {
     }
   }
 
-  this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
+  ip && this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
   return ip;
 };
 
@@ -604,7 +608,7 @@ utils.createRequestTimeoutError = function () {
 };
 
 /**
- * Check the error is the request timeout error
+ * Check the error is a request timeout error
  * 
  * @param {Error} err
  * @returns {boolean}
@@ -618,6 +622,20 @@ utils.isRequestTimeoutError = function (err) {
     ['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) || 
     ['request-timeout', 'body-timeout'].includes(err.type)
   );
+};
+
+/**
+ * Check the error is a provider error
+ * 
+ * @param {Error} err
+ * @returns {boolean}
+ */
+utils.isRequestProviderError = function (err) {
+  if(!(err instanceof Error) || !err.provider) {
+    return false;
+  }
+
+  return err.response && err.response.headers && !err.response.headers.get('provider-target');
 };
 
 /**

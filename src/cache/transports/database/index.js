@@ -9,7 +9,7 @@ module.exports = (Parent) => {
      * @see Cache.prototype.get
      */
     async get(key) {
-      const cache = await this.node.db.getCache(this.type, key);
+      const cache = await this.node.db.getCache(this.name, key);
       return cache? { key: cache.key, value: cache.value }: null;
     }
 
@@ -17,28 +17,28 @@ module.exports = (Parent) => {
      * @see Cache.prototype.set
      */
     async set(key, value) {
-      return await this.node.db.setCache(this.type, key, value, this.options);
+      return await this.node.db.setCache(this.name, key, value, this.options);
     }
 
     /**
      * @see Cache.prototype.remove
      */
     async remove(key) {
-      return await this.node.db.removeCache(this.type, key);
+      return await this.node.db.removeCache(this.name, key);
     }
 
     /**
      * @see Cache.prototype.normalize
      */
     async normalize() {
-      return await this.node.db.normalizeCache(this.type, this.options);
+      return await this.node.db.normalizeCache(this.name, this.options);
     }
 
     /**
      * @see Cache.prototype.flush
      */
     async flush() {
-      return await this.node.db.flushCache(this.type);
+      return await this.node.db.flushCache(this.name);
     }
   }
 };

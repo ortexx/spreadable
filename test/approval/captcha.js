@@ -9,7 +9,8 @@ describe('Approval', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => approval = new ApprovalCaptcha(this.node));
+      assert.doesNotThrow(() => approval = new ApprovalCaptcha());
+      approval.node = this.node;
     });
 
     it('should create the default properties', function () {

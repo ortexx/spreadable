@@ -9,14 +9,11 @@ module.exports = (Parent) => {
    */
   return class Server extends (Parent || Service) {
     /**
-     * @param {Node} node 
      * @param {object} options
-     *  @param {object|boolean} [options.https]
+     * @param {object|boolean} [options.https]
      */
-    constructor(node, options = {}) {
-      super(...arguments);
-      this.node = node;
-      this.port = this.node.port;
+    constructor(options = {}) {
+      super(...arguments);      
       this.options = options;
     }
 
@@ -26,6 +23,8 @@ module.exports = (Parent) => {
      * @async
      */
     async init() {
+      this.port = this.node.port;
+
       if(await utils.isPortUsed(this.port)) {
         throw new Error(`Port ${this.port} is already used`);
       }

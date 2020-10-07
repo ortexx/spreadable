@@ -5,12 +5,10 @@ describe('Cache', () => {
   let cache;
 
   describe('instance creation', function () {
-    it('should not create an instance', function () { 
-      assert.throws(() => cache = new Cache(this.node));   
-    });
-
     it('should create an instance', function () { 
-      assert.doesNotThrow(() => cache = new Cache(this.node, 'test'));    
+      assert.doesNotThrow(() => cache = new Cache());  
+      cache.node = this.node;
+      cache.name = 'test';
     });
   });
 

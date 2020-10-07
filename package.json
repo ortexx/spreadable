@@ -13,13 +13,14 @@
   "homepage": "https://github.com/ortexx/spreadable",
   "scripts": {
     "eslint": "eslint src bin test",
-    "test": "mocha ./test/index.js --timeout=12000",
+    "test": "mocha ./test/index.js --timeout=15000",
     "build-client": "webpack --config=webpack.client.js",
-    "build-client-prod": "cross-env NODE_ENV=production webpack --config=webpack.client.js"
+    "build-client-prod": "cross-env NODE_ENV=production webpack --config=webpack.client.js",
+    "build-ci": "npm run eslint && npm run test && npm run build-client-prod"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run eslint && npm run test && npm run build-client-prod && git add ./dist/*"
+      "pre-commit": "npm run build-ci && git add ./dist/*"
     }
   },
   "keywords": [

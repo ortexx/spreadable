@@ -30,7 +30,8 @@ describe('LoggerConsole', function () {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => logger = new LoggerConsole(this.node));
+      assert.doesNotThrow(() => logger = new LoggerConsole());
+      logger.node = this.node;
     });
   });
 

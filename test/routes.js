@@ -17,7 +17,7 @@ describe('routes', () => {
         auth: { username: 'username', password: 'password' }
       } 
     }));
-    await node.addApproval('test', new ApprovalClient(node));
+    await node.addApproval('test', new ApprovalClient());
     await node.init();
     await node.sync();
     client = new Client(await tools.createClientOptions({

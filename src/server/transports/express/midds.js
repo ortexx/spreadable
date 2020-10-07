@@ -122,17 +122,18 @@ midds.networkAccess = (node, checks = {}) => {
         const cookieKeyValue = cookies.get(cookieKey);
         const info = basicAuth(req);
         const cookieInfo = cookieKeyValue? JSON.parse(Buffer.from(cookieKeyValue, 'base64')): null;
+        const behaviorFail = await node.getBehavior('authentication');
         
         if(
           (!cookieInfo || cookieInfo.username != auth.username || cookieInfo.password != auth.password) && 
           (!info || info.name != auth.username || info.pass != auth.password)
         ) {
           res.setHeader('WWW-Authenticate', `Basic realm="${ node.address }"`);
-          await node.db.addBehaviorFail('authentication', req.clientAddress);
+          behaviorFail.add(req.clientAddress);
           throw new errors.AuthError('Authentication is required');
         }
 
-        await node.db.cleanBehaviorFail('authentication', req.clientAddress);
+        behaviorFail.sub(req.clientAddress);
 
         if(!cookieKeyValue) {
           cookies.set(cookieKey, Buffer.from(JSON.stringify(auth)).toString('base64'), { 

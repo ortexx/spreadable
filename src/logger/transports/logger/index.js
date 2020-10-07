@@ -6,12 +6,10 @@ module.exports = (Parent) => {
    */
   return class Logger extends (Parent || Service) {
     /**
-     * @param {Node} node 
      * @param {object} options 
      */
-    constructor(node, options = {}) {
+    constructor(options = {}) {
       super(...arguments);
-      this.node = node;
       this.options = options;    
       this.levels = ['info', 'warn', 'error'];
       this.defaultLevel = 'info';

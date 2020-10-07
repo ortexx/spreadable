@@ -6,7 +6,8 @@ describe('Approval', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => approval = new Approval(this.node));
+      assert.doesNotThrow(() => approval = new Approval());
+      approval.node = this.node;
     });
 
     it('should create the default properties', function () {

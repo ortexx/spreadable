@@ -13,9 +13,10 @@ describe('DatabaseLoki', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () { 
-      assert.doesNotThrow(() => loki = new DatabaseLoki(this.node, {
+      assert.doesNotThrow(() => loki = new DatabaseLoki({
         filename: tools.getDbFilePath(this.node)
       }));  
+      loki.node = this.node;
       lastNodeDb = this.node.db;
       this.node.db = loki;  
     });
@@ -27,7 +28,7 @@ describe('DatabaseLoki', () => {
     });  
     
     it('should create the db file', async function () {    
-      assert.isTrue(await fse.exists(tools.getDbFilePath(this.node)));
+      assert.isTrue(await fse.pathExists(tools.getDbFilePath(this.node)));
     });
   });
   
@@ -642,17 +643,7 @@ describe('DatabaseLoki', () => {
       key = 'key'
     });
 
-    describe('.addBehaviorFail()', function () { 
-      it('should throw an error', async function () {
-        try {
-          await loki.addBehaviorFail(action, '127.0.0.1', 'key', Date.now());  
-          throw new Error('Fail');
-        }
-        catch(err) {
-          assert.isOk(err.message.includes("doesn't exist"));
-        }
-      });
-
+    describe('.addApproval()', function () {
       it('should add the approval', async function () {
         await this.node.addApproval(action, new Approval());
         const ip = '127.0.0.1';
@@ -1039,7 +1030,7 @@ describe('DatabaseLoki', () => {
     });
     
     it('should remove the db file', async function () {
-      assert.isFalse(await fse.exists(tools.getDbFilePath(this.node)));
+      assert.isFalse(await fse.pathExists(tools.getDbFilePath(this.node)));
     });
   });
 });

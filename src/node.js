@@ -89,6 +89,7 @@ module.exports = (Parent) => {
       this.ServerTransport = this.constructor.ServerTransport;
       this.LoggerTransport = this.constructor.LoggerTransport;  
       this.TaskTransport = this.constructor.TaskTransport;
+      this.__isMasterService = true;
       this.__rootCheckedAt = 0;
       this.__rootNetworkAddress = '';
       this.__cpuUsageInterval = 900,
@@ -98,8 +99,6 @@ module.exports = (Parent) => {
       this.__cpuUsage = 0;      
       this.__requestQueue = {};
       this.__syncList = [];
-      this.__behavior = {};
-      this.__approval = {};
       this.prepareOptions();
     }    
 
@@ -121,9 +120,7 @@ module.exports = (Parent) => {
       }
       
       await fse.ensureDir(this.storagePath);
-      await this.prepareServices();
-      await this.prepareBehavior();
-      await this.initServices(); 
+      await this.prepareServices();      
       await super.init.apply(this, arguments);  
       
       if(!this.options.server) {
@@ -156,18 +153,7 @@ module.exports = (Parent) => {
      */
     async deinit() {
       this.__syncInterval && clearInterval(this.__syncInterval);
-      !this.isDestroying() && await this.deinitServices();
       await super.deinit.apply(this, arguments);
-    }
-
-    /**
-     * Destroy the node
-     * 
-     * @async
-     */
-    async destroy() { 
-      await this.destroyServices();
-      await super.destroy.apply(this, arguments);
     }
 
     /**
@@ -190,11 +176,48 @@ module.exports = (Parent) => {
      * 
      * @async
      */
-    async prepareServices() {
-      this.logger = new this.LoggerTransport(this, this.options.logger);
-      this.db = new this.DatabaseTransport(this, this.options.db);
-      this.options.server && (this.server = new this.ServerTransport(this, this.options.server));    
-      this.options.task && (this.task = new this.TaskTransport(this, this.options.task));
+    async prepareServices() { 
+      await this.prepareLogger();
+      await this.prepareDatabase();
+      await this.prepareServer();
+      await this.prepareTask();
+      await this.prepareBehavior();      
+    }
+
+    /**
+     * Prepare the logger service
+     * 
+     * @async
+     */
+    async prepareLogger() {
+      this.logger = await this.addService('logger', new this.LoggerTransport(this.options.logger));
+    }
+
+    /**
+     * Prepare the database service
+     * 
+     * @async
+     */
+    async prepareDatabase() {
+      this.db = await this.addService('db', new this.DatabaseTransport(this.options.db));
+    }
+
+    /**
+     * Prepare the server service
+     * 
+     * @async
+     */
+    async prepareServer() {
+      this.options.server && (this.server = await this.addService('server', new this.ServerTransport(this.options.server))); 
+    }
+
+    /**
+     * Prepare the task service
+     * 
+     * @async
+     */
+    async prepareTask() {
+      this.options.task && (this.task = await this.addService('task', new this.TaskTransport(this.options.task)));
       
       if(!this.task) {
         return;
@@ -206,83 +229,24 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Prepare the behavior
+     * Prepare the behavior services
      * 
      * @async
      */
     async prepareBehavior() {
-      await this.addBehavior('requestDelays', new BehaviorFail(this, { banLifetime: '5m', failSuspicionLevel: 200 }));
-      await this.addBehavior('authentication', new BehaviorFail(this, { banLifetime: '15m', failSuspicionLevel: 10 }));
-      await this.addBehavior('registration', new BehaviorFail(this, { banLifetime: '10m' }));
-      await this.addBehavior('slaveMasters', new BehaviorFail(this));
-      await this.addBehavior('slaveBacklink', new BehaviorFail(this));
-      await this.addBehavior('backlinkMasters', new BehaviorFail(this));
-      await this.addBehavior('backlinkSlaves', new BehaviorFail(this));
-      await this.addBehavior('masterMasters', new BehaviorFail(this));
-      await this.addBehavior('masterSlaves', new BehaviorFail(this));
-      await this.addBehavior('masterNetworkSize', new BehaviorFail(this));      
-      await this.addBehavior('requestBacklinkMasters', new BehaviorFail(this));
-      await this.addBehavior('responseSchema', new BehaviorFail(this));
-    }
-
-    /**
-     * Initialize the services
-     * 
-     * @async
-     */
-    async initServices() {
-      this.logger && await this.logger.init();   
-      this.db && await this.db.init();
-      this.server && await this.server.init();
-      this.task && await this.task.init();
-
-      for(let key in this.__approval) {
-        await this.__approval[key].init();
-      }
-
-      for(let key in this.__behavior) {
-        await this.__behavior[key].init();
-      }
-    }
-
-    /**
-     * Deinitialize the services
-     * 
-     * @async
-     */
-    async deinitServices() {
-      for(let key in this.__approval) {
-        await this.__approval[key].deinit();
-      }
-
-      for(let key in this.__behavior) {
-        await this.__behavior[key].deinit();
-      }
-
-      this.task && await this.task.deinit();
-      this.server && await this.server.deinit();
-      this.db && await this.db.deinit();
-      this.logger && await this.logger.deinit();
-    }
-
-    /**
-     * Destroy the services
-     * 
-     * @async
-     */
-    async destroyServices() {
-      for(let key in this.__approval) {
-        await this.__approval[key].destroy();
-      }
-
-      for(let key in this.__behavior) {
-        await this.__behavior[key].destroy();
-      }
-
-      this.server && await this.server.destroy();    
-      this.task && await this.task.destroy();
-      this.db && await this.db.destroy();
-      this.logger && await this.logger.destroy();
+      await this.addBehavior('requestDelays', new BehaviorFail({ banLifetime: '20m', failSuspicionLevel: 200 }));
+      await this.addBehavior('authentication', new BehaviorFail({ banLifetime: '15m', failSuspicionLevel: 10 }));
+      await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));
+      await this.addBehavior('providerStructure', new BehaviorFail());      
+      await this.addBehavior('slaveMasters', new BehaviorFail());
+      await this.addBehavior('slaveBacklink', new BehaviorFail());
+      await this.addBehavior('backlinkMasters', new BehaviorFail());
+      await this.addBehavior('backlinkSlaves', new BehaviorFail());
+      await this.addBehavior('masterMasters', new BehaviorFail());
+      await this.addBehavior('masterSlaves', new BehaviorFail());
+      await this.addBehavior('masterNetworkSize', new BehaviorFail());      
+      await this.addBehavior('requestBacklinkMasters', new BehaviorFail());
+      await this.addBehavior('responseSchema', new BehaviorFail());
     }
 
     /**
@@ -371,23 +335,31 @@ module.exports = (Parent) => {
         const masters = result.masters;
         const backlink = result.backlink;
         const address = result.address;
-        const slaves = result.slaves;       
-        const selfMaster = masters.find(m => m.address == this.address);
+        const slaves = result.slaves;     
+        const master = masters.find(m => m.address == this.address);  
+        const checkSelf = !!master;
+        const checkBacklink = !!backlink;
+        const checkSize = checkSelf && master.size == await this.db.getSlavesCount();        
+        const checkBacklinkAddress = checkBacklink && backlink.address == this.address;
+        const checkArrSelf = [checkSelf, checkSize];
+        const checkArrBacklink = [checkBacklink, checkBacklinkAddress];
+        const behaviorSlaveMasters = await this.getBehavior('slaveMasters');
+        const behaviorSlaveBacklink = await this.getBehavior('slaveBacklink');
 
-        if(!selfMaster || selfMaster.size != await this.db.getSlavesCount()) {
-          await this.db.addBehaviorFail('slaveMasters', address);
+        if(checkArrSelf.includes(false) && await this.checkProvider(result)) {
+          await behaviorSlaveMasters.add(address, checkArrSelf, { exp: true });
         }
         else {
-          await this.db.subBehaviorFail('slaveMasters', address);
+          await behaviorSlaveMasters.sub(address, 1, { exp: true });
         }
         
-        if(!backlink || backlink.address != this.address) {          
+        if(checkArrBacklink.includes(false) && await this.checkProvider(result)) {
           await this.db.removeSlave(address);
-          await this.db.addBehaviorFail('slaveBacklink', address);
+          await behaviorSlaveBacklink.add(address, checkArrBacklink, { exp: true });
         }
         else {
           await this.db.addSlave(address);
-          await this.db.subBehaviorFail('slaveBacklink', address);
+          await behaviorSlaveBacklink.sub(address, 1, { exp: true });
         }
 
         if(slaves.length) {
@@ -422,22 +394,24 @@ module.exports = (Parent) => {
       }
       
       const slaves = result.slaves;
-      const masters = result.masters;   
+      const masters = result.masters;
+      const behaviorBacklinkMasters = await this.getBehavior('backlinkMasters');
+      const behaviorBacklinkSlaves = await this.getBehavior('backlinkSlaves');  
       
-      if(!masters.find(m => m.address == backlink.address)) {
-        await this.db.addBehaviorFail('backlinkMasters', backlink.address);
+      if(!masters.find(m => m.address == backlink.address) && await this.checkProvider(result)) {
+        await behaviorBacklinkMasters.add(backlink.address, 1, { exp: true });
       }
       else {
-        await this.db.subBehaviorFail('backlinkMasters', backlink.address);
+        await behaviorBacklinkMasters.sub(backlink.address, 1, { exp: true });
       }
 
-      if(!slaves.find(s => s.address == this.address)) {
-        await this.db.getBehaviorFail('backlinkSlaves', backlink.address) && await this.db.removeBacklink();
-        await this.db.addBehaviorFail('backlinkSlaves', backlink.address);
+      if(!slaves.find(s => s.address == this.address) && await this.checkProvider(result)) {
+        await this.db.removeBacklink();
+        await behaviorBacklinkSlaves.add(backlink.address, 1, { exp: true });
         return [];
       }
       else {
-        await this.db.subBehaviorFail('backlinkSlaves', backlink.address);
+        await behaviorBacklinkSlaves.sub(backlink.address, 1, { exp: true });
       }
 
       await this.db.addBacklink(backlink.address);
@@ -451,7 +425,7 @@ module.exports = (Parent) => {
      */
     async sync() {
       const startTime = Date.now();      
-      const timer = this.createRequestTimer(this.options.network.syncInterval);      
+      const timer = this.createRequestTimer(this.options.network.syncInterval);
       await this.db.normalizeBanlist();
       await this.db.normalizeApproval();
       await this.db.normalizeBehaviorFails();
@@ -529,9 +503,11 @@ module.exports = (Parent) => {
         return;
       }
 
-      checked.push(current.address);
-      await this.checkMasterStructure(current, options);
-      await this.db.setData('checkedMasterStructures', checked);
+      if(await this.checkProvider(current)) {
+        checked.push(current.address);
+        await this.checkMasterStructure(current, options);
+        await this.db.setData('checkedMasterStructures', checked);
+      }
     }
   
     /**
@@ -542,7 +518,7 @@ module.exports = (Parent) => {
      * @param {object} [options]
      * 
      */
-    async checkMasterStructure(master, options = {}) {
+    async checkMasterStructure(master, options = {}) {      
       await this.checkMasterStructureNetworkSize(master.address, master.masters, master.slaves); 
       await this.checkMasterStructureMasters(master.address, master.masters);
       await this.checkMasterStructureSlaves(master.address, master.slaves, options);
@@ -562,14 +538,17 @@ module.exports = (Parent) => {
 
       const self = masters.find(m => m.address == this.address); 
       const size = await this.db.getSlavesCount();
+      const checkAddress = !!masters.find(m => m.address == address);
+      const checkSelf = !!self;
+      const checkSize = checkSelf && self.size == size;
+      const checkArr = [checkAddress, checkSelf, checkSize];
+      const behaviorMasterMasters = await this.getBehavior('masterMasters');  
 
-      if(!masters.find(m => m.address == address) || !self || self.size != size) {
-        const fn = behavior => behavior? 1 * Math.sqrt(behavior.balance): 1;
-        await this.db.addBehaviorFail('masterMasters', address, fn);
+      if(checkArr.includes(false)) {
+        await behaviorMasterMasters.add(address, checkArr, { exp: true });
       }
       else {
-        const fn = behavior => behavior? 1 / Math.sqrt(behavior.balance): 1;
-        await this.db.subBehaviorFail('masterMasters', address, fn);
+        await behaviorMasterMasters.sub(address, 1, { exp: true });
       }
     }
 
@@ -589,17 +568,20 @@ module.exports = (Parent) => {
       const coef = await this.getNetworkOptimum();
       slaves = slaves.slice(0, coef);
       const results = await this.provideGroupStructure(slaves, { includeErrors: true, timeout: options.timeout });
+      const behaviorMasterSlaves = await this.getBehavior('masterSlaves');
       let suspicious = 0;
 
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
 
         if(
-          !utils.isRequestTimeoutError(result) && (
+          !utils.isRequestTimeoutError(result) &&
+          (
             result instanceof Error ||
-            !result.backlink || 
+            !result.backlink ||
             result.backlink.address != address
-          )
+          ) &&
+          await this.checkProvider(result)
         ) {
           suspicious++;
           continue;
@@ -607,13 +589,10 @@ module.exports = (Parent) => {
       }
       
       if(suspicious) {
-        const val = suspicious / slaves.length;
-        const fn = behavior => behavior? val * Math.sqrt(behavior.balance): val;
-        await this.db.addBehaviorFail('masterSlaves', address, fn);
+        await behaviorMasterSlaves.add(address, suspicious / slaves.length, { exp: true });
       }
       else {
-        const fn = behavior => behavior? 1 / Math.sqrt(behavior.balance): 1;
-        await this.db.subBehaviorFail('masterSlaves', address, fn);
+        await behaviorMasterSlaves.sub(address, 1, { exp: true });
       }
     }
 
@@ -630,15 +609,19 @@ module.exports = (Parent) => {
         return;
       }
       
+      const behavior = await this.getBehavior('masterNetworkSize');
       const networkSize = await this.getNetworkSize(masters);
       const coef = await this.getNetworkOptimum(networkSize);
       const master = masters.find(m => m.address == address);
+      const checkSize = !!master && master.size == slaves.length;
+      const checkLength = slaves.length <= coef;
+      const checkArr = [checkSize, checkLength];      
 
-      if((master && master.size != slaves.length) || slaves.length > coef) {
-        await this.db.addBehaviorFail('masterNetworkSize', address);
+      if(checkArr.includes(false)) {
+        await behavior.add(address, checkArr, { exp: true });
       }
       else {
-        await this.db.subBehaviorFail('masterNetworkSize', address);
+        await behavior.sub(address, 1, { exp: true });
       }
     }
 
@@ -654,8 +637,14 @@ module.exports = (Parent) => {
 
       const timer = this.createRequestTimer(options.timeout);
       let timeout = timer();
+      let provider = this.initialNetworkAddress;
+
+      if(this.initialNetworkAddress === this.address && !await this.db.getMastersCount()) {
+        const servers = await this.db.getServers();
+        servers.length && (provider = servers[0].address);
+      }
       
-      let result = await this.requestNode(this.initialNetworkAddress, 'provide-registration', {
+      let result = await this.requestNode(provider, 'provide-registration', {
         body: {
           target: this.address,
           timeout,
@@ -732,7 +721,8 @@ module.exports = (Parent) => {
       }
 
       freeMasters = freeMasters.filter(m => m.address != this.address);
-      winner = utils.getRandomElement(freeMasters.length? freeMasters: candidates);               
+      winner = utils.getRandomElement(freeMasters.length? freeMasters: candidates);  
+      const behavior = await this.getBehavior('registration');             
       
       if(!winner) {
         const msg = 'No available server to register the node';
@@ -750,10 +740,10 @@ module.exports = (Parent) => {
           responseSchema: schema.getRegisterResponse(),
           timeout
         });
-        this.db.subBehaviorFail('registration', winner.address);
+        await behavior.sub(winner.address);
       }
-      catch(err) {
-        this.db.addBehaviorFail('registration', winner.address);
+      catch(err) {        
+        await behavior.add(winner.address);
         throw err;
       }
       
@@ -882,6 +872,11 @@ module.exports = (Parent) => {
 
       for(let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
+
+        if(utils.isRequestTimeoutError(result)) {
+          continue;
+        }
+
         const address = result.address;
         let size = 0;
 
@@ -991,16 +986,24 @@ module.exports = (Parent) => {
       if(this.address == this.initialNetworkAddress) {
         newRoot = this.address; 
       }
-      else {
-        const timeout = timer(this.options.request.pingTimeout);
-        const result = await this.requestServer(this.initialNetworkAddress, 'status', { method: 'GET', timeout });  
-        newRoot = result.root;
-        !result.isRegistered && await this.db.removeBacklink();
+      else { 
+        try {
+          const timeout = timer(this.options.request.pingTimeout);
+          const result = await this.requestServer(this.initialNetworkAddress, 'status', { method: 'GET', timeout });  
+          newRoot = result.root;
+          !result.isRegistered && await this.db.removeBacklink();
+        }
+        catch(err) {
+          this.logger.warn(err.stack);          
+        }
       }
 
-      await this.db.setData('rootNetworkAddress', newRoot);
-      this.__rootNetworkAddress = newRoot;
-      this.__rootCheckedAt = Date.now();
+      await this.db.setData('rootNetworkAddress', newRoot || this.initialNetworkAddress);
+
+      if(newRoot) {
+        this.__rootNetworkAddress = newRoot;
+        this.__rootCheckedAt = Date.now();
+      }      
     }
 
     /**
@@ -1287,12 +1290,48 @@ module.exports = (Parent) => {
      * @returns {string}
      */
     async getProvider() {
-      const providers = (await this.db.getMasters()).filter(m => !m.fails && m.address != this.address).map(m => m.address);
-      providers.indexOf(this.initialNetworkAddress) == -1 && providers.push(this.initialNetworkAddress);
-      const syncTime = await this.getSyncLifetime();
-      const delay = this.options.network.syncInterval;
-      const chance = 1 / (syncTime / delay / (this.options.behavior.failSuspicionLevel + 1));
-      return providers.length && Math.random() <= chance? utils.getRandomElement(providers): this.address;
+      const masters = await this.db.getMasters();
+      const providers = masters.filter(m => !m.fails && m.address != this.address).map(m => m.address);
+      providers.push(this.address);
+      return utils.getRandomElement(providers);
+    }
+
+    /**
+     * Check the provider
+     * 
+     * @async
+     * @param {object} info
+     * @param {string} info.provider
+     * @param {string} info.address
+     * @returns {boolean}
+     */
+    async checkProvider({ provider, address }) {
+      if(provider === this.address) {
+        return true;
+      }
+
+      try {
+        const result = await Promise.all([
+          this.requestNode(address, 'structure', { provider }),
+          this.requestNode(address, 'structure'),
+        ]);
+        const behavior = await this.getBehavior('providerStructure');
+        const check = JSON.stringify(result[0]) === JSON.stringify(result[1]);
+
+        if(!check) {
+          await behavior.add(provider, 1, { exp: true });
+        }
+        else {
+          await behavior.sub(provider, 1, { exp: true });
+        }
+
+        return check;
+      }
+      catch(err) {
+        this.logger.warn(err.stack);        
+      } 
+      
+      return true;
     }
 
     /**
@@ -1309,16 +1348,19 @@ module.exports = (Parent) => {
       
       try {
         const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();
-        return await this.requestNode(target, 'structure', {
+        const result = await this.requestNode(target, 'structure', {
           responseSchema: schema.getStructureResponse(),
           timeout: timer(timeout),
           provider
         });
+
+        result.provider = provider;
+        return result;
       }
       catch(err) {
         this.logger.warn(err.stack);
 
-        if(provider != this.address && err.provider && err.response && !err.response.headers.get('provider-target')) {
+        if(provider != this.address && utils.isRequestProviderError(err)) {
           return await this.provideStructure(target, { provider: this.address, timeout: timer() });
         }
 
@@ -1338,18 +1380,25 @@ module.exports = (Parent) => {
         return [];
       }
 
+      const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();
       const provider = options.provider || await this.getProvider();
-      const timer = this.createRequestTimer(options.timeout);      
+      const timer = this.createRequestTimer(options.timeout);  
+      const requests = [];          
 
       try {
-        provider != this.address && await this.nodeAddressTest(provider);
-        const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();        
-        return await this.requestGroup(targets, 'structure', {
-          responseSchema: schema.getStructureResponse(),
-          timeout: timer(timeout),
-          includeErrors: options.includeErrors,
-          provider
-        });
+        for(let i = 0; i < targets.length; i++) {
+          const target = targets[i];  
+          requests.push(new Promise(resolve => {
+            const opts = Object.assign({}, options, { timeout: timer(timeout) });
+            this.provideStructure(target.address, opts)
+              .then(resolve)
+              .catch(resolve)
+          }));
+        }
+  
+        let results = await Promise.all(requests);
+        !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
+        return results;
       }
       catch(err) {
         this.logger.warn(err.stack);
@@ -1419,7 +1468,7 @@ module.exports = (Parent) => {
         options.headers['content-type'] = 'application/json';
         options.body = Object.keys(body).length? JSON.stringify(body): undefined;
       }
-      
+        
       const start = Date.now();  
       let response = {};
 
@@ -1445,7 +1494,7 @@ module.exports = (Parent) => {
         
         throw new errors.WorkError(body.message, body.code);
       }
-      catch(err) {
+      catch(err) {        
         //eslint-disable-next-line no-ex-assign
         utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
         provider && (err.provider = provider);
@@ -1557,13 +1606,15 @@ module.exports = (Parent) => {
       options = _.merge({}, options);
       const timeout = options.timeout || await this.getRequestServerTimeout();
       options.timeout = timeout;
+      const behaviorResponseSchema = await this.getBehavior('responseSchema');
+      const behaviorRequestDelays = await this.getBehavior('requestDelays');
 
-      try {
+      try {        
         const opts = Object.assign({}, options, { getFullResponse: true });
-        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);
-        await this.db.subBehaviorFail('requestDelays', address);
-        result.provider && await this.db.subBehaviorFail('requestDelays', result.provider);
-        let body = await result.json();      
+        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);        
+        result.provider && await behaviorRequestDelays.sub(result.provider);
+        await behaviorRequestDelays.sub(address);
+        let body = await result.json();
         
         if(options.getFullResponse) {          
           result.__json = body;
@@ -1579,10 +1630,10 @@ module.exports = (Parent) => {
         if(options.responseSchema) {
           try {
             utils.validateSchema(options.responseSchema, body);
-            await this.db.subBehaviorFail('responseSchema', address);
+            await behaviorResponseSchema.sub(address, 1, { exp: true });
           }
           catch(err) {
-            await this.db.addBehaviorFail('responseSchema', address);
+            await behaviorResponseSchema.add(address, 1, { exp: true });
             err.code = 'ERR_SPREADABLE_RESPONSE_SCHEMA';
             throw err;
           }
@@ -1595,12 +1646,12 @@ module.exports = (Parent) => {
       catch(err) {
         this.logger.warn(err.stack);
 
-        if(err.provider && err.response && !err.response.headers.get('provider-target')) {
+        if(utils.isRequestProviderError(err)) {
           address = err.provider;
         }
 
         if(utils.isRequestTimeoutError(err)) {
-          await this.db.addBehaviorFail('requestDelays', address);
+          await behaviorRequestDelays.add(address);
         }
 
         if(err instanceof errors.WorkError) {
@@ -1904,85 +1955,55 @@ module.exports = (Parent) => {
     /**
      * Add the behavior
      * 
-     * @async
-     * @param {string} action
-     * @param {Behavior} behavior
-     * @returns {object}
+     * @see Node.prototype.addService
      */
-    async addBehavior(action, behavior) {
-      this.__behavior[action] = behavior;
-      this.__initialized && !behavior.__initialized && await behavior.init();
-      return behavior;
+    async addBehavior(name, behavior) {
+      return this.addService(name, behavior, 'behavior');     
     }
     
     /**
      * Get the behavior
      * 
-     * @async
-     * @param {string} action
-     * @returns {object}
+     * @see Node.prototype.getService
      */
-    async getBehavior(action) {
-      return this.__behavior[action] || null;
+    async getBehavior(name) {
+      return this.getService(name, 'behavior');
     }
 
     /**
      * Remove the behavior
      * 
-     * @async
-     * @param {string} action
+     * @see Node.prototype.removeService
      */
-    async removeBehavior(action) {
-      const behavior = this.__behavior[action];
-
-      if(!behavior) {
-        return;
-      }
-
-      await behavior.destroy();
-      delete this.__behavior[action];
+    async removeBehavior(name) {
+      return this.removeService(name, 'behavior');
     }
 
     /**
      * Add the approval
      *
-     * @async
-     * @param {string} action
-     * @param {Approval} approval
-     * @returns {object}
+     * @see Node.prototype.addService
      */
-    async addApproval(action, approval) {
-      this.__approval[action] = approval;
-      this.__initialized && !approval.__initialized && await approval.init();
-      return approval;
+    async addApproval(name, approval) {
+      return this.addService(name, approval, 'approval'); 
     }
 
     /**
-     * Get the approval options
+     * Get the approval 
      * 
-     * @async
-     * @param {string} action
-     * @returns {object}
+     * @see Node.prototype.getService
      */
-    async getApproval(action) {
-      return this.__approval[action] || null;
+    async getApproval(name) {
+      return this.getService(name, 'approval'); 
     }
 
     /**
-     * Remove the approval options
+     * Remove the approval 
      * 
-     * @async
-     * @param {string} action
+     * @see Node.prototype.removeService
      */
-    async removeApproval(action) {
-      const approval = this.__approval[action];
-
-      if(!approval) {
-        return;
-      }
-
-      await approval.destroy();
-      delete this.__approval[action];
+    async removeApproval(name) {
+      return this.removeService(name, 'approval');
     }
 
     /**
@@ -2149,7 +2170,7 @@ module.exports = (Parent) => {
     async createStructure() {
       const address = this.address;
       let backlink = await this.db.getBacklink();
-      backlink && (backlink = _.pick(backlink, ['address', 'hash']));
+      backlink && (backlink = _.pick(backlink, ['address']));
       const masters = (await this.db.getMasters()).map(m => _.pick(m, ['address', 'size']));      
       const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));
       return { address, backlink, slaves, masters };

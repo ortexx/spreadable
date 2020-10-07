@@ -6,7 +6,8 @@ describe('Database', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => db = new Database(this.node));
+      assert.doesNotThrow(() => db = new Database());
+      db.node = this.node;
     });
   });
 

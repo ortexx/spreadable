@@ -6,7 +6,8 @@ describe('Logger', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => logger = new Logger(this.node));
+      assert.doesNotThrow(() => logger = new Logger());
+      logger.node = this.node;
     });
   });
 

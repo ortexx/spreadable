@@ -7,13 +7,11 @@ module.exports = (Parent) => {
    * Approval transport
    */
   return class Approval extends (Parent || Service) {
-    /**
-     * @param {Node} node 
+    /** 
      * @param {object} options
      */
-    constructor(node, options = {}) {
-      super(...arguments);
-      this.node = node;      
+    constructor(options = {}) {
+      super(...arguments);    
       Object.assign(this, {
         approversCount: 'auto',
         decisionLevel: '66.6%',

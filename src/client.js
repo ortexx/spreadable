@@ -95,6 +95,7 @@ module.exports = (Parent) => {
       this.LoggerTransport = this.constructor.LoggerTransport;
       this.TaskTransport = this.constructor.TaskTransport;
       this.address = this.options.address;
+      this.__isMasterService = true;
       this.prepareOptions();
     }
 
@@ -117,23 +118,31 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Deinitialize the client
-     * 
-     * @async
-     */
-    async deinit() {
-      await this.deinitServices();
-      super.deinit.apply(this, arguments);
-    }
-
-    /**
      * Prepare the services
      * 
      * @async
      */
     async prepareServices() {
-      this.logger = new this.LoggerTransport(this, this.options.logger);
-      this.options.task && (this.task = new this.TaskTransport(this, this.options.task));
+      await this.prepareLogger();
+      await this.prepareTask();     
+    }
+
+    /**
+     * Prepare the logger service
+     * 
+     * @async
+     */
+    async prepareLogger() {
+      this.logger = await this.addService('logger', new this.LoggerTransport(this.options.logger));
+    }
+
+    /**
+     * Prepare the task service
+     * 
+     * @async
+     */
+    async prepareTask() {
+      this.options.task && (this.task = await this.addService('task', new this.TaskTransport(this.options.task)));
 
       if(!this.task) {
         return;        
@@ -142,26 +151,6 @@ module.exports = (Parent) => {
       if(this.options.task.workerChangeInterval) {
         await this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
       }
-    }
-
-    /**
-     * Initialize the services
-     * 
-     * @async
-     */
-    async initServices() {
-      await this.logger.init();
-      this.task && await this.task.init();
-    }
-
-    /**
-     * Deinitialize the services
-     * 
-     * @async
-     */
-    async deinitServices() {
-      this.task && await this.task.deinit();
-      await this.logger.deinit();
     }
 
     /**

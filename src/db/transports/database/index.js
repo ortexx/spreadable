@@ -7,19 +7,27 @@ module.exports = (Parent) => {
    * Database transport interface
    */
   return class Database extends (Parent || Service) {
-    /**
-     * @param {Node} node 
+    /** 
      * @param {object} options 
      */
-    constructor(node, options = {}) {
+    constructor(options = {}) {
       super(...arguments);
-      this.node = node;
       this.options = _.merge({
         backups: {
-          limit: 3,
-          folder: path.join(node.storagePath, 'backups', 'db')
+          limit: 3
         }
       }, options);
+    }
+
+    /**
+     * @see Service.prototype.init
+     */
+    async init() {
+      if(this.options.backups && !this.options.backups.folder) {
+        this.options.backups.folder = path.join(this.node.storagePath, 'backups', 'db') 
+      }
+
+      super.init.apply(this, arguments);
     }
     
     /**

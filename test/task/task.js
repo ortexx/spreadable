@@ -7,7 +7,8 @@ describe('Task', () => {
   
   describe('instance creation', function () {
     it('should create an instance', function () {
-      assert.doesNotThrow(() => task = new Task(this.node));
+      assert.doesNotThrow(() => task = new Task());
+      task.node = this.node;
     });
   });
 
