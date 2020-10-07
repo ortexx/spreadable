@@ -751,7 +751,6 @@ describe('utils', () => {
     it('should normalize the queue', async () => {
       for(let i = queue.options.limit; i >= 0; i--) {
         await fse.ensureFile(path.join(folderPath, queue.createName(i + 1)));
-        await tools.wait(100);
       }
 
       await queue.normalize();
@@ -761,7 +760,7 @@ describe('utils', () => {
       
       for(let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
-        assert.isOk(file.index > index && file.stat.birthtimeMs > date, 'check the info');        
+        assert.isOk(file.index > index && file.stat.birthtimeMs >= date, 'check the info');        
         index = file.index;
         date = file.stat.birthtimeMs;
       }
