@@ -751,7 +751,7 @@ describe('utils', () => {
     it('should normalize the queue', async () => {
       for(let i = queue.options.limit; i >= 0; i--) {
         await fse.ensureFile(path.join(folderPath, queue.createName(i + 1)));
-        await tools.wait(10);
+        await tools.wait(100);
       }
 
       await queue.normalize();
