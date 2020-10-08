@@ -70,8 +70,8 @@ module.exports = (Parent) => {
           maxBodySize: '500kb',
           compressionLevel: 6
         },
-        behavior: {          
-          candidateSuspicionLevel: 5,
+        behavior: {
+          candidateSuspicionLevel: 5
         },
         logger: {
           level: 'info'
@@ -1474,7 +1474,7 @@ module.exports = (Parent) => {
         options.headers['content-type'] = 'application/json';
         options.body = Object.keys(body).length? JSON.stringify(body): undefined;
       }
-        
+      
       const start = Date.now();  
       let response = {};
 

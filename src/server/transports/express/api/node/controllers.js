@@ -59,7 +59,7 @@ module.exports.register = node => {
  */
 module.exports.structure = node => {
   return async (req, res, next) => {
-    try { 
+    try {
       return res.send(await node.createStructure());
     }
     catch(err) {

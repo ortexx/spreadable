@@ -46,10 +46,12 @@ module.exports.provideRequest = node => {
       });  
 
       for(let key in headers) {
-        if(key.match(/^provider/i)) {
+        if(key.match(/^provider|x-/i)) {
           delete headers[key];
         }
       }
+
+      delete headers.host;
       
       try {
         const options = { body: req, method: req.method, headers, timeout };
@@ -60,7 +62,7 @@ module.exports.provideRequest = node => {
         res.writeHead(response.status, headers);
         response.body.pipe(res).on('error', next);
       }
-      catch(err) {        
+      catch(err) {
         res.setHeader('provider-target', 'true');
         throw err;
       }
