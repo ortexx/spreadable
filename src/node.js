@@ -1298,7 +1298,7 @@ module.exports = (Parent) => {
     async getProvider() {
       const masters = await this.db.getMasters();
       const providers = masters.filter(m => !m.fails && m.address != this.address).map(m => m.address);
-      providers.push(this.address);
+      !providers.includes(this.address) && providers.push(this.address);
       return utils.getRandomElement(providers);
     }
 

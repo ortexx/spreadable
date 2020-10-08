@@ -106,15 +106,14 @@ module.exports = (Parent) => {
      */
     async init() {
       await this.prepareServices();
-      await this.initServices();
+      await super.init.apply(this, arguments);      
       const availableAddress = await this.getAvailableAddress(this.address);
       
       if(!availableAddress) {
         throw new Error('Provided addresses are not available');
       }
 
-      this.workerAddress = availableAddress;
-      super.init.apply(this, arguments);
+      this.workerAddress = availableAddress;      
     }
 
     /**
