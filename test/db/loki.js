@@ -834,22 +834,36 @@ describe('DatabaseLoki', () => {
         await loki.normalizeBehaviorFails();
         const data = loki.col.behaviorFails.find({ action });
         assert.equal(count, data.length, 'check before');
-        data[0].updatedAt = Date.now() - await loki.node.getFailLifetime() - 1;
+        data[0].updatedAt = 0;
+        loki.col.behaviorFails.update(data[0]);
         await loki.normalizeBehaviorFails();
         assert.equal(count - 1, loki.col.behaviorFails.count({ action }), 'check after');
       });
 
-      it('check the banlist', async function () {
+      it('check the banlist delay', async function () {
         loki.col.banlist.chain().find().remove();
         const address = 'localhost:1';
         const behavior = await loki.addBehaviorFail(action, address);
         await loki.normalizeBehaviorFails();
         assert.equal(loki.col.banlist.count(), 0, 'check the banlist before');
         const options = await loki.node.getBehavior(action);
+        options.banDelay = 1000;
         behavior.suspicion = options.failSuspicionLevel + 1;
         loki.col.behaviorFails.update(behavior);
+        await tools.wait(10);
         await loki.normalizeBehaviorFails();
-        assert.equal(loki.col.banlist.count(), 1, 'check the banlist after');
+        assert.equal(loki.col.banlist.count(), 0, 'check the banlist after'); 
+        assert.isNotNull(await loki.getBehaviorFail(action, address), 'check the fail');        
+      });
+
+      it('check the banlist', async function () {
+        loki.col.banlist.chain().find().remove();
+        const address = 'localhost:1';
+        const behavior = await loki.addBehaviorFail(action, address);
+        behavior.createdAt = 0;
+        loki.col.behaviorFails.update(behavior);
+        await loki.normalizeBehaviorFails();
+        assert.equal(loki.col.banlist.count(), 1, 'check the banlist');
         assert.isNull(await loki.getBehaviorFail(action, address), 'check the fail');       
       });
     });

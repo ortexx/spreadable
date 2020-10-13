@@ -242,16 +242,15 @@ module.exports = (Parent) => {
     async prepareBehavior() {
       await this.addBehavior('requestDelays', new BehaviorFail({ banLifetime: '20m', failSuspicionLevel: 200 }));
       await this.addBehavior('authentication', new BehaviorFail({ banLifetime: '15m', failSuspicionLevel: 10 }));
-      await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));
-      await this.addBehavior('providerStructure', new BehaviorFail());      
+      await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));  
+      await this.addBehavior('masterMasters', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
+      await this.addBehavior('masterSlaves', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
+      await this.addBehavior('masterNetworkSize', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
+      await this.addBehavior('providerStructure', new BehaviorFail());           
       await this.addBehavior('slaveMasters', new BehaviorFail());
       await this.addBehavior('slaveBacklink', new BehaviorFail());
       await this.addBehavior('backlinkMasters', new BehaviorFail());
-      await this.addBehavior('backlinkSlaves', new BehaviorFail());
-      await this.addBehavior('masterMasters', new BehaviorFail());
-      await this.addBehavior('masterSlaves', new BehaviorFail());
-      await this.addBehavior('masterNetworkSize', new BehaviorFail());      
-      await this.addBehavior('requestBacklinkMasters', new BehaviorFail());
+      await this.addBehavior('backlinkSlaves', new BehaviorFail());     
       await this.addBehavior('responseSchema', new BehaviorFail());
     }
 
@@ -335,7 +334,9 @@ module.exports = (Parent) => {
       
       let actualMasters = [];
       const results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
-
+      const behaviorSlaveMasters = await this.getBehavior('slaveMasters');
+      const behaviorSlaveBacklink = await this.getBehavior('slaveBacklink')  
+      
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
         const masters = result.masters;
@@ -349,19 +350,21 @@ module.exports = (Parent) => {
         const checkBacklinkAddress = checkBacklink && backlink.address == this.address;
         const checkArrSelf = [checkSelf, checkSize];
         const checkArrBacklink = [checkBacklink, checkBacklinkAddress];
-        const behaviorSlaveMasters = await this.getBehavior('slaveMasters');
-        const behaviorSlaveBacklink = await this.getBehavior('slaveBacklink');
 
-        if(checkArrSelf.includes(false) && await this.checkProvider(result)) {
-          await behaviorSlaveMasters.add(address, checkArrSelf, { exp: true });
+        if(checkArrSelf.includes(false)) {
+          if(await this.checkProvider(result)) {
+            await behaviorSlaveMasters.add(address, checkArrSelf, { exp: true });
+          }
         }
         else {
           await behaviorSlaveMasters.sub(address, 1, { exp: true });
         }
         
-        if(checkArrBacklink.includes(false) && await this.checkProvider(result)) {
-          await this.db.removeSlave(address);
-          await behaviorSlaveBacklink.add(address, checkArrBacklink, { exp: true });
+        if(checkArrBacklink.includes(false)) {
+          if(await this.checkProvider(result)) {
+            await this.db.removeSlave(address);
+            await behaviorSlaveBacklink.add(address, checkArrBacklink, { exp: true });
+          }
         }
         else {
           await this.db.addSlave(address);
@@ -402,19 +405,23 @@ module.exports = (Parent) => {
       const slaves = result.slaves;
       const masters = result.masters;
       const behaviorBacklinkMasters = await this.getBehavior('backlinkMasters');
-      const behaviorBacklinkSlaves = await this.getBehavior('backlinkSlaves');  
+      const behaviorBacklinkSlaves = await this.getBehavior('backlinkSlaves'); 
       
-      if(!masters.find(m => m.address == backlink.address) && await this.checkProvider(result)) {
-        await behaviorBacklinkMasters.add(backlink.address, 1, { exp: true });
+      if(!masters.find(m => m.address == backlink.address)) {
+        if(await this.checkProvider(result)) {
+          await behaviorBacklinkMasters.add(backlink.address, 1, { exp: true });
+        }
       }
       else {
         await behaviorBacklinkMasters.sub(backlink.address, 1, { exp: true });
       }
 
-      if(!slaves.find(s => s.address == this.address) && await this.checkProvider(result)) {
-        await this.db.removeBacklink();
-        await behaviorBacklinkSlaves.add(backlink.address, 1, { exp: true });
-        return [];
+      if(!slaves.find(s => s.address == this.address)) {
+        if(await this.checkProvider(result)) {
+          await this.db.removeBacklink();
+          await behaviorBacklinkSlaves.add(backlink.address, 1, { exp: true });
+          return [];
+        }
       }
       else {
         await behaviorBacklinkSlaves.sub(backlink.address, 1, { exp: true });
@@ -474,13 +481,7 @@ module.exports = (Parent) => {
       }
       catch(err) {
         await this.db.removeBacklink();
-
-        if(err instanceof errors.WorkError) {
-          this.logger.warn(err.stack);
-        }
-        else {
-          throw err;
-        }
+        this.logger.warn(err.stack);
       }
       
       const time = Date.now() - startTime;
@@ -576,6 +577,7 @@ module.exports = (Parent) => {
       const results = await this.provideGroupStructure(slaves, { includeErrors: true, timeout: options.timeout });
       const behaviorMasterSlaves = await this.getBehavior('masterSlaves');
       let suspicious = 0;
+      let inaccurate = 0;
 
       for(let i = 0; i < results.length; i++) {
         const result = results[i];
@@ -586,15 +588,17 @@ module.exports = (Parent) => {
             result instanceof Error ||
             !result.backlink ||
             result.backlink.address != address
-          ) &&
-          await this.checkProvider(result)
+          )          
         ) {
           suspicious++;
+          !await this.checkProvider(result) && inaccurate++;
           continue;
         }
       }
+
+      suspicious -= inaccurate;
       
-      if(suspicious) {
+      if(suspicious) {           
         await behaviorMasterSlaves.add(address, suspicious / slaves.length, { exp: true });
       }
       else {
@@ -1318,19 +1322,21 @@ module.exports = (Parent) => {
 
       try {
         const result = await Promise.all([
-          this.requestNode(address, 'structure', { provider }),
           this.requestNode(address, 'structure'),
+          this.requestNode(address, 'structure'),
+          this.requestNode(address, 'structure', { provider })         
         ]);
+        const currentRes = JSON.stringify(result[0]);
+        const repeatRes = JSON.stringify(result[1]);        
+
+        if(currentRes !== repeatRes) {          
+          return true;
+        }
+
+        const providerRes = JSON.stringify(result[2]);
         const behavior = await this.getBehavior('providerStructure');
-        const check = JSON.stringify(result[0]) === JSON.stringify(result[1]);
-
-        if(!check) {
-          await behavior.add(provider, 1, { exp: true });
-        }
-        else {
-          await behavior.sub(provider, 1, { exp: true });
-        }
-
+        const check = currentRes === providerRes;
+        await behavior[check? 'sub': 'add'](provider, 1, { exp: true });
         return check;
       }
       catch(err) {
@@ -1949,16 +1955,6 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get the fail lifetime
-     * 
-     * @async
-     * @returns {integer}
-     */
-    async getFailLifetime() {
-      return await this.getSyncLifetime();
-    }
-
-    /**
      * Add the behavior
      * 
      * @see Node.prototype.addService
@@ -2076,8 +2072,7 @@ module.exports = (Parent) => {
       }));
       approvers = results.map(r => r.address);
       await approval.approversDecisionCountTest(approvers.length);
-      const question = await approval.createQuestion(results.map(r => r.info), info, clientIp);
-      return question;
+      return await approval.createQuestion(results.map(r => r.info), info, clientIp);
     }
 
     /**
@@ -2089,13 +2084,14 @@ module.exports = (Parent) => {
      * @param {string} key
      * @param {integer} startedAt
      * @param {object} [info]
+     * @returns {object}
      */
     async addApprovalInfo(action, clientIp, key, startedAt, info) {
       await this.approvalActionTest(action);
       const approval = await this.getApproval(action);
       await approval.startTimeTest(startedAt);
       approval.clientInfoTest(info);
-      await this.db.addApproval(action, clientIp, key, startedAt, info);
+      return await this.db.addApproval(action, clientIp, key, startedAt, info);
     }
 
     /**
@@ -2178,7 +2174,7 @@ module.exports = (Parent) => {
       let backlink = await this.db.getBacklink();
       backlink && (backlink = _.pick(backlink, ['address']));
       const masters = (await this.db.getMasters()).map(m => _.pick(m, ['address', 'size']));      
-      const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));
+      const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));      
       return { address, backlink, slaves, masters };
     }
     

@@ -13,7 +13,9 @@ module.exports = (Parent) => {
       super(...arguments);
       Object.assign(this, {
         ban: true,
+        banDelay: 0,
         banLifetime: '27d',
+        failLifetime: 'auto',
         failSuspicionLevel: 20
       }, options);
     }
@@ -54,7 +56,9 @@ module.exports = (Parent) => {
      * @see Behavior.prototype.init
      */
     async init() {
-      typeof this.banLifetime == 'string' && (this.banLifetime = utils.getMs(this.banLifetime));
+      this.banDelay = utils.getMs(this.banDelay);
+      this.banLifetime = utils.getMs(this.banLifetime);
+      this.failLifetime = utils.getMs(this.failLifetime);
       super.init.apply(this, arguments);
     }
 

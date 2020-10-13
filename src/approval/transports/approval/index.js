@@ -23,7 +23,7 @@ module.exports = (Parent) => {
      * @see Approval.prototype.init
      */
     async init() {
-      typeof this.period == 'string' && (this.period = utils.getMs(this.period));
+      this.period = utils.getMs(this.period);
       super.init.apply(this, arguments);
     }
 

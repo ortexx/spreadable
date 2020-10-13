@@ -25,42 +25,18 @@ module.exports = (Parent) => {
      */
     async init() {
       await super.init.apply(this, arguments);
-      !this.options.filename && (this.options.filename = path.join(this.node.storagePath, 'loki.db'));
-      this.__backupQueue = new utils.FilesQueue(this.options.backups.folder, {
-        limit: this.options.backups.limit,
-        ext: 'db'
-      });
-      await fse.ensureFile(this.options.filename);
-      await this.__backupQueue.normalize();
-      await new Promise((resolve, reject) => {     
-        this.loki = new loki(this.options.filename, _.merge(this.options, {
-          autoload: true,
-          autosave: true,
-          autoloadCallback: (err) => {
-            if(err) {
-              return reject(err);
-            }
-
-            this.initCollections();
-            resolve();
-          }
-        }));
-      });        
-
-      this.__onExitListenerRemoveFn = onExit(() => {
-        if(this.loki && this.__initialized) {                
-          this.loki.persistenceMethod = 'adapter';
-          this.loki.persistenceAdapter = new LokiFsSyncAdapter();
-          this.saveDatabase();
-        }
-      });
+      !this.options.filename && (this.options.filename = path.join(this.node.storagePath, 'loki.db'));     
+      await fse.ensureFile(this.options.filename); 
+      await this.createBackupQueue();    
+      await this.createDatabase();  
+      this.createExitListener();
     }
 
     /**
      * @see Database.prototype.deinit
      */
     async deinit() {
-      this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
+      this.removeExitListener();
       await this.saveDatabase(); 
       this.loki && this.loki.close();
       delete this.loki;
@@ -71,7 +47,7 @@ module.exports = (Parent) => {
      * @see Database.prototype.destroy
      */
     async destroy() {
-      this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
+      this.removeExitListener();
       this.loki.autosaveDisable();
       await this.deleteDatabase();
       delete this.loki;
@@ -98,6 +74,65 @@ module.exports = (Parent) => {
       }
 
       await fse.copy(file.filePath, this.options.filename);
+    }
+
+    /**
+     * Create the db instance
+     * 
+     * @async
+     */
+    async createDatabase() {
+      return await new Promise((resolve, reject) => {     
+        this.loki = new loki(this.options.filename, _.merge(this.options, {
+          autoload: true,
+          autosave: true,
+          autoloadCallback: (err) => {
+            if(err) {
+              return reject(err);
+            }
+
+            this.initCollections();
+            resolve(this.loki);
+          }
+        }));
+      });
+    }
+
+    /**
+     * Create the backup queue
+     * 
+     * @async
+     */
+    async createBackupQueue() {
+      this.__backupQueue = new utils.FilesQueue(this.options.backups.folder, {
+        limit: this.options.backups.limit,
+        ext: 'db'
+      });
+      await this.__backupQueue.normalize();
+    }
+
+    /**
+     * Create the exit listener
+     * 
+     * @async
+     */
+    createExitListener() {
+      this.__onExitListenerRemoveFn = onExit(() => {
+        if(this.loki && this.__initialized) {                
+          this.loki.persistenceMethod = 'adapter';
+          this.loki.persistenceAdapter = new LokiFsSyncAdapter();
+          this.saveDatabase();
+        }
+      });
+    }
+    
+    /**
+     * Remove the exit listener
+     * 
+     * @async
+     */
+    removeExitListener() {
+      this.__onExitListenerRemoveFn && this.__onExitListenerRemoveFn();
     }
 
     /**
@@ -491,6 +526,7 @@ module.exports = (Parent) => {
 
       if(server) {
         server.isSlave = true;
+        server.updatedAt = Date.now();
         return this.col.servers.update(server);
       }
 
@@ -503,6 +539,7 @@ module.exports = (Parent) => {
 
       if(master) {
         master.size += 1;
+        master.updatedAt = Date.now();
         this.col.servers.update(master);
       }
 
@@ -517,6 +554,7 @@ module.exports = (Parent) => {
 
       if(server) {
         server.isBacklink = true;
+        server.updatedAt = Date.now();
         this.col.servers.update(server);
       }
       else {
@@ -545,6 +583,7 @@ module.exports = (Parent) => {
       }
 
       if(server.isSlave || server.isBacklink) {
+        server.updatedAt = Date.now();
         server.isMaster = false;
         server.size = 0;
         return this.col.servers.update(server);
@@ -579,6 +618,7 @@ module.exports = (Parent) => {
       }
 
       if(server.isMaster || server.isBacklink) {
+        server.updatedAt = Date.now();
         server.isSlave = false;
         return this.col.servers.update(server);
       }
@@ -588,6 +628,7 @@ module.exports = (Parent) => {
 
       if(master) {
         master.size -= 1;
+        master.updatedAt = Date.now();
         this.col.servers.update(master);
       }
     }
@@ -630,6 +671,7 @@ module.exports = (Parent) => {
       }
 
       if(server.isSlave || server.isMaster) {
+        server.updatedAt = Date.now();
         server.isBacklink = false;
         this.col.servers.update(server);
       }
@@ -990,19 +1032,20 @@ module.exports = (Parent) => {
      */
     async normalizeBehaviorFails() {
       const data = this.col.behaviorFails.find();
-      const failLifetime = await this.node.getFailLifetime();
+      const syncLifetime = await this.node.getSyncLifetime();
       const now = Date.now();
 
       for(let i = 0; i < data.length; i++) {
         const behavior = data[i];
         const options = await this.node.getBehavior(behavior.action);
+        const lifetime = options.failLifetime == 'auto'? syncLifetime: options.failLifetime;
        
-        if(behavior.updatedAt < now - failLifetime) {
+        if(behavior.updatedAt < now - lifetime) {
           this.col.behaviorFails.remove(behavior);
           continue;
         }
 
-        if(behavior.suspicion > options.failSuspicionLevel && options.ban) {
+        if(options.ban && behavior.suspicion > options.failSuspicionLevel && now - behavior.createdAt > options.banDelay) {
           await this.addBanlistAddress(behavior.address, options.banLifetime, behavior.action);
           this.col.behaviorFails.remove(behavior);
         }
