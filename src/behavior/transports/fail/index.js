@@ -12,6 +12,7 @@ module.exports = (Parent) => {
     constructor(options) {
       super(...arguments);
       Object.assign(this, {
+        exp: false,
         ban: true,
         banDelay: 0,
         banLifetime: '27d',
@@ -30,6 +31,8 @@ module.exports = (Parent) => {
      * @returns {number|function}
      */
     createStep(add, step = 1, options = {}) {
+      options = Object.assign({ exp: this.exp }, options);
+
       if(Array.isArray(step)) {
         step = step.map(s => !!s).reduce((p, c, i, a) => !c? (p += 1 / a.length): p, 0);
       }

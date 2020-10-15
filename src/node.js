@@ -89,6 +89,7 @@ module.exports = (Parent) => {
       this.ServerTransport = this.constructor.ServerTransport;
       this.LoggerTransport = this.constructor.LoggerTransport;  
       this.TaskTransport = this.constructor.TaskTransport;
+      this.__syncFailOptions = { banDelay: '1d', failLifetime: '12h', exp: true };
       this.__isMasterService = true;
       this.__rootCheckedAt = 0;
       this.__rootNetworkAddress = '';
@@ -97,7 +98,7 @@ module.exports = (Parent) => {
       this.__initialized = false;
       this.__syncInterval = null;      
       this.__cpuUsage = 0;      
-      this.__requestQueue = {};
+      this.__requestQueue = {};      
       this.__syncList = [];
       this.prepareOptions();
     }    
@@ -239,19 +240,19 @@ module.exports = (Parent) => {
      * 
      * @async
      */
-    async prepareBehavior() {
+    async prepareBehavior() {      
       await this.addBehavior('requestDelays', new BehaviorFail({ banLifetime: '20m', failSuspicionLevel: 200 }));
       await this.addBehavior('authentication', new BehaviorFail({ banLifetime: '15m', failSuspicionLevel: 10 }));
       await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));  
-      await this.addBehavior('masterMasters', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
-      await this.addBehavior('masterSlaves', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
-      await this.addBehavior('masterNetworkSize', new BehaviorFail({ banDelay: '1d', failLifetime: '12h' }));
-      await this.addBehavior('providerStructure', new BehaviorFail());           
-      await this.addBehavior('slaveMasters', new BehaviorFail());
-      await this.addBehavior('slaveBacklink', new BehaviorFail());
-      await this.addBehavior('backlinkMasters', new BehaviorFail());
-      await this.addBehavior('backlinkSlaves', new BehaviorFail());     
-      await this.addBehavior('responseSchema', new BehaviorFail());
+      await this.addBehavior('masterMasters', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('masterSlaves', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('masterNetworkSize', new BehaviorFail(this.__syncFailOptions));               
+      await this.addBehavior('slaveMasters', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('slaveBacklink', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('backlinkMasters', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('backlinkSlaves', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('responseSchema', new BehaviorFail({ exp: true }));
+      await this.addBehavior('providerStructure', new BehaviorFail({ exp: true }));
     }
 
     /**
@@ -353,22 +354,22 @@ module.exports = (Parent) => {
 
         if(checkArrSelf.includes(false)) {
           if(await this.checkProvider(result)) {
-            await behaviorSlaveMasters.add(address, checkArrSelf, { exp: true });
+            await behaviorSlaveMasters.add(address, checkArrSelf);
           }
         }
         else {
-          await behaviorSlaveMasters.sub(address, 1, { exp: true });
+          await behaviorSlaveMasters.sub(address);
         }
         
         if(checkArrBacklink.includes(false)) {
           if(await this.checkProvider(result)) {
             await this.db.removeSlave(address);
-            await behaviorSlaveBacklink.add(address, checkArrBacklink, { exp: true });
+            await behaviorSlaveBacklink.add(address, checkArrBacklink);
           }
         }
         else {
           await this.db.addSlave(address);
-          await behaviorSlaveBacklink.sub(address, 1, { exp: true });
+          await behaviorSlaveBacklink.sub(address);
         }
 
         if(slaves.length) {
@@ -409,22 +410,22 @@ module.exports = (Parent) => {
       
       if(!masters.find(m => m.address == backlink.address)) {
         if(await this.checkProvider(result)) {
-          await behaviorBacklinkMasters.add(backlink.address, 1, { exp: true });
+          await behaviorBacklinkMasters.add(backlink.address);
         }
       }
       else {
-        await behaviorBacklinkMasters.sub(backlink.address, 1, { exp: true });
+        await behaviorBacklinkMasters.sub(backlink.address);
       }
 
       if(!slaves.find(s => s.address == this.address)) {
         if(await this.checkProvider(result)) {
           await this.db.removeBacklink();
-          await behaviorBacklinkSlaves.add(backlink.address, 1, { exp: true });
+          await behaviorBacklinkSlaves.add(backlink.address);
           return [];
         }
       }
       else {
-        await behaviorBacklinkSlaves.sub(backlink.address, 1, { exp: true });
+        await behaviorBacklinkSlaves.sub(backlink.address);
       }
 
       await this.db.addBacklink(backlink.address);
@@ -552,10 +553,10 @@ module.exports = (Parent) => {
       const behaviorMasterMasters = await this.getBehavior('masterMasters');  
 
       if(checkArr.includes(false)) {
-        await behaviorMasterMasters.add(address, checkArr, { exp: true });
+        await behaviorMasterMasters.add(address, checkArr);
       }
       else {
-        await behaviorMasterMasters.sub(address, 1, { exp: true });
+        await behaviorMasterMasters.sub(address);
       }
     }
 
@@ -599,10 +600,10 @@ module.exports = (Parent) => {
       suspicious -= inaccurate;
       
       if(suspicious) {           
-        await behaviorMasterSlaves.add(address, suspicious / slaves.length, { exp: true });
+        await behaviorMasterSlaves.add(address, suspicious / slaves.length);
       }
       else {
-        await behaviorMasterSlaves.sub(address, 1, { exp: true });
+        await behaviorMasterSlaves.sub(address);
       }
     }
 
@@ -628,10 +629,10 @@ module.exports = (Parent) => {
       const checkArr = [checkSize, checkLength];      
 
       if(checkArr.includes(false)) {
-        await behavior.add(address, checkArr, { exp: true });
+        await behavior.add(address, checkArr);
       }
       else {
-        await behavior.sub(address, 1, { exp: true });
+        await behavior.sub(address);
       }
     }
 
@@ -681,7 +682,7 @@ module.exports = (Parent) => {
           await this.db.addBehaviorDelay('registration', res.address);
           
           if(behavior && behavior.createdAt + syncLifetime > Date.now()) {
-            results.splice(i, 1);
+            results.splice(i);
             continue;
           }
           else {
@@ -1336,7 +1337,7 @@ module.exports = (Parent) => {
         const providerRes = JSON.stringify(result[2]);
         const behavior = await this.getBehavior('providerStructure');
         const check = currentRes === providerRes;
-        await behavior[check? 'sub': 'add'](provider, 1, { exp: true });
+        await behavior[check? 'sub': 'add'](provider);
         return check;
       }
       catch(err) {
@@ -1642,10 +1643,10 @@ module.exports = (Parent) => {
         if(options.responseSchema) {
           try {
             utils.validateSchema(options.responseSchema, body);
-            await behaviorResponseSchema.sub(address, 1, { exp: true });
+            await behaviorResponseSchema.sub(address);
           }
           catch(err) {
-            await behaviorResponseSchema.add(address, 1, { exp: true });
+            await behaviorResponseSchema.add(address);
             err.code = 'ERR_SPREADABLE_RESPONSE_SCHEMA';
             throw err;
           }
