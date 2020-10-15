@@ -147,7 +147,7 @@ midds.networkAccess = (node, checks = {}) => {
         const version = node.getVersion();
         const current = req.headers['node-version'] || req.headers['client-version'];
 
-        if(current != version) {
+        if(current !== undefined && current != version) {
           throw new errors.AccessError(`The version is different: "${ current }" instead of "${ version }"`);
         }
       }
