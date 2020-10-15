@@ -97,7 +97,7 @@ midds.networkAccess = (node, checks = {}) => {
     auth: true, 
     root: false,
     address: false,
-    version: true
+    version: false
   }, checks);
 
   return async (req, res, next) => {    

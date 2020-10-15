@@ -1038,6 +1038,12 @@ module.exports = (Parent) => {
       for(let i = 0; i < data.length; i++) {
         const behavior = data[i];
         const options = await this.node.getBehavior(behavior.action);
+
+        if(!options) {
+          this.col.behaviorFails.remove(behavior);
+          continue;
+        }
+
         const lifetime = options.failLifetime == 'auto'? syncLifetime: options.failLifetime;
        
         if(behavior.updatedAt < now - lifetime) {

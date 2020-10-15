@@ -9,7 +9,7 @@ describe('Node', () => {
   describe('instance creation', () => {
     it('should not create an instance because of port', async () => {
       const options = await tools.createNodeOptions({ port: '' });
-      assert.throws(() => new Node(options));
+      assert.throws(() => new Node(options));      
     });
 
     it('should create an instance', async() => { 

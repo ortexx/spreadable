@@ -2,7 +2,7 @@ const controllers = require('./controllers');
 const midds = require('../midds');
 
 module.exports = [
-  { name: 'networkAccess', fn: midds.networkAccess },
+  { name: 'networkAccess', fn: node => midds.networkAccess(node, { version: true }) },
 
   /**
    * Get the available node from the network

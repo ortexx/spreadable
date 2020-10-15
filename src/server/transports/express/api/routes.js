@@ -1,7 +1,7 @@
 const midds = require('../midds');
 
 module.exports = [ 
-  { name: 'networkAccess', fn: node => midds.networkAccess(node, { address: true, version: true, root: true }) },  
+  { name: 'networkAccess', fn: node => midds.networkAccess(node, { address: true, version: true, root: true }) },
   { name: 'updateClientInfo', fn: midds.updateClientInfo },
   { name: 'master', url: '/master', fn: node => node.server.createRouter(node.server.getApiMasterRoutes()) },
   { name: 'butler', url: '/butler', fn: node => node.server.createRouter(node.server.getApiButlerRoutes()) },
