@@ -96,8 +96,8 @@ midds.networkAccess = (node, checks = {}) => {
   checks = _.merge({ 
     auth: true, 
     root: false,
-    address: false, 
-    version: false, 
+    address: false,
+    version: true
   }, checks);
 
   return async (req, res, next) => {    
@@ -145,9 +145,10 @@ midds.networkAccess = (node, checks = {}) => {
 
       if(checks.version) {
         const version = node.getVersion();
+        const current = req.headers['node-version'] || req.headers['client-version'];
 
-        if(req.headers['node-version'] != version) {
-          throw new errors.AccessError(`Node version is different: "${ req.headers['node-version'] }" instead of "${ version }"`);
+        if(current != version) {
+          throw new errors.AccessError(`The version is different: "${ current }" instead of "${ version }"`);
         }
       }
 

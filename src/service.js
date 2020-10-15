@@ -135,5 +135,14 @@ module.exports = () => {
     isInitialized() {
       return !!this.__initialized;
     }
+
+    /**
+     * Get the service version
+     * 
+     * @returns {string}
+     */
+    getVersion() {
+      return `${ this.constructor.codename }-${ this.constructor.version.split('.').slice(0, -1).join('.') }`;
+    }
   }
 };

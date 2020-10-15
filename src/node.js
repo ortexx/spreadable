@@ -25,7 +25,7 @@ module.exports = (Parent) => {
    */
   return class Node extends (Parent || Service) {
     static get version () { return pack.version }
-    static get codename () { return 'spreadable' }
+    static get codename () { return pack.name }
     static get DatabaseTransport () { return DatabaseLoki }
     static get ServerTransport () { return ServerExpress }
     static get LoggerTransport () { return LoggerConsole }
@@ -2321,16 +2321,7 @@ module.exports = (Parent) => {
       this.options.network.syncInterval = utils.getMs(this.options.network.syncInterval);
       this.options.network.syncTimeCalculationPeriod = utils.getMs(this.options.network.syncTimeCalculationPeriod);
       this.options.network.authCookieMaxAge = utils.getMs(this.options.network.authCookieMaxAge);
-    } 
-
-    /**
-     * Get the node version
-     * 
-     * @returns {string}
-     */
-    getVersion() {
-      return `${ this.constructor.codename }-${ this.constructor.version.split('.').slice(0, -1).join('.') }`;
-    }
+    }    
 
     /**
      * Get the node root address

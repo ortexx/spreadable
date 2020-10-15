@@ -9,12 +9,17 @@ const ms = require('ms');
 const LoggerConsole = require('./logger/transports/console')();
 const TaskInterval = require('./task/transports/interval')();
 const Service = require('./service')();
+const pack = require('../package.json');
 
 module.exports = (Parent) => {
   /**
    * Class to manage client requests to the network
    */
   return class Client extends (Parent || Service) {
+    static get version () { return pack.version }
+    static get codename () { return pack.name }
+    static get utils () { return utils }
+    static get errors () { return errors }
     static get LoggerTransport () { return LoggerConsole }
     static get TaskTransport () { return TaskInterval }
     
@@ -403,7 +408,9 @@ module.exports = (Parent) => {
       const defaults = {
         method: 'POST',
         timeout: this.options.request.clientTimeout,
-        headers: {}
+        headers: {
+          'client-version': this.getVersion()
+        }
       };
 
       if(this.options.auth) {
