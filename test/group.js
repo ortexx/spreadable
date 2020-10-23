@@ -97,7 +97,7 @@ describe('group communication', () => {
       await node.sync();
     }
     
-    await tools.nodesSync(nodes, nodes.length * 2);
+    await tools.nodesSync(nodes, nodes.length * 3);
 
     for(let i = 0; i < nodes.length; i++) {
       assert.equal(await nodes[i].getNetworkSize(), nodes.length);
@@ -113,9 +113,9 @@ describe('group communication', () => {
     }
     
     await tools.wait(await nodes[0].getSyncLifetime());
-    await tools.nodesSync(nodes, nodes.length * 2);
+    await tools.nodesSync(nodes, nodes.length * 3);
     await tools.wait(await nodes[0].getSyncLifetime());
-    await tools.nodesSync(nodes, nodes.length * 2);
+    await tools.nodesSync(nodes, nodes.length * 3);
 
     for(let i = 0; i < nodes.length; i++) {
       assert.equal(await nodes[i].getNetworkSize(), nodes.length);
