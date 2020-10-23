@@ -96,7 +96,7 @@ module.exports.provideRegistration = node => {
       
       const timer = node.createRequestTimer(node.createRequestTimeout(req.body));
       let masters = await node.db.getMasters();
-      !masters.length && (masters = [{ address: node.address }]);      
+      !masters.length && (masters = [{ address: node.address }]);
       let results = await node.requestGroup(masters, 'structure', { timeout: timer() });
 
       for(let i = results.length - 1; i >= 0; i--) {

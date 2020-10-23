@@ -1,5 +1,4 @@
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch');
 const compression = require('compression')
 const cors = require('cors');
 const errors = require('../../../errors');
@@ -31,49 +30,6 @@ module.exports.compression = (node) => compression({ level: node.options.server.
  * Cors control
  */
 module.exports.cors = () => cors();
-
-/**
- * Provide the request
- */
-module.exports.provideRequest = node => {
-  return async (req, res, next) => {
-    try {
-      let headers = Object.assign({}, req.headers);
-      const url = req.headers['provider-url'];        
-      const timeout = node.createRequestTimeout({ 
-        timeout: req.headers['provider-timeout'], 
-        timestamp: req.headers['provider-timestamp'] 
-      });  
-
-      for(let key in headers) {
-        if(key.match(/^provider|x-/i)) {
-          delete headers[key];
-        }
-      }
-
-      delete headers.host;
-      
-      try {
-        const options = { body: req, method: req.method, headers, timeout };
-        options.method.match(/head|get/i) && delete options.body;
-        const response = await fetch(url, options);
-        headers = response.headers.raw();
-        headers['provider-target'] = 'true';
-        res.writeHead(response.status, headers);
-        response.body.pipe(res).on('error', next);
-      }
-      catch(err) {
-        res.setHeader('provider-target', 'true');
-        throw err;
-      }
-    }
-    catch(err) {
-      //eslint-disable-next-line no-ex-assign
-      utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
-      next(err);
-    }
-  }
-};
 
 /**
  * Set http requests default timeout

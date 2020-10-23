@@ -12,7 +12,6 @@ module.exports = (Parent) => {
     constructor(options) {
       super(...arguments);
       Object.assign(this, {
-        exp: false,
         ban: true,
         banDelay: 0,
         banLifetime: '27d',
@@ -50,7 +49,7 @@ module.exports = (Parent) => {
           return step;
         }
 
-        const coef = Math.sqrt(behavior.balance);
+        const coef = Math.sqrt(add? behavior.up: behavior.down) || 1;
         return add? step * coef: step / coef;
       };
     }
@@ -72,7 +71,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async get(address) {
-      return this.node.db.getBehaviorFail(this.action, address);
+      return await this.node.db.getBehaviorFail(this.action, address);
     }
     
     /**
@@ -81,8 +80,10 @@ module.exports = (Parent) => {
      * @see BehaviorlFail.prototype.createStep
      * @returns {object}
      */
-    async add(address, step, options) {
-      return this.node.db.addBehaviorFail(this.name, address, this.createStep(true, step, options));
+    async add(address, step, options) {      
+      const behavior = await this.node.db.addBehaviorFail(this.name, address, this.createStep(true, step, options));
+      this.node.logger.warn(`Behavior fail "${ this.name }" for "${ this.node.address }" as ${ JSON.stringify(behavior, null, 2) }`);
+      return behavior;
     }
 
     /**
@@ -92,7 +93,7 @@ module.exports = (Parent) => {
      * @returns {object}
      */
     async sub(address, step, options) {
-      return this.node.db.subBehaviorFail(this.name, address, this.createStep(false, step, options));
+      return await this.node.db.subBehaviorFail(this.name, address, this.createStep(false, step, options));
     }
   }
 };

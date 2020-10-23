@@ -71,7 +71,8 @@ module.exports = (Parent) => {
           compressionLevel: 6
         },
         behavior: {
-          candidateSuspicionLevel: 5
+          candidateSuspicionLevel: 5,
+          banByAddress: false
         },
         logger: {
           level: 'info'
@@ -89,7 +90,6 @@ module.exports = (Parent) => {
       this.ServerTransport = this.constructor.ServerTransport;
       this.LoggerTransport = this.constructor.LoggerTransport;  
       this.TaskTransport = this.constructor.TaskTransport;
-      this.__syncFailOptions = { banDelay: '1d', failLifetime: '12h', exp: true };
       this.__isMasterService = true;
       this.__rootCheckedAt = 0;
       this.__rootNetworkAddress = '';
@@ -240,19 +240,17 @@ module.exports = (Parent) => {
      * 
      * @async
      */
-    async prepareBehavior() {      
+    async prepareBehavior() {
       await this.addBehavior('requestDelays', new BehaviorFail({ banLifetime: '20m', failSuspicionLevel: 200 }));
       await this.addBehavior('authentication', new BehaviorFail({ banLifetime: '15m', failSuspicionLevel: 10 }));
       await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));  
-      await this.addBehavior('masterMasters', new BehaviorFail(this.__syncFailOptions));
-      await this.addBehavior('masterSlaves', new BehaviorFail(this.__syncFailOptions));
-      await this.addBehavior('masterNetworkSize', new BehaviorFail(this.__syncFailOptions));               
-      await this.addBehavior('slaveMasters', new BehaviorFail(this.__syncFailOptions));
-      await this.addBehavior('slaveBacklink', new BehaviorFail(this.__syncFailOptions));
-      await this.addBehavior('backlinkMasters', new BehaviorFail(this.__syncFailOptions));
-      await this.addBehavior('backlinkSlaves', new BehaviorFail(this.__syncFailOptions));
+      await this.addBehavior('masterMasters', new BehaviorFail({ exp: true }));
+      await this.addBehavior('masterNetworkSize', new BehaviorFail({ exp: true }));
+      await this.addBehavior('slaveMasters', new BehaviorFail({ exp: true }));
+      await this.addBehavior('slaveBacklink', new BehaviorFail({ exp: true }));
+      await this.addBehavior('backlinkMasters', new BehaviorFail({ exp: true }));
+      await this.addBehavior('backlinkSlaves', new BehaviorFail({ exp: true }));
       await this.addBehavior('responseSchema', new BehaviorFail({ exp: true }));
-      await this.addBehavior('providerStructure', new BehaviorFail({ exp: true }));
     }
 
     /**
@@ -334,7 +332,7 @@ module.exports = (Parent) => {
       }
       
       let actualMasters = [];
-      const results = await this.provideGroupStructure(slaves, { timeout: options.timeout });
+      const results = await this.requestGroup(slaves, 'structure', { timeout: options.timeout });
       const behaviorSlaveMasters = await this.getBehavior('slaveMasters');
       const behaviorSlaveBacklink = await this.getBehavior('slaveBacklink')  
       
@@ -351,21 +349,17 @@ module.exports = (Parent) => {
         const checkBacklinkAddress = checkBacklink && backlink.address == this.address;
         const checkArrSelf = [checkSelf, checkSize];
         const checkArrBacklink = [checkBacklink, checkBacklinkAddress];
-
+        
         if(checkArrSelf.includes(false)) {
-          if(await this.checkProvider(result)) {
-            await behaviorSlaveMasters.add(address, checkArrSelf);
-          }
+          await behaviorSlaveMasters.add(address, checkArrSelf);
         }
         else {
           await behaviorSlaveMasters.sub(address);
         }
         
         if(checkArrBacklink.includes(false)) {
-          if(await this.checkProvider(result)) {
-            await this.db.removeSlave(address);
-            await behaviorSlaveBacklink.add(address, checkArrBacklink);
-          }
+          await this.db.removeSlave(address);
+          await behaviorSlaveBacklink.add(address, checkArrBacklink);
         }
         else {
           await this.db.addSlave(address);
@@ -397,7 +391,7 @@ module.exports = (Parent) => {
       let result;
       
       try {
-        result = await this.provideStructure(backlink.address, { timeout: options.timeout });
+        result = await this.requestNode(backlink.address, 'structure', { timeout: options.timeout });
       }
       catch(err) {
         return [];
@@ -409,20 +403,16 @@ module.exports = (Parent) => {
       const behaviorBacklinkSlaves = await this.getBehavior('backlinkSlaves'); 
       
       if(!masters.find(m => m.address == backlink.address)) {
-        if(await this.checkProvider(result)) {
-          await behaviorBacklinkMasters.add(backlink.address);
-        }
+        await behaviorBacklinkMasters.add(backlink.address);
       }
       else {
         await behaviorBacklinkMasters.sub(backlink.address);
       }
 
       if(!slaves.find(s => s.address == this.address)) {
-        if(await this.checkProvider(result)) {
-          await this.db.removeBacklink();
-          await behaviorBacklinkSlaves.add(backlink.address);
-          return [];
-        }
+        await this.db.removeBacklink();
+        await behaviorBacklinkSlaves.add(backlink.address);
+        return [];
       }
       else {
         await behaviorBacklinkSlaves.sub(backlink.address);
@@ -452,12 +442,11 @@ module.exports = (Parent) => {
       size? await this.db.addMaster(this.address, size): await this.db.removeMaster(this.address);      
       const mastersUp = await this.syncUp({ timeout: timer() });
       const mastersDown = await this.syncDown({ timeout: timer() });
-      const actualMasters = [].concat(mastersUp, mastersDown);
+      const actualMasters = mastersUp.concat(mastersDown);
 
       if(size) {
         const masters = await this.db.getMasters();
-        masters.forEach(m => m.source = this.address);
-        const structures = await this.updateMastersInfo([].concat(masters, actualMasters), { timeout: timer() });
+        const structures = await this.updateMastersInfo(masters.concat(actualMasters), { timeout: timer() });
         await this.checkStructures(structures, { timeout: timer() });
       }
       else {
@@ -474,6 +463,7 @@ module.exports = (Parent) => {
         }
       }
       
+      await this.normalizeBacklink();
       await this.normalizeMastersCount();
       await this.normalizeSlavesCount();
       
@@ -510,12 +500,10 @@ module.exports = (Parent) => {
         await this.db.setData('checkedMasterStructures', []);
         return;
       }
-
-      if(await this.checkProvider(current)) {
-        checked.push(current.address);
-        await this.checkMasterStructure(current, options);
-        await this.db.setData('checkedMasterStructures', checked);
-      }
+      
+      checked.push(current.address);
+      await this.checkMasterStructure(current, options);
+      await this.db.setData('checkedMasterStructures', checked);
     }
   
     /**
@@ -523,13 +511,10 @@ module.exports = (Parent) => {
      * 
      * @async
      * @param {object} master
-     * @param {object} [options]
-     * 
      */
-    async checkMasterStructure(master, options = {}) {      
+    async checkMasterStructure(master) {      
       await this.checkMasterStructureNetworkSize(master.address, master.masters, master.slaves); 
       await this.checkMasterStructureMasters(master.address, master.masters);
-      await this.checkMasterStructureSlaves(master.address, master.slaves, options);
     }
 
     /**
@@ -557,53 +542,6 @@ module.exports = (Parent) => {
       }
       else {
         await behaviorMasterMasters.sub(address);
-      }
-    }
-
-    /**
-     * Check the master slaves
-     * 
-     * @async
-     * @param {string} address 
-     * @param {object[]} slaves
-     * @param {object} [options]
-     */
-    async checkMasterStructureSlaves(address, slaves, options = {}) {
-      if(await this.isAddressTrusted(address)) {
-        return;
-      }
-
-      const coef = await this.getNetworkOptimum();
-      slaves = slaves.slice(0, coef);
-      const results = await this.provideGroupStructure(slaves, { includeErrors: true, timeout: options.timeout });
-      const behaviorMasterSlaves = await this.getBehavior('masterSlaves');
-      let suspicious = 0;
-      let inaccurate = 0;
-
-      for(let i = 0; i < results.length; i++) {
-        const result = results[i];
-
-        if(
-          !utils.isRequestTimeoutError(result) &&
-          (
-            result instanceof Error ||
-            !result.backlink ||
-            result.backlink.address != address
-          )          
-        ) {
-          suspicious++;
-          !await this.checkProvider(result) && inaccurate++;
-          continue;
-        }
-      }
-
-      suspicious -= inaccurate;
-      
-      if(suspicious) {           
-        await behaviorMasterSlaves.add(address, suspicious / slaves.length);
-      }
-      else {
-        await behaviorMasterSlaves.sub(address);
       }
     }
 
@@ -646,13 +584,15 @@ module.exports = (Parent) => {
         return;
       }
 
+      const slaveHashes = {};
       const timer = this.createRequestTimer(options.timeout);
+      const slaves = await this.db.getSlaves();      
       let timeout = timer();
       let provider = this.initialNetworkAddress;
+      slaves.forEach(s => slaveHashes[s.address] = true);
 
       if(this.initialNetworkAddress === this.address && !await this.db.getMastersCount()) {
-        const servers = await this.db.getServers();
-        servers.length && (provider = servers[0].address);
+        slaves.length && (provider = slaves[0].address);
       }
       
       let result = await this.requestNode(provider, 'provide-registration', {
@@ -673,6 +613,18 @@ module.exports = (Parent) => {
       let candidates = [];
       let failed = false;
       let winner;
+
+      const checkState = server => {
+        if(server.address == this.address) {
+          return false;
+        }
+
+        if(networkSize > 2 && slaveHashes[server.address]) {
+          return false;
+        }
+
+        return true;
+      }
      
       for(let i = results.length - 1; i >= 0; i--) {
         const res = results[i]; 
@@ -698,18 +650,19 @@ module.exports = (Parent) => {
           results.splice(i, 1);
           continue;
         }
+
+        res.appropriate = checkState(res);
         
         for(let k = res.candidates.length - 1; k >= 0; k--) {
           const candidate = res.candidates[k];
           
-          if(candidate.address == this.address) {
-            res.candidates.splice(k, 1);
-            continue;
-          }
-          
           if(!await this.isAddressAllowed(candidate.address)) {
             res.candidates.splice(k, 1);
             continue;
+          }
+
+          if(!checkState(candidate)) {
+            res.candidates.splice(k, 1);
           }
         }
       }
@@ -723,7 +676,7 @@ module.exports = (Parent) => {
         const res = results[i];
         const coef = await this.getNetworkOptimum(res.networkSize);
         candidates.push(utils.getRandomElement(res.candidates));
-        res.candidates.length < coef && freeMasters.push(res);
+        res.appropriate && res.candidates.length < coef && freeMasters.push(res);
       }
       
       if(freeMasters.length > coef) {
@@ -879,7 +832,7 @@ module.exports = (Parent) => {
         arr.push({ address: item.master.address });
       }
 
-      const results = await this.provideGroupStructure(arr, { includeErrors: true, timeout: options.timeout });
+      const results = await this.requestGroup(arr, 'structure', { includeErrors: true, timeout: options.timeout });
 
       for(let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
@@ -914,11 +867,8 @@ module.exports = (Parent) => {
      */
     async cleanUpServers() {
       const lifetime = await this.getSyncLifetime();
+      const isNormalized = await this.isNormalized();
       const servers = await this.db.getServers();
-
-      if(Date.now() - lifetime < this.__initialized) {
-        return;
-      }
 
       for(let i = servers.length - 1; i >= 0; i--) {
         const server = servers[i];
@@ -928,18 +878,41 @@ module.exports = (Parent) => {
         }
 
         if(server.isBroken) {
-          server.updatedAt < Date.now() - lifetime && await this.db.removeServer(server.address); 
+          await this.db.removeServer(server.address); 
           continue;
         }
 
-        if(server.isMaster) {          
-          server.updatedAt < Date.now() - lifetime && await this.db.removeMaster(server.address); 
+        if(isNormalized && server.isMaster) {          
+          server.updatedAt < Date.now() - lifetime && await this.db.removeServer(server.address);
           continue;
         }
         
         if(server.isMaster && server.address == this.address && !await this.isMaster()) {
           await this.db.removeMaster(server.address);
         }
+      }
+    }
+
+    /**
+     * Normalize the backlink
+     * 
+     * @async
+     */
+    async normalizeBacklink() {
+      if(!this.isNormalized()) {
+        return;
+      }
+
+      const backlink = await this.db.getBacklink();
+
+      if(!backlink) {
+        return;
+      }
+
+      const slaves = await this.db.getSlaves();
+
+      if(await this.getNetworkSize() > 2 && slaves.find(s => s.address == backlink.address)) {
+        await this.db.removeBacklink();
       }
     }
 
@@ -1033,7 +1006,7 @@ module.exports = (Parent) => {
         return this.address;
       }
 
-      const result = await this.provideStructure(master.address, { timeout: timer() });
+      const result = await this.requestNode(master.address, 'structure', { timeout: timer() });
       const server = utils.getRandomElement(result.slaves);
 
       if(!server) {
@@ -1266,7 +1239,11 @@ module.exports = (Parent) => {
       const white = this.options.network.whitelist || [];
       const black = this.options.network.blacklist || [];
 
-      if(await this.db.checkBanlistIp(info.ipv6)) {
+      if(this.options.behavior.banByAddress && await this.db.getBanlistAddress(address)) {
+        throw new errors.AccessError(`Address "${address}" is in the banlist`);
+      } 
+
+      if(!this.options.behavior.banByAddress && await this.db.checkBanlistIp(info.ipv6)) {
         throw new errors.AccessError(`Ip "${info.ip}" is in the banlist`);
       }
 
@@ -1295,136 +1272,6 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Get the provider
-     * 
-     * @async
-     * @returns {string}
-     */
-    async getProvider() {
-      const masters = await this.db.getMasters();
-      const providers = masters.filter(m => !m.fails && m.address != this.address).map(m => m.address);
-      !providers.includes(this.address) && providers.push(this.address);
-      return utils.getRandomElement(providers);
-    }
-
-    /**
-     * Check the provider
-     * 
-     * @async
-     * @param {object} info
-     * @param {string} info.provider
-     * @param {string} info.address
-     * @returns {boolean}
-     */
-    async checkProvider({ provider, address }) {
-      if(provider === this.address) {
-        return true;
-      }
-
-      try {
-        const result = await Promise.all([
-          this.requestNode(address, 'structure'),
-          this.requestNode(address, 'structure'),
-          this.requestNode(address, 'structure', { provider })         
-        ]);
-        const currentRes = JSON.stringify(result[0]);
-        const repeatRes = JSON.stringify(result[1]);        
-
-        if(currentRes !== repeatRes) {          
-          return true;
-        }
-
-        const providerRes = JSON.stringify(result[2]);
-        const behavior = await this.getBehavior('providerStructure');
-        const check = currentRes === providerRes;
-        await behavior[check? 'sub': 'add'](provider);
-        return check;
-      }
-      catch(err) {
-        this.logger.warn(err.stack);        
-      } 
-      
-      return true;
-    }
-
-    /**
-     * Provide the node structure
-     * 
-     * @async
-     * @param {string} target
-     * @param {object} [options]
-     * @returns {object}
-     */
-    async provideStructure(target, options = {}) {
-      const provider = options.provider || await this.getProvider();
-      const timer = this.createRequestTimer(options.timeout);
-      
-      try {
-        const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();
-        const result = await this.requestNode(target, 'structure', {
-          responseSchema: schema.getStructureResponse(),
-          timeout: timer(timeout),
-          provider
-        });
-
-        result.provider = provider;
-        return result;
-      }
-      catch(err) {
-        this.logger.warn(err.stack);
-
-        if(provider != this.address && utils.isRequestProviderError(err)) {
-          return await this.provideStructure(target, { provider: this.address, timeout: timer() });
-        }
-
-        throw err;
-      }
-    }
-
-    /**
-     * Provide the node group structure 
-     * 
-     * @async
-     * @param {array} targets
-     * @returns {object[]}
-     */
-    async provideGroupStructure(targets, options = {}) {
-      if(!targets.length) {
-        return [];
-      }
-
-      const timeout = this.options.request.pingTimeout + await this.getRequestServerTimeout();
-      const provider = options.provider || await this.getProvider();
-      const timer = this.createRequestTimer(options.timeout);  
-      const requests = [];          
-
-      try {
-        for(let i = 0; i < targets.length; i++) {
-          const target = targets[i];  
-          requests.push(new Promise(resolve => {
-            const opts = Object.assign({}, options, { timeout: timer(timeout) });
-            this.provideStructure(target.address, opts)
-              .then(resolve)
-              .catch(resolve)
-          }));
-        }
-  
-        let results = await Promise.all(requests);
-        !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
-        return results;
-      }
-      catch(err) {
-        this.logger.warn(err.stack);
-
-        if(provider != this.address) {
-          return await this.provideGroupStructure(targets, { provider: this.address, timeout: timer() });
-        }
-
-        throw err;
-      }
-    }
-
-    /**
      * Make a request
      * 
      * @async
@@ -1442,22 +1289,11 @@ module.exports = (Parent) => {
       else {
         options.url = `${this.getRequestProtocol()}://${url}`;
       }
-      
-      let provider = options.provider === true? await this.getProvider(): options.provider;
-      (provider == this.address) && (provider = null);
+           
       options = this.createDefaultRequestOptions(options);
       const urlInfo = urlib.parse(options.url);
       const address = `${urlInfo.hostname}:${urlInfo.port}`;
-      await this.addressFilter(address);
-
-      if(provider) {
-        options.headers['original-address'] = provider;
-        options.timeout && (options.headers['provider-timeout'] = options.timeout);
-        options.headers['provider-timestamp'] = Date.now();
-        options.headers['provider-url'] = options.url;
-        options.url = `${this.getRequestProtocol()}://${ provider }/provide-request`;
-      }
-      
+      await this.addressFilter(address);      
       let body = options.formData || options.body || {};
 
       if(options.formData) {
@@ -1490,7 +1326,6 @@ module.exports = (Parent) => {
         this.logger.info(`Request from "${this.address}" to "${options.url}": ${ms(Date.now() - start)}`);
 
         if(response.ok) {
-          response.provider = provider;
           return options.getFullResponse? response: await response.json();
         }
 
@@ -1510,7 +1345,6 @@ module.exports = (Parent) => {
       catch(err) {        
         //eslint-disable-next-line no-ex-assign
         utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
-        provider && (err.provider = provider);
         err.response = response;
         err.requestOptions = options;
         throw err;
@@ -1624,8 +1458,7 @@ module.exports = (Parent) => {
 
       try {        
         const opts = Object.assign({}, options, { getFullResponse: true });
-        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);        
-        result.provider && await behaviorRequestDelays.sub(result.provider);
+        let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);
         await behaviorRequestDelays.sub(address);
         let body = await result.json();
         
@@ -1652,16 +1485,11 @@ module.exports = (Parent) => {
           }
         }
         
-        result.provider && this.db.successServerAddress(result.provider);
         await this.db.successServerAddress(address);
         return result;
       }
       catch(err) {
         this.logger.warn(err.stack);
-
-        if(utils.isRequestProviderError(err)) {
-          address = err.provider;
-        }
 
         if(utils.isRequestTimeoutError(err)) {
           await behaviorRequestDelays.add(address);
@@ -2113,7 +1941,7 @@ module.exports = (Parent) => {
         return [this.address];
       }
 
-      const results = await this.provideGroupStructure(masters, { timeout: timer() });
+      const results = await this.requestGroup(masters, 'structure', { timeout: timer() });
 
       for(let i = 0; i < results.length; i++) {
         const slaves = results[i].slaves;
@@ -2175,7 +2003,7 @@ module.exports = (Parent) => {
       let backlink = await this.db.getBacklink();
       backlink && (backlink = _.pick(backlink, ['address']));
       const masters = (await this.db.getMasters()).map(m => _.pick(m, ['address', 'size']));      
-      const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));      
+      const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));    
       return { address, backlink, slaves, masters };
     }
     

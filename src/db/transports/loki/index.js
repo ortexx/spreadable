@@ -399,7 +399,9 @@ module.exports = (Parent) => {
         createdAt: now,
         updatedAt: now,
         suspicion: 1,
-        balance: 1
+        balance: 0,
+        up: 0,
+        down: 0
       }, obj);
     }
 
@@ -721,17 +723,21 @@ module.exports = (Parent) => {
       this.col.servers
         .chain()
         .find({ 
-          $or: [{
-            isSlave: true,              
-            address: this.node.address
-          }, {
-            isBacklink: true,
-            address: this.node.address
-          }, {
-            isSlave: false,
-            isBacklink: false,
-            isMaster: false
-          }]          
+          $or: [
+            {
+              isSlave: true,              
+              address: this.node.address
+            }, 
+            {
+              isBacklink: true,
+              address: this.node.address
+            },
+            {
+              isSlave: false,
+              isBacklink: false,
+              isMaster: false
+            }
+          ]          
         })
         .remove();
     }
@@ -825,7 +831,8 @@ module.exports = (Parent) => {
         return this.col.behaviorCandidates.update(candidate);
       }
 
-      return this.col.behaviorCandidates.insert(this.createBehaviorCandidateFields({ action, address }));
+      const opts = { action, address };
+      return this.col.behaviorCandidates.insert(this.createBehaviorCandidateFields(opts));
     }
 
     /**
@@ -985,11 +992,14 @@ module.exports = (Parent) => {
       if(behavior) {
         behavior.suspicion += step;
         behavior.balance += 1;
+        behavior.up += 1;
+        behavior.down = 0;
         behavior.updatedAt = Date.now();
         return this.col.behaviorFails.update(behavior);
       }
 
-      return this.col.behaviorFails.insert(this.createBehaviorFailsFields({ address, action, suspicion: step }));
+      const opts = { address, action, suspicion: step, up: 1, balance: 1 };
+      return this.col.behaviorFails.insert(this.createBehaviorFailsFields(opts));
     }
 
     /**
@@ -1004,14 +1014,16 @@ module.exports = (Parent) => {
 
       typeof step == 'function' && (step = step(behavior));
       behavior.suspicion -= step;
-      behavior.balance > 1 && (behavior.balance -= 1);
+      behavior.balance > 0 && (behavior.balance -= 1);
+      behavior.up = 0;
+      behavior.down += 1;
 
       if(behavior.suspicion <= 0) {
         return this.col.behaviorFails.remove(behavior);
       }
 
-      behavior.updatedAt = Date.now();
-      this.col.behaviorFails.update(behavior);
+      behavior.updatedAt = Date.now();     
+      return this.col.behaviorFails.update(behavior);
     }
 
      /**
@@ -1051,7 +1063,9 @@ module.exports = (Parent) => {
           continue;
         }
 
-        if(options.ban && behavior.suspicion > options.failSuspicionLevel && now - behavior.createdAt > options.banDelay) {
+        const delay = options.banDelay == 'auto'? syncLifetime: options.banDelay;
+
+        if(options.ban && behavior.suspicion > options.failSuspicionLevel && now - behavior.createdAt > delay) {
           await this.addBanlistAddress(behavior.address, options.banLifetime, behavior.action);
           this.col.behaviorFails.remove(behavior);
         }

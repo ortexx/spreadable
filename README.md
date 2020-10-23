@@ -513,6 +513,8 @@ When you create an instance of the node you can pass options below:
 
 * {object} __[behavior]__ - section that responds for the behavior settings. If the "network.isTrusted" is false then the behavior of the node is monitored to block nodes that disrupt the network.
 
+* {boolean} __[behavior.banByAddress=false]__ - If true, then nodes will be banned by the full address, otherwise only by the ip address.
+
 * {number} __[behavior.candidateSuspicionLevel=5]__ - suspicious level of the candidate node.
 
 * {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.

@@ -625,20 +625,6 @@ utils.isRequestTimeoutError = function (err) {
 };
 
 /**
- * Check the error is a provider error
- * 
- * @param {Error} err
- * @returns {boolean}
- */
-utils.isRequestProviderError = function (err) {
-  if(!(err instanceof Error) || !err.provider) {
-    return false;
-  }
-
-  return err.response && err.response.headers && !err.response.headers.get('provider-target');
-};
-
-/**
  * Manage files queue
  */
 utils.FilesQueue = class {

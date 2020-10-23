@@ -760,11 +760,11 @@ describe('DatabaseLoki', () => {
         const address = 'localhost:2';
         const count = 5;
 
-        for(let i = 0, b = 0; i < count; i += 2, b++) {
+        for(let i = 0, b = 1; i < count; i += 2, b++) {
           await loki.addBehaviorFail(action, address, 2);
           const behavior = loki.col.behaviorFails.findOne({ action, address });
           assert.equal(behavior.suspicion, i + 2, 'check the suspicion'); 
-          assert.equal(behavior.balance, b + 1 , 'check the balance');
+          assert.equal(behavior.balance, b, 'check the balance');
         }
       });
 
@@ -777,6 +777,22 @@ describe('DatabaseLoki', () => {
         behavior = loki.col.behaviorFails.findOne({ action, address });
         assert.equal(behavior.suspicion, suspicion + balance * 2, 'check the suspicion'); 
         assert.equal(behavior.balance, balance + 1, 'check the balance');
+      });
+
+      it('should handle up and down fields', async function () {
+        const address = 'localhost:3';  
+
+        for(let i = 0; i < 3; i++) {
+          const behavior = await loki.addBehaviorFail(action, address);
+          assert.equal(behavior.up, i + 1, 'check addition');
+          assert.equal(behavior.down, 0, 'check reset for down');
+        }
+
+        for(let i = 0; i < 3; i++) {
+          const behavior = await loki.subBehaviorFail(action, address);
+          assert.equal(behavior.down, i + 1, 'check subtraction');
+          assert.equal(behavior.up, 0, 'check reset for up');
+        }
       });
     });
 
