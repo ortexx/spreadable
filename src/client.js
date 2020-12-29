@@ -82,7 +82,7 @@ module.exports = (Parent) => {
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
-        https: false,
+        https: this.constructor.getPageProtocol() == 'https',
         logger: {
           level: 'info'
         },
@@ -90,11 +90,7 @@ module.exports = (Parent) => {
           workerChangeInterval: '30s'
         }
       }, options);
-
-      if(!this.options.address) {
-        throw new Error('You must pass the node address in "ip:port" format');
-      }
-
+      
       !this.options.logger && (this.options.logger = { level: false });
       typeof this.options.logger == 'string' && (this.options.logger = { level: this.options.logger });
       this.LoggerTransport = this.constructor.LoggerTransport;
@@ -110,15 +106,19 @@ module.exports = (Parent) => {
      * @async
      */
     async init() {
+      if(!this.address) {
+        throw new Error('You must pass the node address');
+      }
+
       await this.prepareServices();
       await super.init.apply(this, arguments);      
-      const availableAddress = await this.getAvailableAddress(this.address);
+      this.availableAddress = await this.getAvailableAddress(this.address);
       
-      if(!availableAddress) {
+      if(!this.availableAddress) {
         throw new Error('Provided addresses are not available');
       }
 
-      this.workerAddress = availableAddress;      
+      this.workerAddress = this.availableAddress;      
     }
 
     /**
@@ -194,7 +194,7 @@ module.exports = (Parent) => {
      */
     async changeWorker() {
       const lastAddress = this.workerAddress;
-      const result = await this.request('get-available-node', { address: this.address });
+      const result = await this.request('get-available-node', { address: this.availableAddress });
       const address = result.address;
 
       if(address == lastAddress) {

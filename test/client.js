@@ -19,10 +19,6 @@ describe('Client', () => {
   });
 
   describe('instance creation', function () {
-    it('should not create an instance', function () { 
-      assert.throws(() => client = new Client());
-    });
-
     it('should create an instance', async function () { 
       const options = await tools.createClientOptions({ address: node.address });
       assert.doesNotThrow(() => client = new Client(options));

@@ -455,6 +455,8 @@ When you create an instance of the node you can pass options below:
 
 * {integer} __port__ - port on which the server will be run.  
 
+* {integer} __[publicPort]__ - port for external access. By default, the same as __port__.
+
 * {string|string[]} __[initialNetworkAddress]__ - input node address to connect to the network. You can pass a list of addresses. By default, it is the node own address.
 
 * {string} __[hostname]__ - node hostname. By default, the system tries to find the external ip address. If it can't, then it chooses the internal one. Therefore, if you want to test something locally it is better to pass "localhost" manually.
@@ -515,7 +517,7 @@ When you create an instance of the node you can pass options below:
 
 * {boolean} __[behavior.banByAddress=false]__ - If true, then nodes will be banned by the full address, otherwise only by the ip address.
 
-* {number} __[behavior.candidateSuspicionLevel=5]__ - suspicious level of the candidate node.
+* {number} __[behavior.candidateSuspicionLevel=5]__ - suspicion level of the candidate node.
 
 * {object|false} __[logger]__ - section that responds for the logger settings. Each logger has its own specific settings. Listed below are only common to all.
 
@@ -529,7 +531,7 @@ When you create an instance of the node you can pass options below:
 
 When you create an instance of the client you can pass options below:
 
-* {string|string[]} __address__ - input node address to connect to the network. It can be an array with addresses that will be tested in turn until a working one is found.
+* {string|string[]} __[address]__ - input node address to connect to the network. It can be an array with addresses that will be tested in turn until a working one is found. You can skip this option on the browser version to automatically set the current URL address.
 
 * __[auth]__ - look at _node.options.network.auth_.
 
