@@ -93,7 +93,7 @@ utils.validateSchema = function (schema, data) {
 
     if(schema.expected) {
       for(let key in data) {
-        if(!props.hasOwnProperty(key)) {
+        if(!Object.prototype.hasOwnProperty.call(props, key)) {
           const msg = `Wrong expected object structure ${ getHumanData() } for ${ getHumanSchema() }`;
           throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_EXPECTED');
         }   
@@ -104,7 +104,7 @@ utils.validateSchema = function (schema, data) {
     required && required.forEach(item => requiredKeys[item] = true);
     
     for(let prop in props) {
-      if(!data.hasOwnProperty(prop)) {        
+      if(!Object.prototype.hasOwnProperty.call(data, prop)) {        
         if(required && requiredKeys[prop]) {
           const msg = `Property "${prop}" is required in ${ getHumanData() } for ${ getHumanSchema() }`;
           throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
@@ -117,7 +117,7 @@ utils.validateSchema = function (schema, data) {
     }
   }
 
-  if(!schema.hasOwnProperty('value')) {
+  if(!Object.prototype.hasOwnProperty.call(schema, 'value')) {
     return;
   }
 

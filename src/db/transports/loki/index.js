@@ -254,7 +254,6 @@ module.exports = (Parent) => {
       this.col.data = this.prepareCollection('data', { unique: ['name'] });  
       const rootNetworkAddress = this.col.data.findOne({ name: 'rootNetworkAddress' });     
       const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
-      const checkedMasterStructures = this.col.data.findOne({ name: 'checkedMasterStructures' });
       
       if(!rootNetworkAddress) {
         this.col.data.insert({ name: 'rootNetworkAddress', value: '' });
@@ -262,10 +261,6 @@ module.exports = (Parent) => {
 
       if(!registrationTime) {
         this.col.data.insert({ name: 'registrationTime', value: null });
-      }
-
-      if(!checkedMasterStructures) {
-        this.col.data.insert({ name: 'checkedMasterStructures', value: [] });
       }
     }
 

@@ -77,7 +77,7 @@ tools.createServerResponse = function (address, res) {
  * @param {http.ServerResponse} 
  */
 tools.saveResponseToFile = async function(response, filePath) {
-  await new Promise(async (resolve, reject) => {
+  await new Promise((resolve, reject) => {
     try { 
       const ws = fse.createWriteStream(filePath);
       response.body
@@ -116,7 +116,7 @@ tools.createNodeOptions = async function (options = {}) {
     port,
     task: false,
     request: {
-      pingTimeout: 400,
+      pingTimeout: 500,
       serverTimeout: 600
     },
     network: {

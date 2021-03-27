@@ -1,88 +1,24 @@
 const path = require('path');
 const merge = require('lodash/merge');
-const TerserPlugin = require('terser-webpack-plugin');
-const webpack = require('webpack');
+const config = require('./webpack.common.js');
 
-module.exports = (options = {}) => {
-  const pack = require(options.packagePath || path.join(process.cwd(), 'package.json'));
-  const banner = options.banner || `${pack.name} client\n@version ${pack.version}\n{@link ${pack.homepage}}`;
-  let plugins = [];
-  plugins.push(new webpack.BannerPlugin({ banner }));
-  plugins = plugins.concat(options.plugins || []);
-  const mock = merge({
-    "os": true,
-    "crypto": true,
-    "fs-extra": true,
-    "path": true,
-    "chalk": true,
-    "ip6address": true,
-    "external-ip": true,
-    "tcp-port-used": true,
-    "validate-ip-node": true,
-    "lookup-dns-cache": true
-  }, options.mock);  
-  const include = [path.resolve(__dirname, 'src/browser/client')].concat(options.include || []);
-  const mockIndexPath = options.mockIndexPath || path.resolve(__dirname, 'src/browser/client/mock');
-  const isProd = options.isProd === undefined? process.env.NODE_ENV == 'production': options.isProd;  
-  const alias = options.alias || {};
-  const node = options.node || {};
-  const entry = {};
-  entry[`${pack.name}.client`] = options.entry || path.resolve(process.cwd(), 'src/browser/client');
-
-  for(let key in mock) {
-    const val = mock[key];
-
-    if(val === false) {
-      continue; 
+module.exports = (options = {}, wp) => {
+  options = merge({
+    name: 'client',
+    include: [],
+    mock: {
+      "fs-extra": true,
+      "chalk": true,
+      "ip6addr": true,
+      "external-ip": true,
+      "tcp-port-used": true,
+      "validate-ip-node": true,
+      "lookup-dns-cache": true,      
+      "crypto": true,
+      "path": true,
+      "stream": true
     }
-
-    alias[key] = val === true? mockIndexPath: val;
-  }
-
-  return {
-    mode: isProd? 'production': 'development',
-    performance: { hints: false },
-    watch: !isProd,
-    bail: true,
-    devtool: isProd? false: 'inline-source-map',
-    entry,
-    output: {
-      path: options.distPath || path.join(process.cwd(), '/dist'),
-      filename: '[name].js',
-      library: options.library || ('Client' + pack.name[0].toUpperCase() + pack.name.slice(1)),
-      libraryTarget: 'umd'
-    },
-    optimization: {
-      minimizer: [
-        new TerserPlugin({
-          extractComments: false
-        })
-      ]
-    },
-    plugins,
-    module: {
-      rules: [
-        {
-          test: /\.js$/,
-          loader: 'babel-loader',
-          include,
-          query: {
-            presets: ['env'],
-            plugins: ['transform-runtime']
-          }
-        }
-      ]    
-    },
-    resolve: {
-      alias
-    },
-    node: merge({
-      fs: 'empty',
-      dns: 'empty',
-      net: 'empty',
-      tls: 'empty',
-      url: 'empty',
-      setImmediate: 'empty'
-    }, node)
-  };
-};
+  }, options); 
+  options.include.push([path.resolve(__dirname, 'src/browser/client')]);
+  return wp? config(options, wp): options;
+}

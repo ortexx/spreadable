@@ -85,7 +85,7 @@ const Client = require('spreadable').Client;
 ## How to use the client in a browser
 
 ### 1. Use the prepared file as an html script
-You can download __spreadable/dist/spreadable.client.js__ and import it as a script.
+You can download __spreadable/dist/client/spreadable.client.js__ and import it as a script.
 
 ```html
 <script type="text/javascript" src="spreadable.client.js"></script>
@@ -105,10 +105,10 @@ You can download __spreadable/dist/spreadable.client.js__ and import it as a scr
 ```
 
 ### 2. Import the prepared file
-You can import / require __spreadable/dist/spreadable.client.js__ if you use a building system.
+You can import / require __spreadable/dist/client/spreadable.client.js__ if you use a building system.
 
 ```javascript
-import Client from 'spreadable/dist/spreadable.client.js';
+import Client from 'spreadable/dist/client/spreadable.client.js';
 
 (async () => {
   try {

@@ -323,7 +323,7 @@ module.exports = (Parent) => {
         const approvalInfo = options.approvalInfo;
         delete approvalInfo.question;
 
-        if(!approvalInfo.hasOwnProperty('answer')) {
+        if(!Object.prototype.hasOwnProperty.call(approvalInfo, 'answer')) {
           throw new Error('Request "approvalInfo" option must include "answer" property');
         }
 
@@ -433,8 +433,14 @@ module.exports = (Parent) => {
       }
 
       if(typeof this.options.https == 'object' && this.options.https.ca) {
-        options.agent = options.agent || new https.Agent();
-        options.agent.options.ca = this.options.https.ca;
+        if(!https.Agent) {
+          options.agent = options.agent || {};
+          options.agent.ca = this.options.https.ca;
+        }
+        else {
+          options.agent = options.agent || new https.Agent();
+          options.agent.options.ca = this.options.https.ca;
+        }
       }
 
       return merge({}, defaults, options);

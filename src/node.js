@@ -19,7 +19,7 @@ const schema = require('./schema');
 const errors = require('./errors');
 const pack = require('../package.json');
 
-module.exports = (Parent) => { 
+module.exports = (Parent) => {
   /**
    * The node class
    */
@@ -244,13 +244,12 @@ module.exports = (Parent) => {
       await this.addBehavior('requestDelays', new BehaviorFail({ banLifetime: '20m', failSuspicionLevel: 200 }));
       await this.addBehavior('authentication', new BehaviorFail({ banLifetime: '15m', failSuspicionLevel: 10 }));
       await this.addBehavior('registration', new BehaviorFail({ banLifetime: '10m', failSuspicionLevel: 10 }));  
-      await this.addBehavior('masterMasters', new BehaviorFail({ exp: true }));
-      await this.addBehavior('masterNetworkSize', new BehaviorFail({ exp: true }));
+      await this.addBehavior('responseSchema', new BehaviorFail({ exp: true }));
       await this.addBehavior('slaveMasters', new BehaviorFail({ exp: true }));
       await this.addBehavior('slaveBacklink', new BehaviorFail({ exp: true }));
       await this.addBehavior('backlinkMasters', new BehaviorFail({ exp: true }));
-      await this.addBehavior('backlinkSlaves', new BehaviorFail({ exp: true }));
-      await this.addBehavior('responseSchema', new BehaviorFail({ exp: true }));
+      await this.addBehavior('backlinkSlaves', new BehaviorFail({ exp: true }));      
+      await this.addBehavior('backlinkNetworkSize', new BehaviorFail({ exp: true }));     
     }
 
     /**
@@ -342,24 +341,20 @@ module.exports = (Parent) => {
         const backlink = result.backlink;
         const address = result.address;
         const slaves = result.slaves;     
-        const master = masters.find(m => m.address == this.address);  
-        const checkSelf = !!master;
-        const checkBacklink = !!backlink;
-        const checkSize = checkSelf && master.size == await this.db.getSlavesCount();        
-        const checkBacklinkAddress = checkBacklink && backlink.address == this.address;
-        const checkArrSelf = [checkSelf, checkSize];
-        const checkArrBacklink = [checkBacklink, checkBacklinkAddress];
+        const master = masters.find(m => m.address == this.address);
+        const checkSelf = !!master && master.size == await this.db.getSlavesCount();        
+        const checkBacklink = !!backlink && backlink.address == this.address;
         
-        if(checkArrSelf.includes(false)) {
-          await behaviorSlaveMasters.add(address, checkArrSelf);
+        if(!checkSelf) {
+          await behaviorSlaveMasters.add(address);
         }
         else {
           await behaviorSlaveMasters.sub(address);
         }
         
-        if(checkArrBacklink.includes(false)) {
+        if(!checkBacklink) {
           await this.db.removeSlave(address);
-          await behaviorSlaveBacklink.add(address, checkArrBacklink);
+          await behaviorSlaveBacklink.add(address);
         }
         else {
           await this.db.addSlave(address);
@@ -367,7 +362,7 @@ module.exports = (Parent) => {
         }
 
         if(slaves.length) {
-          masters.forEach(m => m.source = address);
+          await this.db.addMaster(address, slaves.length);
           actualMasters = actualMasters.concat(masters);
         }
       }
@@ -399,14 +394,31 @@ module.exports = (Parent) => {
       
       const slaves = result.slaves;
       const masters = result.masters;
+      const isMaster = await this.db.isMaster();
+      const behaviorNetworkSize = await this.getBehavior('backlinkNetworkSize');         
       const behaviorBacklinkMasters = await this.getBehavior('backlinkMasters');
       const behaviorBacklinkSlaves = await this.getBehavior('backlinkSlaves'); 
+      const networkSize = await this.getNetworkSize(masters);
+      const coef = await this.getNetworkOptimum(networkSize);      
+      const selfMaster = masters.find(m => m.address == this.address);
+      const master = masters.find(m => m.address == backlink.address);
+      const checkSelfMaster = !isMaster || (!!selfMaster && selfMaster.size == await this.db.getSlavesCount());     
+      const checkBacklinkSize = !!master && master.size == slaves.length;
+      const checkBacklinkLength = slaves.length <= coef;
+      const checkArrBacklink = [checkBacklinkSize, checkBacklinkLength];
       
-      if(!masters.find(m => m.address == backlink.address)) {
+      if(!checkSelfMaster) {
         await behaviorBacklinkMasters.add(backlink.address);
       }
       else {
         await behaviorBacklinkMasters.sub(backlink.address);
+      }
+
+      if(checkArrBacklink.includes(false)) {
+        await behaviorNetworkSize.add(backlink.address, checkArrBacklink);
+      }
+      else {
+        await behaviorNetworkSize.sub(backlink.address);
       }
 
       if(!slaves.find(s => s.address == this.address)) {
@@ -419,6 +431,7 @@ module.exports = (Parent) => {
       }
 
       await this.db.addBacklink(backlink.address);
+      await this.db.addMaster(backlink.address, slaves.length);
       return masters;
     }
 
@@ -446,8 +459,7 @@ module.exports = (Parent) => {
 
       if(size) {
         const masters = await this.db.getMasters();
-        const structures = await this.updateMastersInfo(masters.concat(actualMasters), { timeout: timer() });
-        await this.checkStructures(structures, { timeout: timer() });
+        await this.updateMastersInfo(masters.concat(actualMasters), { timeout: timer() });
       }
       else {
         await this.db.removeMasters();
@@ -479,99 +491,6 @@ module.exports = (Parent) => {
       this.__syncList.push({ time });
       this.__syncList.length > this.getSyncListSize() && this.__syncList.shift();
       this.logger.info(`Sync takes ${ms(time)}`);
-    }
-
-    /**
-     * Check the masters structure
-     * 
-     * @async
-     * @param {object[]} structures
-     * @param {object} [options]
-     */
-    async checkStructures(structures, options = {}) {
-      if(await this.isAddressTrusted() || !await this.isMaster()) {
-        return;
-      }
-
-      const checked = await this.db.getData('checkedMasterStructures');
-      const current = structures.filter(s => checked.indexOf(s.address) == -1 && s.address != this.address)[0];
-
-      if(!current) {
-        await this.db.setData('checkedMasterStructures', []);
-        return;
-      }
-      
-      checked.push(current.address);
-      await this.checkMasterStructure(current, options);
-      await this.db.setData('checkedMasterStructures', checked);
-    }
-  
-    /**
-     * Check the master structure
-     * 
-     * @async
-     * @param {object} master
-     */
-    async checkMasterStructure(master) {      
-      await this.checkMasterStructureNetworkSize(master.address, master.masters, master.slaves); 
-      await this.checkMasterStructureMasters(master.address, master.masters);
-    }
-
-    /**
-     * Check the master masters
-     * 
-     * @async
-     * @param {string} address
-     * @param {object[]} masters
-     */
-    async checkMasterStructureMasters(address, masters) {
-      if(await this.isAddressTrusted(address)) {
-        return;
-      }
-
-      const self = masters.find(m => m.address == this.address); 
-      const size = await this.db.getSlavesCount();
-      const checkAddress = !!masters.find(m => m.address == address);
-      const checkSelf = !!self;
-      const checkSize = checkSelf && self.size == size;
-      const checkArr = [checkAddress, checkSelf, checkSize];
-      const behaviorMasterMasters = await this.getBehavior('masterMasters');  
-
-      if(checkArr.includes(false)) {
-        await behaviorMasterMasters.add(address, checkArr);
-      }
-      else {
-        await behaviorMasterMasters.sub(address);
-      }
-    }
-
-    /**
-     * Check the master network size
-     * 
-     * @async
-     * @param {string} address 
-     * @param {object[]} masters
-     * @param {object[]} slaves
-     */
-    async checkMasterStructureNetworkSize(address, masters, slaves) {
-      if(await this.isAddressTrusted(address)) {
-        return;
-      }
-      
-      const behavior = await this.getBehavior('masterNetworkSize');
-      const networkSize = await this.getNetworkSize(masters);
-      const coef = await this.getNetworkOptimum(networkSize);
-      const master = masters.find(m => m.address == address);
-      const checkSize = !!master && master.size == slaves.length;
-      const checkLength = slaves.length <= coef;
-      const checkArr = [checkSize, checkLength];      
-
-      if(checkArr.includes(false)) {
-        await behavior.add(address, checkArr);
-      }
-      else {
-        await behavior.sub(address);
-      }
     }
 
     /**
@@ -809,7 +728,6 @@ module.exports = (Parent) => {
      */
     async updateMastersInfo(masters, options = {}) {    
       const obj = {};
-      const structures = [];
       
       for(let i = 0; i < masters.length; i++) {        
         const master = masters[i]; 
@@ -846,7 +764,6 @@ module.exports = (Parent) => {
 
         if(!(result instanceof Error)) {
           size = result.slaves.length;
-          size && structures.push(result);
         }
         
         if(!size) {
@@ -856,8 +773,6 @@ module.exports = (Parent) => {
 
         await this.db.addMaster(address, size);
       }
-
-      return structures;
     }
 
     /**
