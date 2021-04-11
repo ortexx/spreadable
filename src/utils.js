@@ -7,7 +7,7 @@ const path = require('path');
 const uniqBy = require('lodash/uniqBy');
 const lookup = require('lookup-dns-cache').lookup;
 const tcpPortUsed = require('tcp-port-used');
-const externalIp = require('external-ip');
+const publicIp = require('public-ip');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr');
 const errors = require('./errors');
@@ -330,10 +330,15 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
   try {
-    return await new Promise((resolve, reject) => externalIp()(((err, ip) => err? reject(err): resolve(ip))));
+    return await publicIp.v4();
   }
   catch(err) {
-    return null;
+    try {
+      return await publicIp.v6();
+    }
+    catch(err) {
+      return null;
+    }   
   }
 }
 

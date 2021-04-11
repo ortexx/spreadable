@@ -1435,8 +1435,7 @@ module.exports = (Parent) => {
      */
     async duplicateData(action, servers, options = {}) {
       options = _.merge({}, options);
-      const timer = this.createRequestTimer(options.timeout);      
-      let result;
+      const timer = this.createRequestTimer(options.timeout);   
       
       while(servers.length) {
         const address = servers[0];
@@ -1452,8 +1451,7 @@ module.exports = (Parent) => {
         
         try {
           serverOptions.timeout = timer(serverOptions.timeout);
-          result = await this.requestNode(address, action, serverOptions);
-          return result;
+          return await this.requestNode(address, action, serverOptions);
         }
         catch(err) {
           if(err instanceof errors.WorkError) {
