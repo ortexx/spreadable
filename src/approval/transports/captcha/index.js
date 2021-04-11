@@ -198,24 +198,27 @@ module.exports = (Parent) => {
      * @see Approval.prototype.getClientInfoSchema
      */
     getClientInfoSchema() {
-      return {
-        type: ['object', 'undefined'],
-        props: {
-          captchaWidth: {
-            type: 'number',
-            value: val => val >= 100 && val <= 500 && Number.isInteger(val)
+      return [
+        {
+          type: 'object',
+          props: {
+            captchaWidth: {
+              type: 'number',
+              value: val => val >= 100 && val <= 500 && Number.isInteger(val)
+            },
+            captchaBackground: {
+              type: 'string',
+              value: val => val == 'transparent' || utils.isHexColor(val)
+            },
+            captchaColor: {
+              type: 'string',
+              value: val => val == 'random' || utils.isHexColor(val)
+            }
           },
-          captchaBackground: {
-            type: 'string',
-            value: val => val == 'transparent' || utils.isHexColor(val)
-          },
-          captchaColor: {
-            type: 'string',
-            value: val => val == 'random' || utils.isHexColor(val)
-          }
+          expected: true
         },
-        expected: true
-      }
+        'undefined'
+      ]
     }
 
     /**

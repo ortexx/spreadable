@@ -30,6 +30,42 @@ describe('utils', () => {
       }
     }
 
+    describe('multiple types', () => {
+      it('should be true', () => { 
+        assert.doesNotThrow(() => {
+          utils.validateSchema([
+            {
+              type: 'object',
+              props: {
+                x: [
+                  'number',
+                  'boolean'
+                ]
+              }
+            },
+            'string'
+          ], { x: 5 });
+        });
+      });
+
+      it('should be false', () => { 
+        assert.throws(() => {
+          utils.validateSchema([
+            {
+              type: 'object',
+              props: {
+                x: [
+                  'number',
+                  'boolean'
+                ]
+              }
+            },
+            'string'
+          ], { x: '1' });
+        });
+      });
+    });
+
     describe('number', () => {
       it('should verify a number', () => { 
         assert.doesNotThrow(() => {

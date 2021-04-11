@@ -36,25 +36,26 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@babel/core": "^7.0.0",
-    "@babel/eslint-parser": "^7.0.3",
-    "@babel/plugin-transform-runtime": "^7.13.10",
-    "@babel/preset-env": "^7.0.0",
+    "@babel/core": "^7.13.15",
+    "@babel/eslint-parser": "^7.13.14",
+    "@babel/plugin-transform-runtime": "^7.13.15",
+    "@babel/preset-env": "^7.13.15",
     "babel-loader": "^8.2.2",
     "chai": "^4.3.4",
     "cross-env": "^7.0.3",
-    "eslint": "^7.0.0",
+    "css-minimizer-webpack-plugin": "^1.3.0",
+    "eslint": "^7.23.0",
     "eslint-webpack-plugin": "^2.5.3",
     "husky": "^4.3.8",
+    "mini-css-extract-plugin": "^0.4.5",
     "mocha": "^7.2.0",
     "node-mocks-http": "^1.10.1",
-    "node-polyfill-webpack-plugin": "^1.0.3",
+    "node-polyfill-webpack-plugin": "^1.1.0",
     "selfsigned": "^1.10.8",
     "terser-webpack-plugin": "^5.0.0",
-    "webpack": "^5.28.0",
-    "webpack-cli": "^4.5.0",
-    "css-minimizer-webpack-plugin": "^1.3.0",
-    "mini-css-extract-plugin": "^0.4.5"
+    "webpack": "^5.31.0",
+    "webpack-cli": "^4.6.0",
+    "yargs": "^16.2.0"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",
@@ -82,14 +83,13 @@
     "signal-exit": "^3.0.3",
     "tcp-port-used": "^1.0.2",
     "text-to-svg": "^3.1.5",
-    "validate-ip-node": "^1.0.6",
-    "yargs": "^15.4.1"
+    "validate-ip-node": "^1.0.6"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=10.12.0"
   }
 }

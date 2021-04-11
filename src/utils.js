@@ -22,121 +22,136 @@ const utils = {
  * @param {object|array|string} schema
  * @param {*} data
  */
-utils.validateSchema = function (schema, data) {  
-  if(Array.isArray(schema) || typeof schema != 'object') {
-    schema = { type: schema };
-  }
-
-  const getHumanData = () => JSON.stringify(data, null, 2);
-  const getHumanSchema = () => JSON.stringify(schema, null, 2);
-  const schemaType = Array.isArray(schema.type)? schema.type: [schema.type];
+utils.validateSchema = function (schema, data) {
+  const fullSchema = Array.isArray(schema)? schema: [schema];
   const dataType = Array.isArray(data)? 'array': typeof data;
+  const getHumanData = () => JSON.stringify(data, null, 2);
+  let err = null;
+  let isValid = false;
 
-  if(schemaType.indexOf(dataType) == -1) {
-    const msg = `Wrong data type "${ dataType }" instead of "${ schemaType }" ${ getHumanData() } for ${ getHumanSchema() }`;
-    throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
-  }
+  for(let i = 0; i < fullSchema.length; i++) {
+    const schema = typeof fullSchema[i] != 'object'? { type: fullSchema[i] }: fullSchema[i];
+    const getHumanSchema = () => JSON.stringify(schema, null, 2);
 
-  if(dataType == 'array') {
-    const minLength = typeof schema.minLength == 'function'? minLength(data): schema.minLength;
-    const maxLength = typeof schema.maxLength == 'function'? maxLength(data): schema.maxLength;
-
-    if(minLength && data.length < minLength) {
-      const msg = `Wrong array min length ${ getHumanData() } for ${ getHumanSchema() }`;
-      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
-    }
-
-    if(maxLength && data.length > maxLength) {
-      const msg = `Wrong array max length ${ getHumanData() } for ${ getHumanSchema() }`;
-      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
-    }
-
-    if(schema.uniq) {
-      const arr = schema.uniq === true? uniqBy(data): uniqBy(data, schema.uniq);
-
-      if(arr.length != data.length) {
-        const msg = `Wrong array uniqueness ${ getHumanData() } for ${ getHumanSchema() }`;
-        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');
+    try {
+      if(schema.type != dataType) {
+        const msg = `Wrong data type "${ dataType }" instead of "${ schema.type }" ${ getHumanData() } for ${ getHumanSchema() }`;
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
       }
-    }
-
-    if(schema.items) {
-      data.forEach(item => this.validateSchema(schema.items, item));
-    }
-  }
-  else if(dataType == 'object') {
-    const props = schema.props || {};
-    const required = schema.required;  
-
-    if(required && !Array.isArray(required)) {
-      throw new Error(`Option "required" for ${ getHumanSchema() } must be an array`);
-    }
-
-    if(schema.canBeNull && data === null) {
-      return;
-    }
-
-    if(schema.canBeNull === false && data === null) {
-      const msg = `Data for ${ getHumanSchema() } can't be null`;
-      throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_NULL');
-    }
     
-    if(schema.strict) {
-      const schemaKeys = Object.keys(props).sort();
-      const dataKeys = Object.keys(data).sort();
-
-      if(schemaKeys.toString() != dataKeys.toString()) {
-        const msg = `Wrong strict object structure ${ getHumanData() } for ${ getHumanSchema() }`;
-        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_STRICT');
-      }     
-    }
-
-    if(schema.expected) {
-      for(let key in data) {
-        if(!Object.prototype.hasOwnProperty.call(props, key)) {
-          const msg = `Wrong expected object structure ${ getHumanData() } for ${ getHumanSchema() }`;
-          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_EXPECTED');
-        }   
-      }
-    }
-
-    const requiredKeys = {};
-    required && required.forEach(item => requiredKeys[item] = true);
+      if(dataType == 'array') {
+        const minLength = typeof schema.minLength == 'function'? minLength(data): schema.minLength;
+        const maxLength = typeof schema.maxLength == 'function'? maxLength(data): schema.maxLength;
     
-    for(let prop in props) {
-      if(!Object.prototype.hasOwnProperty.call(data, prop)) {        
-        if(required && requiredKeys[prop]) {
-          const msg = `Property "${prop}" is required in ${ getHumanData() } for ${ getHumanSchema() }`;
-          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
+        if(minLength && data.length < minLength) {
+          const msg = `Wrong array min length ${ getHumanData() } for ${ getHumanSchema() }`;
+          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
         }
-
+    
+        if(maxLength && data.length > maxLength) {
+          const msg = `Wrong array max length ${ getHumanData() } for ${ getHumanSchema() }`;
+          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
+        }
+    
+        if(schema.uniq) {
+          const arr = schema.uniq === true? uniqBy(data): uniqBy(data, schema.uniq);
+    
+          if(arr.length != data.length) {
+            const msg = `Wrong array uniqueness ${ getHumanData() } for ${ getHumanSchema() }`;
+            throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');
+          }
+        }
+    
+        if(schema.items) {
+          data.forEach(item => this.validateSchema(schema.items, item));
+        }
+      }
+      else if(dataType == 'object') {
+        const props = schema.props || {};
+        const required = schema.required;  
+    
+        if(required && !Array.isArray(required)) {
+          throw new Error(`Option "required" for ${ getHumanSchema() } must be an array`);
+        }
+    
+        if(schema.canBeNull && data === null) {
+          isValid = true;
+          continue;
+        }
+    
+        if(schema.canBeNull === false && data === null) {
+          const msg = `Data for ${ getHumanSchema() } can't be null`;
+          throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_NULL');
+        }
+        
+        if(schema.strict) {
+          const schemaKeys = Object.keys(props).sort();
+          const dataKeys = Object.keys(data).sort();
+    
+          if(schemaKeys.toString() != dataKeys.toString()) {
+            const msg = `Wrong strict object structure ${ getHumanData() } for ${ getHumanSchema() }`;
+            throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_STRICT');
+          }     
+        }
+    
+        if(schema.expected) {
+          for(let key in data) {
+            if(!Object.prototype.hasOwnProperty.call(props, key)) {
+              const msg = `Wrong expected object structure ${ getHumanData() } for ${ getHumanSchema() }`;
+              throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_EXPECTED');
+            }   
+          }
+        }
+    
+        const requiredKeys = {};
+        required && required.forEach(item => requiredKeys[item] = true);
+        
+        for(let prop in props) {
+          if(!Object.prototype.hasOwnProperty.call(data, prop)) {        
+            if(required && requiredKeys[prop]) {
+              const msg = `Property "${prop}" is required in ${ getHumanData() } for ${ getHumanSchema() }`;
+              throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_REQUIRED_PROPS');          
+            }
+    
+            continue;
+          }
+    
+          this.validateSchema(props[prop], data[prop]);
+        }
+      }
+    
+      if(!Object.prototype.hasOwnProperty.call(schema, 'value')) {
+        isValid = true;
         continue;
       }
+    
+      let valid;
+    
+      if(typeof schema.value == 'function') {
+        valid = schema.value(data);
+      }
+      else if(schema.value instanceof RegExp) {
+        valid = String(data).match(schema.value);
+      }
+      else {
+        const value = Array.isArray(schema.value)? schema.value: [schema.value];
+        valid = value.indexOf(data) != -1;
+      }  
+    
+      if(!valid) {
+        const msg = `Validation is failed for ${ getHumanData() }`;
+        throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_VALUE');
+      }
 
-      this.validateSchema(props[prop], data[prop]);
+      isValid = true;
     }
-  }
-
-  if(!Object.prototype.hasOwnProperty.call(schema, 'value')) {
-    return;
-  }
-
-  let valid;
-
-  if(typeof schema.value == 'function') {
-    valid = schema.value(data);
-  }
-  else if(schema.value instanceof RegExp) {
-    valid = String(data).match(schema.value);
-  }
-  else {
-    const value = Array.isArray(schema.value)? schema.value: [schema.value];
-    valid = value.indexOf(data) != -1;
+    catch(error) {
+      err = error;
+    }
   }  
 
-  if(!valid) {
-    const msg = `Validation is failed for ${ getHumanData() }`;
-    throw new errors.WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_VALUE');
+  if(!isValid && err) {
+    throw err;
   }
 }
 
