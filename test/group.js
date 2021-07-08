@@ -94,7 +94,6 @@ describe('group communication', () => {
       const node = new Node(await tools.createNodeOptions({ initialNetworkAddress: nodes[i].address }));
       nodes.push(node);
       await node.init();
-      await node.sync();
     }
     
     await tools.nodesSync(nodes, nodes.length * 3);

@@ -1,5 +1,5 @@
-const bodyParser = require('body-parser');
-const compression = require('compression')
+const compression = require('compression');
+const express = require('express');
 const cors = require('cors');
 const errors = require('../../../errors');
 const utils = require('../../../utils');
@@ -43,8 +43,8 @@ module.exports.timeout = () => {
  */
 module.exports.bodyParser = node => {
   return [ 
-    bodyParser.urlencoded({ extended: false, limit: node.options.server.maxBodySize }), 
-    bodyParser.json({ limit: node.options.server.maxBodySize }) 
+    express.urlencoded({ extended: false, limit: node.options.server.maxBodySize }), 
+    express.json({ limit: node.options.server.maxBodySize }) 
   ];
 };
 

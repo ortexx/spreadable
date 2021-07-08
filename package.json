@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -43,23 +43,22 @@
     "babel-loader": "^8.2.2",
     "chai": "^4.3.4",
     "cross-env": "^7.0.3",
-    "css-minimizer-webpack-plugin": "^1.3.0",
-    "eslint": "^7.23.0",
-    "eslint-webpack-plugin": "^2.5.3",
+    "css-minimizer-webpack-plugin": "^3.0.2",
+    "eslint": "^7.29.0",
+    "eslint-webpack-plugin": "^2.5.4",
     "husky": "^4.3.8",
     "mini-css-extract-plugin": "^1.3.9",
     "mocha": "^7.2.0",
     "node-mocks-http": "^1.10.1",
     "node-polyfill-webpack-plugin": "^1.1.0",
     "selfsigned": "^1.10.8",
-    "terser-webpack-plugin": "^5.0.0",
-    "webpack": "^5.31.0",
-    "webpack-cli": "^4.6.0",
-    "yargs": "^16.2.0"
+    "terser-webpack-plugin": "^5.1.4",
+    "webpack": "^5.41.1",
+    "webpack-cli": "^4.7.2",
+    "yargs": "^17.0.1"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",
-    "body-parser": "^1.19.0",
     "bytes": "^3.1.0",
     "chalk": "^3.0.0",
     "cli-spinner": "^0.2.10",
@@ -90,6 +89,6 @@
     "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
-    "node": ">=10.12.0"
+    "node": ">=10.13.0"
   }
 }

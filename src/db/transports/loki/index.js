@@ -382,7 +382,7 @@ module.exports = (Parent) => {
       }, obj);
     }
 
-     /**
+    /**
      * Create the failed behavior collection fields
      * 
      * @param {object} [obj]
