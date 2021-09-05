@@ -491,7 +491,7 @@ When you create an instance of the node you can pass options below:
 
 * {number|string} __[network.authCookieMaxAge="7d"]__ - period of saving authorization data on the client.
 
-* {integer} __[network.serverMaxFails=3]__ - number of failed requests to some node after which it will be removed from the lists.
+* {integer} __[network.serverMaxFails=10]__ - number of failed requests to some node after which it will be removed from the lists.
 
 * {string[]} __[network.blacklist=[]]__ - list of node addresses or IP addresses that can't work with the network.
 

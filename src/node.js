@@ -60,7 +60,7 @@ module.exports = (Parent) => {
           syncTimeCalculationPeriod: '1d',
           auth: null,
           authCookieMaxAge: '7d',
-          serverMaxFails: 3,
+          serverMaxFails: 10,
           whitelist: [],
           blacklist: [],
           trustlist: []
@@ -695,8 +695,7 @@ module.exports = (Parent) => {
      * @returns {number}
      */
     async getSyncLifetime() {
-      const delay = this.options.network.syncInterval;
-      return delay * this.options.network.serverMaxFails * await this.getNetworkOptimum();
+      return this.options.network.syncInterval * this.options.network.serverMaxFails * await this.getNetworkOptimum();
     }
 
     /**
