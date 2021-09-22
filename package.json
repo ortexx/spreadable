@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -13,7 +13,7 @@
   "homepage": "https://github.com/ortexx/spreadable",
   "scripts": {
     "eslint": "eslint src bin test",
-    "test": "mocha ./test/index.js --timeout=15000",
+    "test": "mocha ./test/index.js --timeout=20000",
     "build-client": "webpack --config=webpack.client.js",
     "build-client-prod": "cross-env NODE_ENV=production webpack --config=webpack.client.js",
     "build-ci": "npm run eslint && npm run test && npm run build-client-prod"

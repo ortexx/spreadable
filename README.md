@@ -1,6 +1,9 @@
 # [Spreadable](https://github.com/ortexx/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable) [![Build status](https://github.com/ortexx/spreadable/workflows/build/badge.svg)](https://github.com/ortexx/spreadable/actions)
 
 Spreadable is a decentralized network mechanism.
+
+There is [an article here](https://ortex.medium.com/spreadable-a-decentralized-network-option-c415bdac7e2e) with an explanation. 
+
 You can use it to combine servers in a public or private network for any purpose. The library consists of two parts:
 
 ```javascript
@@ -12,7 +15,7 @@ const Node = require('spreadable').Node;
     const node = new Node({
       port: 4000,
       hostname: 'localhost',
-      initialNetworkAddress: 'localhost:4000'    
+      initialNetworkAddress: 'localhost:4000'  
     });
     await node.init();
   }

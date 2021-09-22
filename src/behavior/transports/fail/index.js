@@ -14,9 +14,9 @@ module.exports = (Parent) => {
       Object.assign(this, {
         ban: true,
         banDelay: 0,
-        banLifetime: '27d',
+        banLifetime: '18d',
         failLifetime: 'auto',
-        failSuspicionLevel: 20
+        failSuspicionLevel: 30
       }, options);
     }
 

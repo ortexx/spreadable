@@ -444,10 +444,13 @@ describe('utils', () => {
       timer = utils.getRequestTimer(timeout);
     });
 
-    it('should return the current timeout', async () => {
+    it('should return the current timeout', (done) => {
       last = timeout;
-      timeout = timer();
-      assert.isOk(timeout <= last && timeout >= last - 5);
+      setTimeout(() => {
+        timeout = timer();
+        assert.isTrue(timeout < last);
+        done();
+      });
     });
 
     it('should return the passed timeout', async () => {
