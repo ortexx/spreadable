@@ -1058,7 +1058,7 @@ module.exports = (Parent) => {
           continue;
         }
 
-        const delay = options.banDelay == 'auto'? syncLifetime: options.banDelay;
+        const delay = options.banDelay == 'auto'? lifetime * 2: options.banDelay;
 
         if(options.ban && behavior.suspicion > options.failSuspicionLevel && now - behavior.createdAt > delay) {
           await this.addBanlistAddress(behavior.address, options.banLifetime, behavior.action);

@@ -13,8 +13,8 @@ module.exports = (Parent) => {
       super(...arguments);
       Object.assign(this, {
         ban: true,
-        banDelay: 0,
         banLifetime: '18d',
+        banDelay: 'auto',        
         failLifetime: 'auto',
         failSuspicionLevel: 30
       }, options);
