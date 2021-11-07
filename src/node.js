@@ -1058,11 +1058,12 @@ module.exports = (Parent) => {
         return true;
       }
      
-      try {
-        const info = await this.getAddressInfo(address);
+      try {       
         const trust = this.options.network.trustlist || [];
 
-        if(trust.length) {          
+        if(trust.length) {             
+          const info = await this.getAddressInfo(address); 
+                
           for(let i = 0; i < trust.length; i++) {
             if(await this.compareAddressInfo(trust[i], info)) {
               return true;

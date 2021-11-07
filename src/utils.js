@@ -13,7 +13,10 @@ const ip6addr = require('ip6addr');
 const errors = require('./errors');
 
 const utils = {
-  domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu
+  domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu,
+  dnsCache: new Map(),
+  dnsCacheLimit: 10000,
+  dnsCachePeriod: 1000 * 60 * 10
 };
 
 /**
@@ -256,6 +259,18 @@ utils.getHostIp = async function (hostname) {
     return hostname;
   }
 
+  const cache = this.dnsCache.get(hostname);
+
+  if(cache) {
+    if(cache.createdAt + this.dnsCachePeriod > Date.now()) {
+      return cache.value;
+    
+    }
+    else {
+      this.dnsCache.delete(hostname);
+    }
+  }
+
   return await new Promise((resolve, reject) => {
     lookup(hostname, (err, ip) => {      
       if(err) {
@@ -264,6 +279,14 @@ utils.getHostIp = async function (hostname) {
         }
         
         return reject(err);
+      }
+
+      this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
+      this.dnsCache.set(hostname, { value: ip, createdAt: Date.now() });
+    
+      if(this.dnsCache.size > this.dnsCacheLimit) {
+        const keys = Array.from(this.dnsCache.keys()).slice(0, this.dnsCache.size - this.dnsCacheLimit);
+        keys.forEach(k => this.dnsCache.delete(k));
       }
 
       return resolve(ip);
