@@ -1,4 +1,5 @@
 const merge = require('lodash/merge');
+const shuffle = require('lodash/shuffle');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const https = require('https');
@@ -111,8 +112,10 @@ module.exports = (Parent) => {
       }
 
       await this.prepareServices();
-      await super.init.apply(this, arguments);      
-      this.availableAddress = await this.getAvailableAddress(this.address);
+      await super.init.apply(this, arguments);
+      let address = this.address;
+      Array.isArray(address) && (address = shuffle(address));           
+      this.availableAddress = await this.getAvailableAddress(address);
       
       if(!this.availableAddress) {
         throw new Error('Provided addresses are not available');

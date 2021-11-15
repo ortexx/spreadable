@@ -170,7 +170,13 @@ module.exports = (Parent) => {
      */
     async initBeforeSync() {
       this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress');
-      const initialNetworkAddress = this.options.initialNetworkAddress || this.address;
+      let initialNetworkAddress = this.options.initialNetworkAddress || this.address;
+
+      if(Array.isArray(initialNetworkAddress)) {
+        initialNetworkAddress = _.shuffle(initialNetworkAddress);
+        initialNetworkAddress = initialNetworkAddress.sort(a => a === this.address? 0: -1);
+      }
+      
       this.initialNetworkAddress = await this.getAvailableAddress(initialNetworkAddress);
       
       if(!this.initialNetworkAddress) {
@@ -1480,7 +1486,8 @@ module.exports = (Parent) => {
      */
     async getAvailability() {
       const arr = await this.getAvailabilityParts();
-      return arr.reduce((p, c) => p + c, 0) / arr.length;
+      const res = arr.reduce((p, c) => p + c, 0) / arr.length;
+      return res < 0? 0: res;
     }
 
     /**
