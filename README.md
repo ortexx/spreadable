@@ -544,7 +544,9 @@ When you create an instance of the client you can pass options below:
 
 * __[request.pingTimeout]__ - look at _node.options.request.pingTimeout_.
 
-* {number|string} __[request.clientTimeout="3s"]__ - default timeout for a typical client request for any purpose.
+* {number|string} __[request.clientTimeout="10s"]__ - default timeout for a typical client request for any purpose.
+
+* {number|string} __[request.approvalQuestionTimeout="20s"]__ - timeout for an approval question.
 
 * {boolean|object} __[https=false]__ - use https or not.
 

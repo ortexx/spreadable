@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -13,7 +13,7 @@
   "homepage": "https://github.com/ortexx/spreadable",
   "scripts": {
     "eslint": "eslint src bin test",
-    "test": "mocha ./test/index.js --timeout=20000",
+    "test": "mocha ./test/index.js --timeout=30000",
     "build-client": "webpack --config=webpack.client.js",
     "build-client-prod": "cross-env NODE_ENV=production webpack --config=webpack.client.js",
     "build-ci": "npm run eslint && npm run test && npm run build-client-prod"
@@ -70,7 +70,7 @@
     "form-data": "^3.0.1",
     "fs-extra": "^9.1.0",
     "get-port": "^5.1.1",
-    "ip6addr": "^0.2.3",
+    "ip6addr": "^0.2.4",
     "is-png": "^2.0.0",
     "lodash": "^4.17.21",
     "lokijs": "^1.5.10",

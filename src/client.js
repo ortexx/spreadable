@@ -78,8 +78,8 @@ module.exports = (Parent) => {
       this.options = merge({
         request: {
           pingTimeout: '1s',
-          clientTimeout: '6s',
-          approvalQuestionTimeout: '15s'
+          clientTimeout: '10s',
+          approvalQuestionTimeout: '20s'
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
