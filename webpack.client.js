@@ -12,8 +12,7 @@ module.exports = (options = {}, wp) => {
       "ip6addr": true,
       "public-ip": true,
       "tcp-port-used": true,
-      "validate-ip-node": true,
-      "lookup-dns-cache": true,      
+      "validate-ip-node": true,    
       "crypto": true,
       "path": true,
       "stream": true

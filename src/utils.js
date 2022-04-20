@@ -5,7 +5,7 @@ const os = require('os');
 const fse = require('fs-extra');
 const path = require('path');
 const uniqBy = require('lodash/uniqBy');
-const lookup = require('lookup-dns-cache').lookup;
+const dns = require('dns');
 const tcpPortUsed = require('tcp-port-used');
 const publicIp = require('public-ip');
 const crypto = require('crypto');
@@ -272,7 +272,7 @@ utils.getHostIp = async function (hostname) {
   }
 
   return await new Promise((resolve, reject) => {
-    lookup(hostname, (err, ip) => {      
+    dns.lookup(hostname, (err, ip) => {      
       if(err) {
         if(err.code == 'ENOTFOUND' || err.code == 'ESERVFAIL') {
           return resolve(null);
@@ -281,6 +281,10 @@ utils.getHostIp = async function (hostname) {
         return reject(err);
       }
 
+      if(!ip || /^127/.test(ip)) {
+        return resolve(null);
+      }
+      
       this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
       this.dnsCache.set(hostname, { value: ip, createdAt: Date.now() });
     
