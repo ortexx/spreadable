@@ -271,17 +271,9 @@ utils.getHostIp = async function (hostname) {
     }
   }
 
-  return await new Promise((resolve, reject) => {
+  return await new Promise((resolve) => {
     dns.lookup(hostname, (err, ip) => {      
-      if(err) {
-        if(err.code == 'ENOTFOUND' || err.code == 'ESERVFAIL') {
-          return resolve(null);
-        }
-        
-        return reject(err);
-      }
-
-      if(!ip || /^127/.test(ip)) {
+      if(err || !ip || /^127/.test(ip)) {        
         return resolve(null);
       }
       
