@@ -7,7 +7,7 @@ const path = require('path');
 const uniqBy = require('lodash/uniqBy');
 const dns = require('dns');
 const tcpPortUsed = require('tcp-port-used');
-const publicIp = require('public-ip');
+const publicIp = require('qiao-get-ip');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr');
 const errors = require('./errors');
@@ -349,15 +349,10 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
   try {
-    return await publicIp.v4();
+    return await publicIp.getIp();
   }
   catch(err) {
-    try {
-      return await publicIp.v6();
-    }
-    catch(err) {
-      return null;
-    }   
+    return null;
   }
 }
 

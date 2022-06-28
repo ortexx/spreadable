@@ -10,7 +10,7 @@ module.exports = (options = {}, wp) => {
       "fs-extra": true,
       "chalk": true,
       "ip6addr": true,
-      "public-ip": true,
+      "qiao-get-ip": true,
       "tcp-port-used": true,
       "validate-ip-node": true,    
       "crypto": true,
