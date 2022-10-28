@@ -1,4 +1,4 @@
-const express = import('bunrest');
+const express = require('bunrest/dist').default;
 const Server = require('../server')();
 const routes = require('./routes');
 const routesClient = require('./client/routes');

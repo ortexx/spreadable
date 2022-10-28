@@ -5,10 +5,11 @@ const fse = require('fs-extra');
 const path = require('path');
 const uniqBy = require('lodash/uniqBy');
 const tcpPortUsed = require('tcp-port-used');
-const publicIp = require('@esm2cjs/public-ip');
+const { publicIpv4 } = require('@esm2cjs/public-ip');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr');
 const errors = require('./errors');
+const Dig = require('./dig');
 
 const utils = {
   domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu,
@@ -16,22 +17,6 @@ const utils = {
   dnsCacheLimit: 10000,
   dnsCachePeriod: 1000 * 60 * 10
 };
-
-async function lookup(domain) {
-  const req = {};
-  req.domain = domain;
-  req.record = "A";
-  req.cmd = 'dig +nocmd ${this.domain} ${this.record} +noall +answer';
-  return new Promise(( resolve, reject ) => {
-      exec(req.cmd, (error, stdout, stderr) => {
-          if(error || stderr) {
-              reject('DNS lookup failed');
-          }
-          resolve(stdout);
-      });
-  });
-}
-
 
 /**
  * @public
@@ -310,25 +295,31 @@ utils.getHostIp = async function (hostname) {
     }
   }
 
-  return await new Promise((resolve) => {
+  return await new Promise(async (resolve) => {
 
-    const result = await lookup(hostname);
+    const dig = new Dig(hostname, "A");
+    try {
+        const lookup = await dig.lookup();
+        const ip = lookup.trim()
+        if(ip == '') {     
+          return resolve(null);   
+        }
 
-    lookup(hostname, (err, ip) => {      
-      if(err || !ip || /^127/.test(ip)) {        
-        return resolve(null);
-      }
+        this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
+        this.dnsCache.set(hostname, { value: ip, createdAt: Date.now() });
       
-      this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
-      this.dnsCache.set(hostname, { value: ip, createdAt: Date.now() });
-    
-      if(this.dnsCache.size > this.dnsCacheLimit) {
-        const keys = Array.from(this.dnsCache.keys()).slice(0, this.dnsCache.size - this.dnsCacheLimit);
-        keys.forEach(k => this.dnsCache.delete(k));
-      }
-
-      return resolve(ip);
-    });
+        if(this.dnsCache.size > this.dnsCacheLimit) {
+          const keys = Array.from(this.dnsCache.keys()).slice(0, this.dnsCache.size - this.dnsCacheLimit);
+          keys.forEach(k => this.dnsCache.delete(k));
+        }
+  
+        return resolve(ip);
+    } catch(err) {
+        res.send(err);
+        if(err || !ip || /^127/.test(ip)) {        
+          return resolve(null);
+        }
+    }
   });
 };
 
@@ -391,7 +382,8 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
   try {
-    return await publicIp();
+    const ip = await publicIpv4();
+    return ip;
   }
   catch(err) {
     return null;
