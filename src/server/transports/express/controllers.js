@@ -1,5 +1,5 @@
+const express = import('bunrest');
 const compression = require('compression');
-const express = require('express');
 const cors = require('cors');
 const errors = require('../../../errors');
 const utils = require('../../../utils');

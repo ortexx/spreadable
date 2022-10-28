@@ -1,13 +1,11 @@
-const validateIP = require('validate-ip-node');
 const bytes = require('bytes');
 const ms = require('ms');
 const os = require('os');
 const fse = require('fs-extra');
 const path = require('path');
 const uniqBy = require('lodash/uniqBy');
-const dns = require('dns');
 const tcpPortUsed = require('tcp-port-used');
-const publicIp = require('qiao-get-ip');
+const publicIp = require('@esm2cjs/public-ip');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr');
 const errors = require('./errors');
@@ -18,6 +16,47 @@ const utils = {
   dnsCacheLimit: 10000,
   dnsCachePeriod: 1000 * 60 * 10
 };
+
+async function lookup(domain) {
+  const req = {};
+  req.domain = domain;
+  req.record = "A";
+  req.cmd = 'dig +nocmd ${this.domain} ${this.record} +noall +answer';
+  return new Promise(( resolve, reject ) => {
+      exec(req.cmd, (error, stdout, stderr) => {
+          if(error || stderr) {
+              reject('DNS lookup failed');
+          }
+          resolve(stdout);
+      });
+  });
+}
+
+
+/**
+ * @public
+ * @function validateIP
+ * @description Validate IP address.
+ * @param {String} ip - IP address.
+ * @returns {Boolean} - Determine whether IP address is valid.
+ */
+ function validateIP(ip) {
+  if (
+    /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(
+      ip
+    )
+  ) {
+    return true;
+  } else if (
+    /(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/.test(
+      ip
+    )
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 /**
  * Validate the schema
@@ -272,7 +311,10 @@ utils.getHostIp = async function (hostname) {
   }
 
   return await new Promise((resolve) => {
-    dns.lookup(hostname, (err, ip) => {      
+
+    const result = await lookup(hostname);
+
+    lookup(hostname, (err, ip) => {      
       if(err || !ip || /^127/.test(ip)) {        
         return resolve(null);
       }
@@ -349,7 +391,7 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
   try {
-    return await publicIp.getIp();
+    return await publicIp();
   }
   catch(err) {
     return null;

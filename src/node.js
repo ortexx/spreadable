@@ -1,5 +1,5 @@
 const ms = require('ms');
-const v8 = require('v8');
+const v8 = require('bun');
 const urlib = require('url');
 const path = require('path');
 const fse = require('fs-extra');
@@ -49,7 +49,7 @@ module.exports = (Parent) => {
           path: '',
         },
         request: {
-          clientConcurrency: 50,
+          clientConcurrency: '50',
           serverTimeout: '2s',
           pingTimeout: '1s'
         },
@@ -1510,6 +1510,9 @@ module.exports = (Parent) => {
      * @returns {float} 0-1
      */
     async getAvailabilityMemory() {
+      const heapStats = v8.heapStats();
+      const memoryUsage = v8.memoryUsage();
+
       const stats = v8.getHeapStatistics();
       return 1 - stats.used_heap_size / stats.total_available_size;
     }
