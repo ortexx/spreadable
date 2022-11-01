@@ -93,7 +93,7 @@ module.exports = (Parent) => {
      * @returns {express.Router}
      */
     createRouter(routes) {
-      const router = express.Router();
+      const router = express().router();
   
       routes.forEach(route => {
         const fn = Array.isArray(route.fn)? route.fn.map(fn => fn(this.node)): route.fn(this.node);

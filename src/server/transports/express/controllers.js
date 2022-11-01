@@ -1,4 +1,4 @@
-const express = import('bunrest');
+var bodyParser = require('body-parser');
 const compression = require('compression');
 const cors = require('cors');
 const errors = require('../../../errors');
@@ -43,8 +43,8 @@ module.exports.timeout = () => {
  */
 module.exports.bodyParser = node => {
   return [ 
-    express.urlencoded({ extended: false, limit: node.options.server.maxBodySize }), 
-    express.json({ limit: node.options.server.maxBodySize }) 
+    bodyParser.urlencoded({ extended: false, limit: node.options.server.maxBodySize }), 
+    bodyParser.json({ limit: node.options.server.maxBodySize }) 
   ];
 };
 
