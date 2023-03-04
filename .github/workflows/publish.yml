@@ -10,6 +10,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 14
+      - run: npm i -g npm@latest
       - run: npm ci
       - run: npm ddp
       - run: npm run build-ci
