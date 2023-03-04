@@ -964,6 +964,7 @@ module.exports = (Parent) => {
      * Create a suspicion comparison function
      * 
      * @async
+     * @param {string} action
      * @param {function} fn 
      * @returns {function}
      */
@@ -983,28 +984,6 @@ module.exports = (Parent) => {
     }
 
     /**
-     * Create a suspicion comparison function
-     * 
-     * @async
-     * @param {function} [fn] 
-     * @returns {function}
-     */
-    async createSuscpicionComparisonFunction(action, fn) {
-      const obj = await this.prepareCandidateSuscpicionInfo(action);
-
-      return (a, b) => {
-        const suspicionLevelA = obj[a.address] || 0;
-        const suspicionLevelB = obj[b.address] || 0;
-
-        if(fn && suspicionLevelA == suspicionLevelB) {
-          return fn(a, b);
-        }
-        
-        return suspicionLevelA - suspicionLevelB;
-      }
-    }
-
-     /**
      * Create an address comparison function
      * 
      * @async
