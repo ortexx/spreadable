@@ -24,7 +24,6 @@ module.exports = (options = {}) => {
     "net": true,
     "tls": true,
     "os": true,
-    "fs": true,
     "dns": true,
   }, options.mock);  
   const include = options.include || [];
