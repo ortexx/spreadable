@@ -1,4 +1,4 @@
-# [Spreadable](https://github.com/ortexx/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable) [![Build status](https://github.com/ortexx/spreadable/workflows/build/badge.svg)](https://github.com/ortexx/spreadable/actions)
+# [Spreadable](https://github.com/metasound/spreadable/) [alpha] [![npm version](https://badge.fury.io/js/spreadable.svg)](https://badge.fury.io/js/spreadable) [![Build status](https://github.com/metasound/spreadable/workflows/build/badge.svg)](https://github.com/metasound/spreadable/actions)
 
 Spreadable is a decentralized network mechanism.
 
@@ -138,7 +138,7 @@ Now you perform various actions running it from your project root folder:
 
 ``` spreadable -a status -c ./config.js ```
 
-You can skip the config argument passing if you have file with the name **spreadable.config.js** in the root. To see all actions and commands just look at [spreadable/bin](https://github.com/ortexx/spreadable/tree/master/bin) folder.
+You can skip the config argument passing if you have file with the name **spreadable.config.js** in the root. To see all actions and commands just look at [spreadable/bin](https://github.com/metasound/spreadable/tree/master/bin) folder.
 
 ## How the network works
 For the network working all nodes must be able to interact with each other. Requests are made via the http(s) protocol. The network is p2p, but the nodes are conditionally divided into masters and slaves. From the point of view of rights, there is no difference between them. Masters only additionally maintain some lists for grouping servers and register new members. The network is designed in such a way that at any time a new member can join it or the old one will leave. After a while, another server will take over this role.
@@ -190,7 +190,7 @@ const hash = 'someFileHash';
 First, we set the default timeout, then for a specific request passed a unique one. 
 
 ## How exactly the library can be used
-You can extend the library code and add various interesting features. A detailed description will be later. For example, [the storacle](https://github.com/ortexx/storacle/) organizes file storage using the protocol.
+You can extend the library code and add various interesting features. A detailed description will be later. For example, [the storacle](https://github.com/metasound/storacle/) organizes file storage using the protocol.
 
 ## How to use https
 
@@ -570,4 +570,4 @@ async __Client.prototype.request()__ - request to some client endpoint
 
 ## Contribution
 
-If you face a bug or have an idea how to improve the library, create an issue on github. In order to fix something or add new code yourself fork the library, make changes and create a pull request to the master branch. Don't forget about tests in this case. Also you can join [the project on github](https://github.com/ortexx/spreadable/projects/1).
+If you face a bug or have an idea how to improve the library, create an issue on github. In order to fix something or add new code yourself fork the library, make changes and create a pull request to the master branch. Don't forget about tests in this case. Also you can join [the project on github](https://github.com/metasound/spreadable/projects/1).
