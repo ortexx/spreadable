@@ -199,9 +199,9 @@ Suppose you have a trusted certificate for __example.com__.
 
 ```javascript
 const Node = require('spreadable').Node;
-const fs = require('fs');
-const key = fs.readFileSync('key.pem');
-const cert = fs.readFileSync('cert.pem');
+const fse = require('fs-extra');
+const key = fse.readFileSync('key.pem');
+const cert = fse.readFileSync('cert.pem');
 
 (async () => {  
   try {
@@ -248,10 +248,10 @@ You can also create a self-signed certificate, and use an authentication certifi
 
 ```javascript
 const Node = require('spreadable').Node;
-const fs = require('fs');
-const key = fs.readFileSync('key.pem');
-const cert = fs.readFileSync('cert.pem');
-const ca = fs.readFileSync('ca.pem');
+const fse = require('fs-extra');
+const key = fse.readFileSync('key.pem');
+const cert = fse.readFileSync('cert.pem');
+const ca = fse.readFileSync('ca.pem');
 
 (async () => {
   try {
@@ -280,8 +280,8 @@ const ca = fs.readFileSync('ca.pem');
 
 ```javascript
 const Client = require('spreadable').Client;
-const fs = require('fs');
-const ca = fs.readFileSync('ca.pem');
+const fse = require('fs-extra');
+const ca = fse.readFileSync('ca.pem');
 
 (async () => {  
   try {
