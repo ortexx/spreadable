@@ -10,7 +10,7 @@ import interval from "./task/transports/interval/index.js";
 import service from "./service.js";
 import fse from "fs-extra";
 
-const pack = JSON.parse(fse.readFileSync("./package.json"));
+const pack = JSON.parse(fse.readFileSync(new URL("../package.json", import.meta.url)));
 const LoggerConsole = console();
 const TaskInterval = interval();
 const Service = service();

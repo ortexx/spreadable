@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default (options = {}) => {
     const cwd = process.cwd();
     const name = options.name || 'build';
-    const pack = JSON.parse(fse.readFileSync(options.packagePath || path.join(cwd, 'package.json')));
+    const pack = JSON.parse(fse.readFileSync(new URL(options.packagePath || path.join(cwd, 'package.json'), import.meta.url)));
     const banner = options.banner || `${pack.name} ${name}\n@version ${pack.version}\n{@link ${pack.homepage}}`;
     let plugins = [];
     plugins.push(new webpack.BannerPlugin({ banner }));
