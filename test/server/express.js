@@ -1,41 +1,40 @@
-const assert = require('chai').assert;
-const ServerExpress = require('../../src/server/transports/express')();
+import { assert } from "chai";
+import server from "../../src/server/transports/express/index.js";
 
-describe('ServerExpress', () => {
-  let server;
-  let nodeServer;
+const ServerExpress = server();
 
-  describe('instance creation', function () {
-    it('should create an instance', function () { 
-      assert.doesNotThrow(() => server = new ServerExpress());  
-      server.node = this.node;
-      nodeServer = this.node.server;
-      this.node.server = server; 
+export default function () {
+    describe('ServerExpress', () => {
+        let server;
+        let nodeServer;
+        describe('instance creation', function () {
+            it('should create an instance', function () {
+                assert.doesNotThrow(() => server = new ServerExpress());
+                server.node = this.node;
+                nodeServer = this.node.server;
+                this.node.server = server;
+            });
+        });
+        describe('.init()', function () {
+            it('should not throw an exception', async function () {
+                await server.init();
+            });
+        });
+        describe('.deinit()', function () {
+            it('should not throw an exception', async function () {
+                await server.deinit();
+            });
+        });
+        describe('reinitialization', () => {
+            it('should not throw an exception', async function () {
+                await server.init();
+            });
+        });
+        describe('.destroy()', function () {
+            it('should not throw an exception', async function () {
+                await server.destroy();
+                this.node.server = nodeServer;
+            });
+        });
     });
-  });
-
-  describe('.init()', function () { 
-    it('should not throw an exception', async function () {
-      await server.init();
-    });
-  });
-  
-  describe('.deinit()', function () { 
-    it('should not throw an exception', async function () {
-      await server.deinit();
-    });
-  }); 
-
-  describe('reinitialization', () => {
-    it('should not throw an exception', async function () {
-      await server.init();
-    });
-  });
-  
-  describe('.destroy()', function () { 
-    it('should not throw an exception', async function () {
-      await server.destroy();
-      this.node.server = nodeServer; 
-    });
-  });
-});
+}

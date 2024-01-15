@@ -1,1 +1,2 @@
-module.exports = require('../../client')();
+import client from "../../client.js";
+export default client();

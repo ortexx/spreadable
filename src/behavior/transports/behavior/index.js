@@ -1,16 +1,16 @@
-const Service = require('../../../service')();
-
-module.exports = (Parent) => {
-  /**
-   * Behavior transport
-   */
-  return class Behavior extends (Parent || Service) {
+import service from "../../../service.js";
+const Service = service();
+export default (Parent) => {
     /**
-     * @param {object} [options]
+     * Behavior transport
      */
-    constructor(options = {}) {
-      super(...arguments);
-      Object.assign(this, options);
-    }
-  }
+    return class Behavior extends (Parent || Service) {
+        /**
+         * @param {object} [options]
+         */
+        constructor(options = {}) {
+            super(...arguments);
+            Object.assign(this, options);
+        }
+    };
 };

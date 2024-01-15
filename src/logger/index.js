@@ -1,11 +1,12 @@
-const Logger = require('./transports/logger')();
-const LoggerConsole = require('./transports/console')();
-const LoggerFile = require('./transports/file')();
-const LoggerAdapter = require('./transports/adapter')();
+import * as loggerModule from "./transports/logger/index.js";
+import * as consoleModule from "./transports/console/index.js";
+import * as fileModule from "./transports/file/index.js";
+import * as adapterModule from "./transports/adapter/index.js";
 
-module.exports = {
-  Logger,
-  LoggerConsole,
-  LoggerFile,
-  LoggerAdapter
-};
+const Logger = loggerModule;
+const LoggerConsole = consoleModule;
+const LoggerFile = fileModule;
+const LoggerAdapter = adapterModule;
+
+export { Logger, LoggerConsole, LoggerFile, LoggerAdapter };
+export default { Logger, LoggerConsole, LoggerFile, LoggerAdapter };

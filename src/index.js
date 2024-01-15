@@ -1,7 +1,10 @@
-const Node = require('./node')();
-const Client = require('./client')();
-
-module.exports = {
-  Client,
-  Node
+import node from "./node.js";
+import client from "./client.js";
+const Node = node();
+const Client = client();
+export { Client };
+export { Node };
+export default {
+    Client,
+    Node
 };

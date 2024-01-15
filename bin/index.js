@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
-const runner = require('./runner');
-const Node = require('../src').Node;
-runner('spreadable', Node, require('./actions'));
+import runner from "./runner.js";
+import { Node } from "../src/index.js";
+import * as actions from "./actions.js";
+runner('spreadable', Node, actions);
