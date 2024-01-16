@@ -1,6 +1,7 @@
 import _ from "lodash";
 import FormData from "form-data";
 import https from "https";
+import fetch from "node-fetch";
 import qs from "querystring";
 import utils from "./utils.js";
 import * as errors from "./errors.js";
