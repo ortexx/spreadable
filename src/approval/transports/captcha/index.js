@@ -11,7 +11,6 @@ const Approval = approval();
 import { URL } from 'url';
 const __dirname = new URL('.', import.meta.url).pathname;
 
-
 export default (Parent) => {
     /**
      * Captcha approval transport

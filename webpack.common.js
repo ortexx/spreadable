@@ -7,10 +7,9 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import webpack from "webpack";
 import fse from "fs-extra"
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { URL } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = new URL('.', import.meta.url).pathname;
 
 export default (options = {}) => {
     const cwd = process.cwd();
@@ -29,6 +28,7 @@ export default (options = {}) => {
         "net": true,
         "tls": true,
         "os": true,
+        "fs": true,
         "dns": true,
     }, options.mock);
     const include = options.include || [];
