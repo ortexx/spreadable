@@ -54,7 +54,7 @@ export default (options = {}) => {
         output: {
             path: options.distPath || path.join(cwd, `/dist/${name}`),
             filename: '[name].js',
-            library: options.library || (_.capitalize(name) + _.capitalize(pack.name)),
+            library: options.library || (_.capitalize(name) + (_.replace(_.capitalize(pack.name), "-", ""))),
             libraryTarget: 'umd',
             clean: true
         },
