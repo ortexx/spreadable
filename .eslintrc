@@ -1,7 +1,7 @@
 {
   "parserOptions": {
-    "ecmaVersion": 2021, // or a later version if your code uses more recent features
-    "sourceType": "module" // Enable ECMAScript modules
+    "ecmaVersion": 2021,
+    "sourceType": "module"
   },
   "env": {
     "browser": true,
@@ -11,7 +11,6 @@
   "extends": "eslint:recommended",
   "rules": {
     "no-console": "warn"
-    // Add more rules or customize as needed
   },
   "globals": {}
 }
