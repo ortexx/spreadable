@@ -9,7 +9,7 @@ import dns from "dns";
 import tcpPortUsed from "tcp-port-used";
 import crypto from "crypto";
 import ip6addr from "ip6addr";
-import { publicIp } from 'public-ip';
+import { publicIpv4 } from 'public-ip';
 import { WorkError } from "./errors.js";
 
 const utils = {
@@ -297,7 +297,7 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
     try {
-        return await publicIp({
+        return await publicIpv4({
             fallbackUrls: [
                 'https://ifconfig.co/ip',
                 'https://api.ipify.org/',
