@@ -297,7 +297,17 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
     try {
-        return await publicIp();
+        return await publicIp({
+            fallbackUrls: [
+                'https://ifconfig.co/ip',
+                'https://api.ipify.org/',
+                'https://icanhazip.com/',
+                'https://ipinfo.io/ip',
+                'https://ifconfig.me/ip',
+                'https://checkip.amazonaws.com/',
+                'http://txt.go.sohu.com/ip/soip'
+            ]
+        });
     }
     catch (err) {
         return null;
