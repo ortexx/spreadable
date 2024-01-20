@@ -7,10 +7,11 @@ import path from "path";
 import _ from "lodash";
 import dns from "dns";
 import tcpPortUsed from "tcp-port-used";
-import qiaoIP from 'qiao-get-ip';
 import crypto from "crypto";
 import ip6addr from "ip6addr";
-import {WorkError} from "./errors.js";
+import { publicIp } from 'public-ip';
+import { WorkError } from "./errors.js";
+
 const utils = {
     domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu,
     dnsCache: new Map(),
@@ -296,7 +297,7 @@ utils.getRequestTimer = function (timeout, options = {}) {
  */
 utils.getExternalIp = async function () {
     try {
-        return await qiaoIP.getIP(1000);
+        return await publicIp();
     }
     catch (err) {
         return null;

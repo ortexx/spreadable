@@ -1,7 +1,8 @@
 import logger from "../logger/index.js";
-import transports from "../../index.js";
 const Logger = logger();
+
 export default (Parent) => {
+
     /**
      * Console logger transport
      */
@@ -17,7 +18,17 @@ export default (Parent) => {
             const arr = this.options.transports || [];
             for (let i = 0; i < arr.length; i++) {
                 const obj = arr[i];
-                const CurrentLogger = typeof obj.transport == 'string' ? transports[obj.transport] : obj.transport;
+                let CurrentLogger;
+
+                if(typeof obj.transport == 'string') {
+                    const LoggerModule = await import("../../index.js");
+                    const Transport = LoggerModule.default;
+                    CurrentLogger = new Transport().getLoggers().find(logger => logger.name == obj.transport);
+                }
+                else {
+                    CurrentLogger = obj.transport;
+                }
+
                 const logger = new CurrentLogger(obj.options);
                 logger.node = this.node;
                 await logger.init();

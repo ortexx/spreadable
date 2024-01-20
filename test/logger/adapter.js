@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import adapter from "../../src/logger/transports/adapter/index.js";
 import logger from "../../src/logger/transports/logger/index.js";
-import transports from "../../src/logger/index.js";
+import Transports from "../../src/logger/index.js";
 
 const LoggerAdapter = adapter();
 const Logger = logger();
@@ -28,7 +28,7 @@ class LoggerInterface extends Logger {
         this.destroyCounter++;
     }
 }
-transports.LoggerInterface = LoggerInterface;
+new Transports().addLogger(LoggerInterface);
 
 export default function () {
     describe('LoggerConsole', function () {

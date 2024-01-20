@@ -8,13 +8,12 @@ import * as errors from "./errors.js";
 import ms from "ms";
 import console from "./logger/transports/console/index.js";
 import interval from "./task/transports/interval/index.js";
-import service from "./service.js";
+import Service from "./service.js";
 import fse from "fs-extra";
 
 const pack = JSON.parse(fse.readFileSync(new URL("../package.json", import.meta.url)));
 const LoggerConsole = console();
 const TaskInterval = interval();
-const Service = service();
 export default (Parent) => {
     /**
      * Class to manage client requests to the network

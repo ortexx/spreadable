@@ -1,7 +1,6 @@
-import service from "../../../service.js";
+import Service from "../../../service.js";
 import utils from "../../../utils.js";
 import * as errors from "../../../errors.js";
-const Service = service();
 export default (Parent) => {
     /**
      * Approval transport

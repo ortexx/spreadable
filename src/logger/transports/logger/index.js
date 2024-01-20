@@ -1,5 +1,4 @@
-import service from "../../../service.js";
-const Service = service();
+import Service from "../../../service.js";
 
 export default (Parent) => {
     /**

@@ -1,7 +1,6 @@
 import _ from "lodash";
-import service from "../../../service.js";
+import Service from "../../../service.js";
 import utils from "../../../utils.js";
-const Service = service();
 export default (Parent) => {
     /**
      * Cache transport

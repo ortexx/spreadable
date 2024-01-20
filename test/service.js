@@ -1,6 +1,5 @@
 import { assert } from "chai";
-import service from "../src/service.js";
-const Service = service();
+import Service from "../src/service.js";
 
 export default function () {
 describe('Service', () => {

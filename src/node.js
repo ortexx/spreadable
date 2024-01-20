@@ -12,7 +12,7 @@ import express from "./server/transports/express/index.js";
 import console from "./logger/transports/console/index.js";
 import interval from "./task/transports/interval/index.js";
 import fail from "./behavior/transports/fail/index.js";
-import service from "./service.js";
+import Service from "./service.js";
 import utils from "./utils.js";
 import schema from "./schema.js";
 import * as errors from "./errors.js";
@@ -23,7 +23,6 @@ const ServerExpress = express();
 const LoggerConsole = console();
 const TaskInterval = interval();
 const BehaviorFail = fail();
-const Service = service();
 
 export default (Parent) => {
     /**

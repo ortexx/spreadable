@@ -1,8 +1,6 @@
-import service from "../../../service.js";
+import Service from "../../../service.js";
 import _ from "lodash";
 import path from "path";
-
-const Service = service();
 
 export default (Parent) => {
     /**

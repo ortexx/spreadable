@@ -1,6 +1,6 @@
 import _ from "lodash";
-import service from "../../../service.js";
-const Service = service();
+import Service from "../../../service.js";
+
 export default (Parent) => {
     /**
      * Tasks transport
