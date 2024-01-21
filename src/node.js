@@ -16,8 +16,8 @@ import Service from "./service.js";
 import utils from "./utils.js";
 import schema from "./schema.js";
 import * as errors from "./errors.js";
+import pack from "../package.json" assert { type: "json" }
 
-const pack = JSON.parse(fse.readFileSync(new URL("../package.json", import.meta.url)));
 const DatabaseLoki = loki();
 const ServerExpress = express();
 const LoggerConsole = console();

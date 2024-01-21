@@ -9,9 +9,8 @@ import ms from "ms";
 import console from "./logger/transports/console/index.js";
 import interval from "./task/transports/interval/index.js";
 import Service from "./service.js";
-import fse from "fs-extra";
+import pack from "../package.json" assert { type: "json" }
 
-const pack = JSON.parse(fse.readFileSync(new URL("../package.json", import.meta.url)));
 const LoggerConsole = console();
 const TaskInterval = interval();
 export default (Parent) => {
