@@ -1421,7 +1421,7 @@ export default (Parent) => {
         async filterCandidates(arr, options = {}) {
             arr = arr.slice();
             if (options.uniq) {
-                arr = options.uniq === true ? _.uniq(arr) : _.uniqBy(arr, options.uniq);
+                arr = options.uniq === true ? [...new Set(arr)] : _.uniqBy(arr, options.uniq);
             }
             if (options.fnFilter) {
                 arr = arr.filter(options.fnFilter);

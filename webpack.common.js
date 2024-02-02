@@ -1,4 +1,5 @@
 import path from "path";
+import LodashModuleReplacementPlugin from 'lodash-webpack-plugin';
 import _ from "lodash";
 import TerserPlugin from "terser-webpack-plugin";
 import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
@@ -8,15 +9,23 @@ import ESLintPlugin from "eslint-webpack-plugin";
 import webpack from "webpack";
 import fse from "fs-extra"
 import { URL } from 'url';
+import BomPlugin from 'webpack-utf8-bom'; // add this line
 
 const __dirname = new URL('.', import.meta.url).pathname;
+
+const capitalize = (string) => {
+    return string ? string.charAt(0).toUpperCase() + string.slice(1).toLowerCase() : '';
+  };
 
 export default (options = {}) => {
     const cwd = process.cwd();
     const name = options.name || 'build';
     const pack = JSON.parse(fse.readFileSync(new URL(options.packagePath || path.join(cwd, 'package.json'), import.meta.url)));
+    pack.name = pack.name.split("-")[0] || pack.name;
     const banner = options.banner || `${pack.name} ${name}\n@version ${pack.version}\n{@link ${pack.homepage}}`;
     let plugins = [];
+    plugins.push(new BomPlugin(true));
+    plugins.push(new LodashModuleReplacementPlugin);
     plugins.push(new webpack.BannerPlugin({ banner }));
     plugins.push(new MiniCssExtractPlugin({ filename: 'style.css' }));
     plugins.push(new NodePolyfillPlugin());
@@ -28,7 +37,7 @@ export default (options = {}) => {
         "net": true,
         "tls": true,
         "os": true,
-        "fs": true,
+        "fs-extra": true,
         "dns": true,
     }, options.mock);
     const include = options.include || [];
@@ -54,7 +63,7 @@ export default (options = {}) => {
         output: {
             path: options.distPath || path.join(cwd, `/dist/${name}`),
             filename: '[name].js',
-            library: options.library || (_.capitalize(name) + (_.replace(_.capitalize(pack.name), "-", ""))),
+            library: options.library || (capitalize(name) + capitalize(pack.name)),
             libraryTarget: 'umd',
             clean: true
         },
@@ -81,9 +90,11 @@ export default (options = {}) => {
                 {
                     test: /\.js$/,
                     loader: 'babel-loader',
+                    exclude: /node_modules/,
                     include,
                     options: {
-                        configFile: path.join(mainEntry, '.babelrc')
+                        plugins: ['lodash'],
+                        configFile: path.join(mainEntry, '.babelrc'),
                     }
                 },
                 {
@@ -117,7 +128,7 @@ export default (options = {}) => {
                         esModule: false,
                         name: '[name].[ext]'
                     }
-                }
+                },
             ]
         },
         resolve: {

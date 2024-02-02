@@ -10,10 +10,8 @@ export default (options = {}, wp) => {
         name: 'client',
         include: [],
         mock: {
-            "fs-extra": true,
             "chalk": true,
             "ip6addr": true,
-            "qiao-get-ip": true,
             "tcp-port-used": true,
             "validate-ip-node": true,
             "crypto": true,
