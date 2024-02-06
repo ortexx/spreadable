@@ -1,17 +1,17 @@
-import path from "path";
-import LodashModuleReplacementPlugin from 'lodash-webpack-plugin';
-import _ from "lodash";
-import TerserPlugin from "terser-webpack-plugin";
-import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
 import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
-import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
+import fse from "fs-extra";
+import _ from "lodash";
+import LodashModuleReplacementPlugin from 'lodash-webpack-plugin';
+import MiniCssExtractPlugin from "mini-css-extract-plugin";
+import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
+import path from "path";
+import TerserPlugin from "terser-webpack-plugin";
+import { fileURLToPath } from 'url';
 import webpack from "webpack";
-import fse from "fs-extra"
-import { URL } from 'url';
 import BomPlugin from 'webpack-utf8-bom'; // add this line
 
-const __dirname = new URL('.', import.meta.url).pathname;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const capitalize = (string) => {
     return string ? string.charAt(0).toUpperCase() + string.slice(1).toLowerCase() : '';

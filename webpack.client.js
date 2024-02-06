@@ -1,9 +1,9 @@
 import path from "path";
+import { fileURLToPath } from 'url';
 import _ from "lodash";
 import config from "./webpack.common.js";
-import { URL } from 'url';
 
-const __dirname = new URL('.', import.meta.url).pathname;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default (options = {}, wp) => {
     options = _.merge({

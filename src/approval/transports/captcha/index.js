@@ -1,15 +1,14 @@
+import isPng from "is-png";
+import _ from "lodash";
+import path from "path";
 import sharp from "sharp";
 import textToSvg from "text-to-svg";
-import isPng from "is-png";
-import path from "path";
-import _ from "lodash";
-import approval from "../approval/index.js";
+import { fileURLToPath } from 'url';
 import utils from "../../../utils.js";
-const Approval = approval();
+import approval from "../approval/index.js";
 
-// Fix obsolete __dirname in ES
-import { URL } from 'url';
-const __dirname = new URL('.', import.meta.url).pathname;
+const Approval = approval();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default (Parent) => {
     /**
