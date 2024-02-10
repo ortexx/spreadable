@@ -1,5 +1,6 @@
 import path from "path";
 import merge from "lodash-es/merge.js";
+import shuffle from "lodash-es/shuffle.js";
 import getPort from "get-port";
 import FormData from "form-data";
 import fse from "fs-extra";
@@ -149,7 +150,7 @@ tools.wait = async function (timeout) {
  * @param {number} [count]
  */
 tools.nodesSync = async function (nodes, count = 1) {
-    nodes = _.shuffle(nodes);
+    nodes = shuffle(nodes);
     for (let i = 0; i < count; i++) {
         for (let k = 0; k < nodes.length; k++) {
             try {

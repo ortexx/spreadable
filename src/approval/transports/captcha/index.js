@@ -1,5 +1,5 @@
 import isPng from "is-png";
-import merge from "lodash-es/merge.js";
+import random from "lodash-es/random.js";
 import path from "path";
 import sharp from "sharp";
 import textToSvg from "text-to-svg";
@@ -143,11 +143,11 @@ export default (Parent) => {
             for (let i = 0; i < length; i++) {
                 const color = (options.captchaColor == 'random') ? utils.getRandomHexColor() : options.captchaColor;
                 const strokeColor = utils.invertHexColor(color);
-                const fillOpacity = _.random(0.25, 1, true);
+                const fillOpacity = random(0.25, 1, true);
                 const strokeOpacity = fillOpacity * 0.5;
-                const strokeWidth = _.random(1, 1.3, true);
+                const strokeWidth = random(1, 1.3, true);
                 for (let k = 0; k < options.captchaShadows + 1; k++) {
-                    const fontSize = _.random(minFontSize, maxFontSize);
+                    const fontSize = random(minFontSize, maxFontSize);
                     const dev = Math.floor(size - fontSize);
                     const svg = this.svgHandler.getSVG(text[i], {
                         fontSize,
@@ -161,11 +161,11 @@ export default (Parent) => {
                         }
                     });
                     const txtImg = sharp(Buffer.from(svg));
-                    txtImg.rotate(_.random(-75, 75), { background: 'transparent' });
+                    txtImg.rotate(random(-75, 75), { background: 'transparent' });
                     comp.push({
                         input: await txtImg.toBuffer(),
-                        left: size * i + _.random(0, dev),
-                        top: _.random(0, dev)
+                        left: size * i + random(0, dev),
+                        top: random(0, dev)
                     });
                 }
             }

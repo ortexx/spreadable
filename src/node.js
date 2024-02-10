@@ -1,22 +1,22 @@
-import ms from "ms";
-import urlib from "url";
-import path from "path";
+import FormData from "form-data";
 import fse from "fs-extra";
-import merge from "lodash-es/merge.js";
 import http from "http";
 import https from "https";
+import { capitalize, isPlainObject, merge, orderBy, pick, shuffle, uniqBy } from "lodash-es";
+import ms from "ms";
 import fetch from "node-fetch";
-import FormData from "form-data";
-import loki from "./db/transports/loki/index.js";
-import express from "./server/transports/express/index.js";
-import console from "./logger/transports/console/index.js";
-import interval from "./task/transports/interval/index.js";
+import path from "path";
+import urlib from "url";
+import pack from "../package.json" assert { type: "json" };
 import fail from "./behavior/transports/fail/index.js";
-import Service from "./service.js";
-import utils from "./utils.js";
-import schema from "./schema.js";
+import loki from "./db/transports/loki/index.js";
 import * as errors from "./errors.js";
-import pack from "../package.json" assert { type: "json" }
+import console from "./logger/transports/console/index.js";
+import schema from "./schema.js";
+import express from "./server/transports/express/index.js";
+import Service from "./service.js";
+import interval from "./task/transports/interval/index.js";
+import utils from "./utils.js";
 
 const DatabaseLoki = loki();
 const ServerExpress = express();
@@ -162,7 +162,7 @@ export default (Parent) => {
             this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress');
             let initialNetworkAddress = this.options.initialNetworkAddress || this.address;
             if (Array.isArray(initialNetworkAddress)) {
-                initialNetworkAddress = _.shuffle(initialNetworkAddress);
+                initialNetworkAddress = shuffle(initialNetworkAddress);
                 initialNetworkAddress = initialNetworkAddress.sort(a => a === this.address ? 0 : -1);
             }
             this.initialNetworkAddress = await this.getAvailableAddress(initialNetworkAddress);
@@ -531,7 +531,7 @@ export default (Parent) => {
                 res.appropriate && res.candidates.length < coef && freeMasters.push(res);
             }
             if (freeMasters.length > coef) {
-                freeMasters = _.orderBy(freeMasters, ['size', 'address'], ['desc', 'asc']);
+                freeMasters = orderBy(freeMasters, ['size', 'address'], ['desc', 'asc']);
                 freeMasters = freeMasters.slice(0, coef);
             }
             freeMasters = freeMasters.filter(m => m.address != this.address);
@@ -736,7 +736,7 @@ export default (Parent) => {
             let masters = await this.db.getMasters();
             const size = await this.getNetworkOptimum();
             if (masters.length > size) {
-                masters = _.orderBy(masters, ['size', 'address'], ['desc', 'asc']);
+                masters = orderBy(masters, ['size', 'address'], ['desc', 'asc']);
                 masters = masters.slice(0, size).map(m => m.address);
                 masters.indexOf(this.address) == -1 && await this.db.removeSlaves();
             }
@@ -1041,7 +1041,7 @@ export default (Parent) => {
                 options.body = form;
                 delete options.formData;
             }
-            else if (_.isPlainObject(body)) {
+            else if (isPlainObject(body)) {
                 options.headers['content-type'] = 'application/json';
                 options.body = Object.keys(body).length ? JSON.stringify(body) : undefined;
             }
@@ -1141,7 +1141,7 @@ export default (Parent) => {
                 requests.push(new Promise(resolve => {
                     const opts = merge({ requestType: 'node' }, options, item.options);
                     opts.timeout = timer(opts.timeout);
-                    const requestType = _.capitalize(opts.requestType);
+                    const requestType = capitalize(opts.requestType);
                     const p = requestType ? this[`request${requestType}`](item.address, url, opts) : this.request(url, opts);
                     p.then(resolve).catch(resolve);
                 }));
@@ -1421,7 +1421,7 @@ export default (Parent) => {
         async filterCandidates(arr, options = {}) {
             arr = arr.slice();
             if (options.uniq) {
-                arr = options.uniq === true ? [...new Set(arr)] : _.uniqBy(arr, options.uniq);
+                arr = options.uniq === true ? [...new Set(arr)] : uniqBy(arr, options.uniq);
             }
             if (options.fnFilter) {
                 arr = arr.filter(options.fnFilter);
@@ -1648,9 +1648,9 @@ export default (Parent) => {
         async createStructure() {
             const address = this.address;
             let backlink = await this.db.getBacklink();
-            backlink && (backlink = _.pick(backlink, ['address']));
-            const masters = (await this.db.getMasters()).map(m => _.pick(m, ['address', 'size']));
-            const slaves = (await this.db.getSlaves()).map(s => _.pick(s, ['address']));
+            backlink && (backlink = pick(backlink, ['address']));
+            const masters = (await this.db.getMasters()).map(m => pick(m, ['address', 'size']));
+            const slaves = (await this.db.getSlaves()).map(s => pick(s, ['address']));
             return { address, backlink, slaves, masters };
         }
         /**

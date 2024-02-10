@@ -1,10 +1,11 @@
 import * as errors from "../../../errors.js";
 import utils from "../../../utils.js";
 import schema from "../../../schema.js";
-import merge from "lodash-es/merge.js";
+import {merge, intersection} from "lodash-es";
 import crypto from "crypto";
 import Cookies from "cookies";
 import basicAuth from "basic-auth";
+
 const midds = {};
 /**
  * Handle the approval request
@@ -44,7 +45,7 @@ midds.approval = node => {
             const time = utils.getClosestPeriodTime(startedAt, approval.period);
             const approversCount = await approval.calculateApproversCount();
             let approvers = await node.getApprovalApprovers(time, approversCount, { timeout: timer() });
-            const targets = _.intersection(clientApprovers, approvers).map(address => ({ address }));
+            const targets = intersection(clientApprovers, approvers).map(address => ({ address }));
             await approval.approversDecisionCountTest(targets.length);
             const results = await node.requestGroup(targets, 'check-approval-answer', {
                 includeErrors: false,

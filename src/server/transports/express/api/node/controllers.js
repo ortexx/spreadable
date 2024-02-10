@@ -1,7 +1,8 @@
 import * as errors from "../../../../../errors.js";
 import utils from "../../../../../utils.js";
 import schema from "../../../../../schema.js";
-import merge from "lodash-es/merge.js";
+import pick from "lodash-es/pick.js";
+
 export const register = node => {
     return async (req, res, next) => {
         try {
@@ -80,7 +81,7 @@ export const provideRegistration = node => {
                 let info = {};
                 info.address = result.address;
                 info.networkSize = await node.getNetworkSize(result.masters);
-                info.candidates = result.slaves.length ? result.slaves.map(s => _.pick(s, ['address'])) : [{ address: node.address }];
+                info.candidates = result.slaves.length ? result.slaves.map(s => pick(s, ['address'])) : [{ address: node.address }];
                 results[i] = info;
             }
             const syncLifetime = await node.getSyncLifetime();

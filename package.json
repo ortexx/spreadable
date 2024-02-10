@@ -1,6 +1,6 @@
 {
   "name": "spreadable-ms",
-  "version": "0.3.37",
+  "version": "0.3.38",
   "description": "Decentralized network mechanism for MetaSound",
   "bin": {
     "spreadable": "./bin/index.js"
