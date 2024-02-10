@@ -1,7 +1,7 @@
 import * as errors from "../../../../../errors.js";
 import utils from "../../../../../utils.js";
 import schema from "../../../../../schema.js";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 export const register = node => {
     return async (req, res, next) => {
         try {

@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import yargs from "yargs";
 import path from "path";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import { Spinner } from "cli-spinner";
 import utils from "./utils.js";
 const argv = yargs.argv;
@@ -39,7 +39,7 @@ export default async (name, Node, actions) => {
         catch (err) {
             throw new Error(`Not found the config file ${configPath}`);
         }
-        config = _.merge(config, {
+        config = merge(config, {
             logger: logger === false ? false : config.logger,
             server: server === false ? false : config.server
         });

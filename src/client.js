@@ -1,4 +1,5 @@
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
+import shuffle from "lodash-es/shuffle.js";
 import FormData from "form-data";
 import https from "https";
 import fetch from "node-fetch";
@@ -68,7 +69,7 @@ export default (Parent) => {
          */
         constructor(options = {}) {
             super(...arguments);
-            this.options = _.merge({
+            this.options = merge({
                 request: {
                     pingTimeout: '1s',
                     clientTimeout: '10s',
@@ -104,7 +105,7 @@ export default (Parent) => {
             await this.prepareServices();
             await super.init.apply(this, arguments);
             let address = this.address;
-            Array.isArray(address) && (address = _.shuffle(address));
+            Array.isArray(address) && (address = shuffle(address));
             this.availableAddress = await this.getAvailableAddress(address);
             if (!this.availableAddress) {
                 throw new Error('Provided addresses are not available');
@@ -263,7 +264,7 @@ export default (Parent) => {
                 const item = arr[i];
                 const address = item.address;
                 requests.push(new Promise(resolve => {
-                    this.request(action, _.merge({ address }, options, item.options))
+                    this.request(action, merge({ address }, options, item.options))
                         .then(resolve)
                         .catch(resolve);
                 }));
@@ -281,7 +282,7 @@ export default (Parent) => {
          * @returns {object}
          */
         async request(endpoint, options = {}) {
-            options = _.merge(this.createDefaultRequestOptions(), options);
+            options = merge(this.createDefaultRequestOptions(), options);
             let body = options.formData || options.body || {};
             body.timeout = options.timeout;
             body.timestamp = Date.now();
@@ -388,7 +389,7 @@ export default (Parent) => {
                     options.agent.options.ca = this.options.https.ca;
                 }
             }
-            return _.merge({}, defaults, options);
+            return merge({}, defaults, options);
         }
         /**
          * Create a request timer

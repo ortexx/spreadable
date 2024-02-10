@@ -2,7 +2,7 @@ import ms from "ms";
 import urlib from "url";
 import path from "path";
 import fse from "fs-extra";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import http from "http";
 import https from "https";
 import fetch from "node-fetch";
@@ -45,7 +45,7 @@ export default (Parent) => {
             if (!options.port) {
                 throw new Error('You must pass the necessary port');
             }
-            this.options = _.merge({
+            this.options = merge({
                 hostname: '',
                 storage: {
                     path: '',
@@ -1015,7 +1015,7 @@ export default (Parent) => {
          * @returns {object}
          */
         async request(url, options = {}) {
-            options = _.merge({}, options);
+            options = merge({}, options);
             if (typeof url == 'object') {
                 options = url;
             }
@@ -1139,7 +1139,7 @@ export default (Parent) => {
             for (let i = 0; i < arr.length; i++) {
                 const item = arr[i];
                 requests.push(new Promise(resolve => {
-                    const opts = _.merge({ requestType: 'node' }, options, item.options);
+                    const opts = merge({ requestType: 'node' }, options, item.options);
                     opts.timeout = timer(opts.timeout);
                     const requestType = _.capitalize(opts.requestType);
                     const p = requestType ? this[`request${requestType}`](item.address, url, opts) : this.request(url, opts);
@@ -1160,7 +1160,7 @@ export default (Parent) => {
          * @returns {object}
          */
         async requestServer(address, url, options = {}) {
-            options = _.merge({}, options);
+            options = merge({}, options);
             const timeout = options.timeout || await this.getRequestServerTimeout();
             options.timeout = timeout;
             const behaviorResponseSchema = await this.getBehavior('responseSchema');
@@ -1220,12 +1220,12 @@ export default (Parent) => {
          * @returns {object}
          */
         async duplicateData(action, servers, options = {}) {
-            options = _.merge({}, options);
+            options = merge({}, options);
             const timer = this.createRequestTimer(options.timeout);
             while (servers.length) {
                 const address = servers[0];
                 let serverOptions = typeof options.serverOptions == 'function' ? options.serverOptions(address) : options.serverOptions;
-                serverOptions = _.merge({}, options, serverOptions || {});
+                serverOptions = merge({}, options, serverOptions || {});
                 if (serverOptions.formData) {
                     servers.slice(1).forEach((val, i) => serverOptions.formData[`duplicates[${i}]`] = val);
                 }
@@ -1683,7 +1683,7 @@ export default (Parent) => {
             if (typeof this.options.server.https == 'object' && this.options.server.https.ca) {
                 options.agent.options.ca = this.options.server.https.ca;
             }
-            return _.merge(defaults, options);
+            return merge(defaults, options);
         }
         /**
          * Create the request network options
@@ -1693,7 +1693,7 @@ export default (Parent) => {
          * @returns {object}
          */
         createRequestNetworkOptions(body, options = {}) {
-            return _.merge({
+            return merge({
                 body,
                 timeout: this.createRequestTimeout(body),
                 level: body.level === undefined ? body.level : body.level - 1
@@ -1707,7 +1707,7 @@ export default (Parent) => {
          * @returns {object}
          */
         prepareClientMessageOptions(body, options = {}) {
-            options = _.merge({
+            options = merge({
                 timeout: this.createRequestTimeout(body),
                 approvalInfo: body.approvalInfo
             }, options);

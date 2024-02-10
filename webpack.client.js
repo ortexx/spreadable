@@ -1,12 +1,13 @@
 import path from "path";
 import { fileURLToPath } from 'url';
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
+ 
 import config from "./webpack.common.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default (options = {}, wp) => {
-    options = _.merge({
+    options = merge({
         name: 'client',
         include: [],
         mock: {

@@ -1,7 +1,7 @@
 import database from "../database/index.js";
 import fse from "fs-extra";
 import path from "path";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import loki from "lokijs";
 import LokiFsSyncAdapter from "lokijs";
 import utils from "../../../utils.js";
@@ -15,7 +15,7 @@ export default (Parent) => {
      */
     return class DatabaseLoki extends (Parent || Database) {
         constructor(options = {}) {
-            options = _.merge({
+            options = merge({
                 autosaveInterval: 10000
             }, options);
             super(options);
@@ -77,7 +77,7 @@ export default (Parent) => {
          */
         async createDatabase() {
             return await new Promise((resolve, reject) => {
-                this.loki = new loki(this.options.filename, _.merge(this.options, {
+                this.loki = new loki(this.options.filename, merge(this.options, {
                     autoload: true,
                     autosave: true,
                     autoloadCallback: (err) => {
@@ -281,7 +281,7 @@ export default (Parent) => {
          */
         createServerFields(obj = {}) {
             const now = Date.now();
-            const fields = _.merge({
+            const fields = merge({
                 size: 0,
                 createdAt: now,
                 updatedAt: now,
@@ -305,7 +305,7 @@ export default (Parent) => {
          */
         createBanlistFields(obj = {}) {
             const now = Date.now();
-            return _.merge({
+            return merge({
                 createdAt: now,
                 updatedAt: now,
                 reason: ''
@@ -319,7 +319,7 @@ export default (Parent) => {
          */
         createBehaviorCandidateFields(obj = {}) {
             const now = Date.now();
-            return _.merge({
+            return merge({
                 createdAt: now,
                 updatedAt: now,
                 suspicion: 1,
@@ -334,7 +334,7 @@ export default (Parent) => {
          */
         createBehaviorDelaysFields(obj = {}) {
             const now = Date.now();
-            return _.merge({
+            return merge({
                 createdAt: now,
                 updatedAt: now
             }, obj);
@@ -347,7 +347,7 @@ export default (Parent) => {
          */
         createBehaviorFailsFields(obj = {}) {
             const now = Date.now();
-            return _.merge({
+            return merge({
                 createdAt: now,
                 updatedAt: now,
                 suspicion: 1,

@@ -1,5 +1,5 @@
 import isPng from "is-png";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import path from "path";
 import sharp from "sharp";
 import textToSvg from "text-to-svg";

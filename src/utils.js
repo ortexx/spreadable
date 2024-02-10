@@ -4,7 +4,7 @@ import ms from "ms";
 import os from "os";
 import fse from "fs-extra";
 import path from "path";
-import _ from "lodash";
+import uniqBy from "lodash-es/uniqBy.js"
 import dns from "dns";
 import tcpPortUsed from "tcp-port-used";
 import crypto from "crypto";
@@ -51,7 +51,7 @@ utils.validateSchema = function (schema, data) {
                     throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
                 }
                 if (schema.uniq) {
-                    const arr = schema.uniq === true ? _.uniqBy(data) : _.uniqBy(data, schema.uniq);
+                    const arr = schema.uniq === true ? uniqBy(data) : uniqBy(data, schema.uniq);
                     if (arr.length != data.length) {
                         const msg = `Wrong array uniqueness ${getHumanData()} for ${getHumanSchema()}`;
                         throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');

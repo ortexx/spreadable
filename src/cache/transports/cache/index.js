@@ -1,4 +1,4 @@
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import Service from "../../../service.js";
 import utils from "../../../utils.js";
 export default (Parent) => {
@@ -11,7 +11,7 @@ export default (Parent) => {
          */
         constructor(options = {}) {
             super(...arguments);
-            this.options = _.merge({
+            this.options = merge({
                 limit: 50000
             }, options);
             if (this.options.lifetime !== undefined) {

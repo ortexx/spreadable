@@ -1,5 +1,5 @@
 import Service from "../../../service.js";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import path from "path";
 
 export default (Parent) => {
@@ -12,7 +12,7 @@ export default (Parent) => {
          */
         constructor(options = {}) {
             super(...arguments);
-            this.options = _.merge({
+            this.options = merge({
                 backups: {
                     limit: 3
                 }

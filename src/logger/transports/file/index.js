@@ -1,6 +1,6 @@
 import path from "path";
 import fse from "fs-extra";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import logger from "../logger/index.js";
 import utils from "../../../utils.js";
 const Logger = logger();
@@ -10,7 +10,7 @@ export default (Parent) => {
      */
     return class LoggerFile extends (Parent || Logger) {
         constructor(options) {
-            options = _.merge({
+            options = merge({
                 filesCount: 5,
                 fileMaxSize: '10mb'
             }, options);

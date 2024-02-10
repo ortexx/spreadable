@@ -1,7 +1,7 @@
 import * as errors from "../../../errors.js";
 import utils from "../../../utils.js";
 import schema from "../../../schema.js";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import crypto from "crypto";
 import Cookies from "cookies";
 import basicAuth from "basic-auth";
@@ -83,7 +83,7 @@ midds.updateClientInfo = node => {
  * Control the current request client access
  */
 midds.networkAccess = (node, checks = {}) => {
-    checks = _.merge({
+    checks = merge({
         auth: true,
         root: false,
         address: false,
@@ -144,7 +144,7 @@ midds.networkAccess = (node, checks = {}) => {
  * Control the client requests queue
  */
 midds.requestQueueClient = (node, options = {}) => {
-    options = _.merge({
+    options = merge({
         limit: node.options.request.clientConcurrency
     }, options);
     return (req, res, next) => {
@@ -157,7 +157,7 @@ midds.requestQueueClient = (node, options = {}) => {
  * Control parallel requests queue
  */
 midds.requestQueue = (node, keys, options) => {
-    options = _.merge({
+    options = merge({
         limit: 1,
         fnHash: key => crypto.createHash('md5').update(key).digest("hex")
     }, options);

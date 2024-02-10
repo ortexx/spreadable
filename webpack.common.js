@@ -1,21 +1,20 @@
 import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import fse from "fs-extra";
-import _ from "lodash";
-import LodashModuleReplacementPlugin from 'lodash-webpack-plugin';
+import merge from "lodash-es/merge.js";
+
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
 import path from "path";
 import TerserPlugin from "terser-webpack-plugin";
 import { fileURLToPath } from 'url';
 import webpack from "webpack";
-import BomPlugin from 'webpack-utf8-bom'; // add this line
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const capitalize = (string) => {
     return string ? string.charAt(0).toUpperCase() + string.slice(1).toLowerCase() : '';
-  };
+};
 
 export default (options = {}) => {
     const cwd = process.cwd();
@@ -24,14 +23,12 @@ export default (options = {}) => {
     pack.name = pack.name.split("-")[0] || pack.name;
     const banner = options.banner || `${pack.name} ${name}\n@version ${pack.version}\n{@link ${pack.homepage}}`;
     let plugins = [];
-    plugins.push(new BomPlugin(true));
-    plugins.push(new LodashModuleReplacementPlugin);
     plugins.push(new webpack.BannerPlugin({ banner }));
     plugins.push(new MiniCssExtractPlugin({ filename: 'style.css' }));
     plugins.push(new NodePolyfillPlugin());
     plugins.push(new ESLintPlugin({ exclude: ['node_modules', 'dist'] }));
     plugins = plugins.concat(options.plugins || []);
-    const mock = _.merge({
+    const mock = merge({
         "https": true,
         "http": true,
         "net": true,
@@ -54,7 +51,7 @@ export default (options = {}) => {
         }
         alias[key] = val === true ? mockIndexPath : val;
     }
-    return _.merge({
+    return merge({
         mode: isProd ? 'production' : 'development',
         performance: { hints: false },
         watch: !isProd,
@@ -65,7 +62,8 @@ export default (options = {}) => {
             filename: '[name].js',
             library: options.library || (capitalize(name) + capitalize(pack.name)),
             libraryTarget: 'umd',
-            clean: true
+            libraryExport: 'default',
+            clean: true,
         },
         optimization: {
             minimizer: [
@@ -93,7 +91,6 @@ export default (options = {}) => {
                     exclude: /node_modules/,
                     include,
                     options: {
-                        plugins: ['lodash'],
                         configFile: path.join(mainEntry, '.babelrc'),
                     }
                 },

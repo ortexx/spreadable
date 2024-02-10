@@ -1,5 +1,5 @@
 import path from "path";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import getPort from "get-port";
 import FormData from "form-data";
 import fse from "fs-extra";
@@ -23,7 +23,7 @@ tools.getDbFilePath = function (node) {
 tools.createJsonRequestOptions = function (options = {}) {
     let body = options.body;
     typeof body == 'object' && (body = JSON.stringify(body));
-    return _.merge({
+    return merge({
         method: 'post',
         headers: {
             'Content-Type': 'application/json'
@@ -99,7 +99,7 @@ tools.getFreePort = async function () {
  */
 tools.createNodeOptions = async function (options = {}) {
     const port = options.port || await this.getFreePort();
-    return _.merge({
+    return merge({
         port,
         task: false,
         request: {
@@ -127,7 +127,7 @@ tools.createNodeOptions = async function (options = {}) {
  * @returns {object}
  */
 tools.createClientOptions = async function (options = {}) {
-    return _.merge({
+    return merge({
         logger: false,
         task: false
     }, options);

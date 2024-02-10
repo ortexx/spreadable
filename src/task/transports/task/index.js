@@ -1,4 +1,4 @@
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 import Service from "../../../service.js";
 
 export default (Parent) => {
@@ -11,7 +11,7 @@ export default (Parent) => {
          */
         constructor(options = {}) {
             super(...arguments);
-            this.options = _.merge({
+            this.options = merge({
                 showCompletionLogs: true,
                 showFailLogs: true
             }, options);
@@ -21,7 +21,7 @@ export default (Parent) => {
          * Add the task
          */
         async add(name, interval, fn, options) {
-            const task = _.merge({
+            const task = merge({
                 interval,
                 fn,
                 name,

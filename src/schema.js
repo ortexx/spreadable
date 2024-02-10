@@ -1,5 +1,5 @@
 import utils from "./utils.js";
-import _ from "lodash";
+import merge from "lodash-es/merge.js";
 const schema = {};
 schema.getAddress = function () {
     return {
@@ -36,7 +36,7 @@ schema.getStatusResponse = function () {
     };
 };
 schema.getStatusPrettyResponse = function () {
-    return _.merge(this.getStatusResponse(), {
+    return merge(this.getStatusResponse(), {
         props: {
             availability: 'string',
             syncAvgTime: 'string'
