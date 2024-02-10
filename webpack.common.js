@@ -62,7 +62,7 @@ export default (options = {}) => {
             filename: '[name].js',
             library: options.library || (capitalize(name) + capitalize(pack.name)),
             libraryTarget: 'umd',
-            libraryExport: 'default',
+            // libraryExport: 'default',
             clean: true,
         },
         optimization: {
@@ -88,7 +88,7 @@ export default (options = {}) => {
                 {
                     test: /\.js$/,
                     loader: 'babel-loader',
-                    exclude: /node_modules/,
+                    exclude: /node_modules/,  
                     include,
                     options: {
                         configFile: path.join(mainEntry, '.babelrc'),
