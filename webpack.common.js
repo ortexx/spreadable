@@ -35,6 +35,7 @@ export default (options = {}) => {
         "tls": true,
         "os": true,
         "fs-extra": true,
+        "fs": true,
         "dns": true,
     }, options.mock);
     const include = options.include || [];
@@ -62,7 +63,7 @@ export default (options = {}) => {
             filename: '[name].js',
             library: options.library || (capitalize(name) + capitalize(pack.name)),
             libraryTarget: 'umd',
-            // libraryExport: 'default',
+            libraryExport: 'default',
             clean: true,
         },
         optimization: {
