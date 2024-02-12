@@ -177,7 +177,7 @@ describe('group communication', () => {
     for(let i = 0; i < approvers.length; i++) {
       const address = approvers[i];
       const count = Math.floor(length / (approvers.length - i));
-      answer += answers[address].substr(0, count);
+      answer += answers[address].slice(0, count);
       length -= count;
     }
 

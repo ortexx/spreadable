@@ -109,8 +109,9 @@ module.exports = (Parent) => {
       for(let i = 0; i < approvers.length; i++) {
         const address = approvers[i];
         const count = Math.floor(length / (approvers.length - i));
-        const from = String(answer).substr(this.captchaLength - length, count).toLowerCase();
-        const to = String(approver.answer).substr(0, count).toLowerCase();
+        const cLength = this.captchaLength - length;
+        const from = String(answer).slice(cLength, cLength + count).toLowerCase();
+        const to = String(approver.answer).slice(0, count).toLowerCase();
 
         if(address == this.node.address) {
           return from === to;

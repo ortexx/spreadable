@@ -7,7 +7,7 @@ const path = require('path');
 const uniqBy = require('lodash/uniqBy');
 const dns = require('dns');
 const tcpPortUsed = require('tcp-port-used');
-const publicIp = require('qiao-get-ip');
+const fetch = require('node-fetch');
 const crypto = require('crypto');
 const ip6addr = require('ip6addr');
 const errors = require('./errors');
@@ -16,7 +16,13 @@ const utils = {
   domainValidationRegex: /^localhost|[\p{L}\p{N}-][\p{L}\p{N}-]{1,61}[\p{L}\p{N}](?:\.[\p{L}]{2,})+$/iu,
   dnsCache: new Map(),
   dnsCacheLimit: 10000,
-  dnsCachePeriod: 1000 * 60 * 10
+  dnsCachePeriod: 1000 * 60 * 10,
+  ipLookupPoints: [
+    'https://api.ipify.org/',
+    'https://ipinfo.io/ip',
+    'https://ifconfig.me/ip',
+    'https://checkip.amazonaws.com/'
+  ]
 };
 
 /**
@@ -348,12 +354,24 @@ utils.getRequestTimer = function (timeout, options = {}) {
  * @returns {string}
  */
 utils.getExternalIp = async function () {
-  try {
-    return await publicIp.getIp();
-  }
-  catch(err) {
-    return null;
-  }
+  let ip = null;
+
+  for(let url of this.ipLookupPoints) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
+      const text = await res.text();
+      
+      if(this.isValidIp(text)) {
+        ip = text;
+        break;
+      }
+    }
+    catch(err) {
+      continue;
+    }
+  } 
+
+  return ip;
 }
 
 /**
@@ -627,7 +645,7 @@ utils.getRandomHexColor = function () {
  * @return {string}
  */
 utils.invertHexColor = function (color) {
-  return '#'+ (Number(`0x1${ color.substr(1) }`) ^ 0xFFFFFF).toString(16).substr(1).toUpperCase();
+  return '#'+ (Number(`0x1${ color.slice(1) }`) ^ 0xFFFFFF).toString(16).slice(1).toUpperCase();
 }
 
 /**

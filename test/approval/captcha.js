@@ -4,7 +4,7 @@ const isPng = require('is-png');
 const ApprovalCaptcha = require('../../src/approval/transports/captcha')();
 const utils = require('../../src/utils');
 
-describe('Approval', () => {
+describe('ApprovalCaptcha', () => {
   let approval;
   
   describe('instance creation', function () {

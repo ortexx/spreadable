@@ -284,7 +284,7 @@ module.exports = (Parent) => {
      * Make a group request
      * 
      * @async
-     * @param {aray} arr 
+     * @param {array} arr 
      * @param {string} action
      * @param {object} [options]
      * @returns {object}
@@ -354,12 +354,17 @@ module.exports = (Parent) => {
         options.headers['content-type'] = 'application/json';
         options.body = JSON.stringify(body);
       } 
+
+      if(options.timeout && !options.signal) {
+        options.signal = AbortSignal.timeout(options.timeout);
+      }
       
       options.url = this.createRequestUrl(endpoint, options);
       const start = Date.now();
+      let response = {};
 
       try {        
-        const response = await fetch(options.url, options);    
+        response = await fetch(options.url, options);    
         this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);
 
         if(response.ok) {
@@ -380,8 +385,10 @@ module.exports = (Parent) => {
         throw new errors.WorkError(body.message, body.code);
       }
       catch(err) {
+        options.timeout && err.type == 'aborted' && (err.type = 'request-timeout');        
         //eslint-disable-next-line no-ex-assign
         utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
+        err.response = response;
         err.requestOptions = options;
         throw err;
       }
