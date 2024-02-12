@@ -87,6 +87,6 @@
     "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
-    "node": ">=10.13.0"
+    "node": ">=16.0.0"
   }
 }
