@@ -446,7 +446,13 @@ const Client = require('spreadable').Client;
 })();
 ```
 
-In both cases the network is closed, but not completely secure. If we use http protocol the data transferred is not encrypted. In some cases this is a suitable option, otherwise you need to use https.
+## Ban system
+
+By default, nodes are configured to check each other's behavior. And if a node commits malicious actions for a significant time, then it will be banned by others for some time, depending on the severity of the crime. This system is not perfect, since it is not completely free from undeserved bans rerated to problems with the Internet provider, DNS cache, etc. Therefore, if you notice that some of your servers have stopped working with others, then first of all check the banlists and remove it if you are sure that these are technical problems. Access to these actions occurs through terminal commands. You should pause the server and run the necessary commands, for example: 
+
+``` spreadable -a getBanlist --no-s ```
+
+``` spreadable -a emptyBanlist --no-s ```
 
 ## Versioning
 
