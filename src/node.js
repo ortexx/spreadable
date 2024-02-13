@@ -1045,6 +1045,10 @@ export default (Parent) => {
                 options.headers['content-type'] = 'application/json';
                 options.body = Object.keys(body).length ? JSON.stringify(body) : undefined;
             }
+
+            if (options.timeout && !options.signal) {
+                options.signal = AbortSignal.timeout(options.timeout);
+            }
             const start = Date.now();
             let response = {};
             try {
@@ -1064,6 +1068,7 @@ export default (Parent) => {
                 throw new errors.WorkError(body.message, body.code);
             }
             catch (err) {
+                options.timeout && err.type == 'aborted' && (err.type = 'request-timeout'); 
                 //eslint-disable-next-line no-ex-assign
                 utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
                 err.response = response;
@@ -1128,7 +1133,7 @@ export default (Parent) => {
          * Group request to the node
          *
          * @async
-         * @param {aray} arr
+         * @param {array} arr
          * @param {string} url
          * @param {object} [options]
          * @returns {object}
