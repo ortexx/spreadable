@@ -17,7 +17,8 @@ try {
     initialNetworkAddress: "localhost:4000",
   });
   await node.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -32,7 +33,8 @@ try {
     address: "localhost:4000",
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -51,7 +53,8 @@ try {
     initialNetworkAddress: "localhost:4000",
   });
   await node.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -67,7 +70,8 @@ try {
     address: "localhost:4000",
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -102,16 +106,15 @@ You can import / require **spreadable/dist/client/spreadable.client.js** if you 
 ```javascript
 import Client from "spreadable/dist/client/spreadable.client.js";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4001",
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4001",
+  });
+  await client.init();
+}
+catch (err) {
+  console.error(err.stack);
+}
 ```
 
 ### 3. Build it by yourself
@@ -173,7 +176,8 @@ try {
   });
   await client.init();
   const link = await client.getFileLink(hash, { timeout: 2000 });
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -211,7 +215,8 @@ try {
     });
     await node.init();
   }
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -226,7 +231,8 @@ try {
     https: true,
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -260,7 +266,8 @@ try {
     });
     await node.init();
   }
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -280,7 +287,8 @@ try {
     },
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -308,7 +316,8 @@ try {
     });
     await node.init();
   }
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -323,7 +332,8 @@ try {
     https: true,
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -349,7 +359,8 @@ try {
     },
   });
   await node.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -365,7 +376,8 @@ try {
     auth,
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
@@ -411,7 +423,8 @@ try {
     address: "localhost:4000",
   });
   await client.init();
-} catch (err) {
+} 
+catch (err) {
   console.error(err.stack);
   process.exit(1);
 }
