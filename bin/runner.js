@@ -5,7 +5,7 @@ import merge from "lodash-es/merge.js";
 import { Spinner } from "cli-spinner";
 import utils from "./utils.js";
 
-const argv = yargs.argv;
+const argv = yargs(process.argv).argv;
 
 export default async (name, Node, actions) => {
   let node;

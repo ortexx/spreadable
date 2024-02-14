@@ -1,7 +1,8 @@
 import chalk from "chalk";
 import yargs from "yargs";
 import srcUtils from "../src/utils.js";
-const argv = yargs.argv;
+
+const argv = yargs(process.argv).argv;
 
 /**
  * Show the node status info
