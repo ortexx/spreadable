@@ -1,17 +1,17 @@
 {
-  "name": "spreadable-ms",
-  "version": "0.3.39",
-  "description": "Decentralized network mechanism for MetaSound",
+  "name": "spreadable",
+  "version": "0.2.31",
+  "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
   },
   "type": "module",
   "main": "./src/index.js",
   "author": {
-    "name": "MetaSound",
-    "email": "info@metasound.us"
+    "name": "Alexander Balasyan",
+    "email": "mywebstreet@gmail.com"
   },
-  "homepage": "https://github.com/metasound/spreadable",
+  "homepage": "https://github.com/ortexx/spreadable",
   "scripts": {
     "eslint": "eslint src bin test",
     "test": "mocha ./test/index.js --timeout=30000",
@@ -86,7 +86,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/metasound/spreadable"
+    "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
     "node": ">=20.11.0"
