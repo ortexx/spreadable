@@ -417,11 +417,14 @@ module.exports = (Parent) => {
     createDefaultRequestOptions(options = {}) {   
       const defaults = {
         method: 'POST',
-        timeout: this.options.request.clientTimeout,
-        headers: {
+        timeout: this.options.request.clientTimeout
+      };
+
+      if(!this.options.request.ignoreVersion) {
+        defaults.headers = {
           'client-version': this.getVersion()
         }
-      };
+      }
 
       if(this.options.auth) {
         const username = this.options.auth.username;
