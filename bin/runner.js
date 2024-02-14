@@ -39,12 +39,12 @@ export default async (name, Node, actions) => {
     }
 
     try {
-      config = require(configPath);
+      config = (await import(configPath)).default;
     }
     catch (err) {
-      throw new Error(`Not found the config file ${configPath}`);
+      throw new Error(`Not found the config file ${ configPath }`);
     }
-
+    
     config = merge(config, {
       logger: logger === false ? false : config.logger,
       server: server === false ? false : config.server
