@@ -1,15 +1,16 @@
-const Logger = require('../logger')();
-const chalk = require('chalk');
-const utils = require('../../../utils');
+import logger from "../logger/index.js";
+import chalk from "chalk";
+import utils from "../../../utils.js";
 
-module.exports = (Parent) => {
+const Logger = logger();
+
+export default (Parent) => {
   /**
    * Console logger transport
    */
   return class LoggerConsole extends (Parent || Logger) {
     constructor() {
       super(...arguments);
-
       this.colors = {
         info: 'white',
         warn: 'yellow',
@@ -21,12 +22,12 @@ module.exports = (Parent) => {
      * @see Logger.prototype.log
      */
     async log(level, message) {
-      if(!this.isLevelActive(level)) {  
+      if (!this.isLevelActive(level)) {
         return;
-      } 
+      }
       
       //eslint-disable-next-line no-console
-      (console[level] || console.log)(utils.isBrowserEnv()? message: chalk[this.colors[level]](message));
+      (console[level] || console.log)(utils.isBrowserEnv() ? message : chalk[this.colors[level]](message));
     }
-  }
+  };
 };

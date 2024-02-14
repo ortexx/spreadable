@@ -1,8 +1,8 @@
-const _ = require('lodash');
-const Service = require('../../../service')();
-const utils = require('../../../utils');
+import merge from "lodash-es/merge.js";
+import Service from "../../../service.js";
+import utils from "../../../utils.js";
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Cache transport
    */
@@ -12,19 +12,18 @@ module.exports = (Parent) => {
      */
     constructor(options = {}) {
       super(...arguments);
-
-      this.options = _.merge({
+      this.options = merge({
         limit: 50000
       }, options);
-
-      if(this.options.lifetime !== undefined) {
+      
+      if (this.options.lifetime !== undefined) {
         this.options.lifetime = utils.getMs(this.options.lifetime);
       }
     }
 
     /**
      * Get the cache
-     * 
+     *
      * @async
      * @param {string} key
      */
@@ -34,7 +33,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the cache
-     * 
+     *
      * @async
      * @param {string} key
      * @param {object} value
@@ -45,7 +44,7 @@ module.exports = (Parent) => {
 
     /**
      * Remove the cache
-     * 
+     *
      * @async
      * @param {string} key
      */
@@ -55,7 +54,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the cache
-     * 
+     *
      * @async
      */
     async normalize() {
@@ -64,11 +63,11 @@ module.exports = (Parent) => {
 
     /**
      * Flush the cache
-     * 
+     *
      * @async
      */
     async flush() {
       throw new Error('Method "flush" is required for cache transport');
     }
-  }
+  };
 };

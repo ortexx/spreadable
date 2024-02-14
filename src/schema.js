@@ -1,5 +1,6 @@
-const utils = require('./utils');
-const _ = require('lodash');
+import utils from "./utils.js";
+import merge from "lodash-es/merge.js";
+
 const schema = {};
 
 schema.getAddress = function () {
@@ -13,7 +14,7 @@ schema.getClientIp = function () {
   return {
     type: 'string',
     value: utils.isValidIp.bind(utils)
-  }
+  };
 };
 
 schema.getApprovers = function () {
@@ -21,7 +22,7 @@ schema.getApprovers = function () {
     type: 'array',
     uniq: true,
     items: this.getAddress()
-  }
+  };
 };
 
 schema.getStatusResponse = function () {
@@ -37,15 +38,15 @@ schema.getStatusResponse = function () {
       networkSize: 'number'
     },
     strict: true
-  }
+  };
 };
 
 schema.getStatusPrettyResponse = function () {
-  return _.merge(this.getStatusResponse(), {
+  return merge(this.getStatusResponse(), {
     props: {
       availability: 'string',
       syncAvgTime: 'string'
-    }    
+    }
   });
 };
 
@@ -56,7 +57,7 @@ schema.getAvailableNodeResponse = function () {
       address: this.getAddress()
     },
     strict: true
-  }
+  };
 };
 
 schema.getRequestApprovalKeyResponse = function () {
@@ -69,12 +70,11 @@ schema.getRequestApprovalKeyResponse = function () {
       approvers: this.getApprovers()
     },
     strict: true
-  }
+  };
 };
 
 schema.getStructureResponse = function () {
   const address = this.getAddress();
-
   return {
     type: 'object',
     props: {
@@ -86,7 +86,7 @@ schema.getStructureResponse = function () {
           uniq: 'address',
           props: {
             address,
-            size: 'number'         
+            size: 'number'
           },
           strict: true
         }
@@ -112,12 +112,11 @@ schema.getStructureResponse = function () {
       }
     },
     strict: true
-  }
+  };
 };
 
-schema.getProvideRegistrationResponse = function() {
+schema.getProvideRegistrationResponse = function () {
   const address = this.getAddress();
-
   return {
     type: 'object',
     props: {
@@ -145,15 +144,14 @@ schema.getProvideRegistrationResponse = function() {
           },
           strict: true
         }
-      }          
+      }
     },
     strict: true
-  }
+  };
 };
 
 schema.getRegisterResponse = function () {
   const address = this.getAddress();
-
   return {
     type: 'object',
     props: {
@@ -161,12 +159,11 @@ schema.getRegisterResponse = function () {
       size: 'number'
     },
     strict: true
-  }
+  };
 };
 
-schema.getInterviewSummaryResponse = function() {
+schema.getInterviewSummaryResponse = function () {
   const address = this.getAddress();
-
   return {
     type: 'object',
     props: {
@@ -180,12 +177,11 @@ schema.getInterviewSummaryResponse = function() {
       }
     },
     strict: true
-  }
+  };
 };
 
-schema.getApprovalApproverInfoResponse = function(infoSchema) {
+schema.getApprovalApproverInfoResponse = function (infoSchema) {
   const address = this.getAddress();
-
   return {
     type: 'object',
     props: {
@@ -193,10 +189,10 @@ schema.getApprovalApproverInfoResponse = function(infoSchema) {
       info: infoSchema
     },
     strict: true
-  }
+  };
 };
 
-schema.getApprovalInfoRequest = function(answerSchema) {
+schema.getApprovalInfoRequest = function (answerSchema) {
   return {
     type: 'object',
     props: {
@@ -208,7 +204,7 @@ schema.getApprovalInfoRequest = function(answerSchema) {
       answer: answerSchema
     },
     strict: true
-  }
+  };
 };
 
-module.exports = schema;
+export default schema;

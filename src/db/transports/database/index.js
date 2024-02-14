@@ -1,18 +1,18 @@
-const Service = require('../../../service')();
-const _ = require('lodash');
-const path = require('path');
+import Service from "../../../service.js";
+import merge from "lodash-es/merge.js";
+import path from "path";
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Database transport interface
    */
   return class Database extends (Parent || Service) {
-    /** 
-     * @param {object} options 
+    /**
+     * @param {object} options
      */
     constructor(options = {}) {
       super(...arguments);
-      this.options = _.merge({
+      this.options = merge({
         backups: {
           limit: 3
         }
@@ -23,16 +23,16 @@ module.exports = (Parent) => {
      * @see Service.prototype.init
      */
     async init() {
-      if(this.options.backups && !this.options.backups.folder) {
-        this.options.backups.folder = path.join(this.node.storagePath, 'backups', 'db') 
+      if (this.options.backups && !this.options.backups.folder) {
+        this.options.backups.folder = path.join(this.node.storagePath, 'backups', 'db');
       }
 
       super.init.apply(this, arguments);
     }
-    
+
     /**
      * Get the current database path
-     * 
+     *
      * @async
      * @returns {string}
      */
@@ -42,7 +42,7 @@ module.exports = (Parent) => {
 
     /**
      * Restore the database
-     * 
+     *
      * @async
      * @param {number} index
      */
@@ -52,7 +52,7 @@ module.exports = (Parent) => {
 
     /**
      * Set the data
-     * 
+     *
      * @async
      * @param {string} name
      * @param {*} value
@@ -63,7 +63,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the data
-     * 
+     *
      * @async
      * @param {string} name
      * @returns {*}
@@ -74,17 +74,17 @@ module.exports = (Parent) => {
 
     /**
      * Check the node is master
-     * 
+     *
      * @async
      * @returns {boolean}
      */
     async isMaster() {
       throw new Error('Method "isMaster" is required for database transport');
     }
-    
+
     /**
      * Get the server
-     * 
+     *
      * @async
      * @param {string} address
      * @returns {object}
@@ -95,7 +95,7 @@ module.exports = (Parent) => {
 
     /**
      * Get all servers
-     * 
+     *
      * @async
      * @returns {object[]}
      */
@@ -105,7 +105,7 @@ module.exports = (Parent) => {
 
     /**
      * Check the node has the slave
-     * 
+     *
      * @async
      * @returns {boolean}
      */
@@ -115,7 +115,7 @@ module.exports = (Parent) => {
 
     /**
      * Get all slaves
-     * 
+     *
      * @async
      * @returns {object[]}
      */
@@ -125,7 +125,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the master
-     * 
+     *
      * @async
      * @param {string} address
      * @returns {object}
@@ -136,7 +136,7 @@ module.exports = (Parent) => {
 
     /**
      * Get all masters
-     * 
+     *
      * @async
      * @returns {object[]}
      */
@@ -146,7 +146,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the backlink
-     * 
+     *
      * @async
      * @returns {object}
      */
@@ -156,7 +156,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the masters count
-     * 
+     *
      * @async
      * @returns {integer}
      */
@@ -166,17 +166,17 @@ module.exports = (Parent) => {
 
     /**
      * Get the slaves count
-     * 
+     *
      * @async
      * @returns {integer}
      */
     async getSlavesCount() {
       throw new Error('Method "getSlavesCount" is required for database transport');
     }
-    
+
     /**
      * Add the master
-     * 
+     *
      * @async
      * @param {string} address
      * @param {integer} size
@@ -190,7 +190,7 @@ module.exports = (Parent) => {
 
     /**
      * Add the slave
-     * 
+     *
      * @async
      * @param {string} address
      * @param {string} availability
@@ -202,39 +202,39 @@ module.exports = (Parent) => {
 
     /**
      * Add the backlink
-     * 
+     *
      * @async
      * @param {string} address
      * @param {string[]} chain
      * @returns {object}
      */
     async addBacklink() {
-      throw new Error('Method "addBacklink" is required for database transport');    
+      throw new Error('Method "addBacklink" is required for database transport');
     }
 
     /**
      * Remove the master
-     * 
+     *
      * @async
      * @param {string} address
      */
     async removeMaster() {
-      throw new Error('Method "removeMaster" is required for database transport'); 
+      throw new Error('Method "removeMaster" is required for database transport');
     }
 
     /**
      * Remove the server
-     * 
+     *
      * @async
      * @param {string} address
      */
     async removeServer() {
       throw new Error('Method "removeServer" is required for database transport');
     }
-    
+
     /**
      * Remove the slave
-     * 
+     *
      * @async
      * @param {string} address
      */
@@ -244,16 +244,16 @@ module.exports = (Parent) => {
 
     /**
      * Remove all slaves
-     * 
+     *
      * @async
      */
     async removeSlaves() {
       throw new Error('Method "removeSlaves" is required for database transport');
     }
-    
+
     /**
      * Shift the slaves
-     * 
+     *
      * @async
      * @param {integer} [limit=1]
      */
@@ -263,7 +263,7 @@ module.exports = (Parent) => {
 
     /**
      * Remove the backlink
-     * 
+     *
      * @async
      * @param {string} address
      */
@@ -273,7 +273,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the servers
-     * 
+     *
      * @async
      */
     async normalizeServers() {
@@ -282,7 +282,7 @@ module.exports = (Parent) => {
 
     /**
      * Mark the server as successed
-     * 
+     *
      * @async
      * @param {string} address
      */
@@ -292,7 +292,7 @@ module.exports = (Parent) => {
 
     /**
      * Mark the server as failed
-     * 
+     *
      * @async
      * @param {string} address
      */
@@ -302,7 +302,7 @@ module.exports = (Parent) => {
 
     /**
      * Get suspicious candidades
-     * 
+     *
      * @async
      * @param {string} action
      * @returns {object[]}
@@ -313,10 +313,10 @@ module.exports = (Parent) => {
 
     /**
      * Add the candidade
-     * 
+     *
      * @async
      * @param {string} action
-     * @param {string} address 
+     * @param {string} address
      */
     async addBehaviorCandidate() {
       throw new Error('Method "addBehaviorCandidate" is required for database transport');
@@ -324,7 +324,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the candidates
-     * 
+     *
      * @async
      */
     async normalizeBehaviorCandidates() {
@@ -333,7 +333,7 @@ module.exports = (Parent) => {
 
     /**
      * Add the delay behavior
-     * 
+     *
      * @async
      * @param {string} action
      * @param {string} address
@@ -344,9 +344,9 @@ module.exports = (Parent) => {
 
     /**
      * Get the delay behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      * @returns {object}
      */
@@ -356,9 +356,9 @@ module.exports = (Parent) => {
 
     /**
      * Remove the delay behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      */
     async removeBehaviorDelay() {
@@ -367,7 +367,7 @@ module.exports = (Parent) => {
 
     /**
      * Clear the delay behaviors
-     * 
+     *
      * @async
      * @param {string} action
      */
@@ -377,9 +377,9 @@ module.exports = (Parent) => {
 
     /**
      * Get the fail behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      * @returns {object}
      */
@@ -389,9 +389,9 @@ module.exports = (Parent) => {
 
     /**
      * Add the fail behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      * @param {number} [step=1]
      */
@@ -401,9 +401,9 @@ module.exports = (Parent) => {
 
     /**
      * Subtract the fail behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      * @param {number} [step=1]
      */
@@ -411,11 +411,11 @@ module.exports = (Parent) => {
       throw new Error('Method "subBehaviorFail" is required for database transport');
     }
 
-     /**
+    /**
      * Clean the fail behavior
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} address
      */
     async cleanBehaviorFail() {
@@ -424,7 +424,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the behavior fails
-     * 
+     *
      * @async
      */
     async normalizeBehaviorFails() {
@@ -433,9 +433,9 @@ module.exports = (Parent) => {
 
     /**
      * Add the approval
-     * 
+     *
      * @async
-     * @param {string} action 
+     * @param {string} action
      * @param {string} clientIp
      * @param {string} key
      * @param {number} startedAt
@@ -448,7 +448,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the approval
-     * 
+     *
      * @param {string} key
      * @returns {object}
      */
@@ -458,7 +458,7 @@ module.exports = (Parent) => {
 
     /**
      * Use the approval
-     * 
+     *
      * @param {string} key
      * @param {string} address
      */
@@ -468,7 +468,7 @@ module.exports = (Parent) => {
 
     /**
      * Start the approval
-     * 
+     *
      * @param {string} key
      * @param {*} answer
      */
@@ -478,7 +478,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the approval
-     * 
+     *
      * @async
      */
     async normalizeApproval() {
@@ -487,7 +487,7 @@ module.exports = (Parent) => {
 
     /**
      * Get all banlist
-     * 
+     *
      * @async
      * @returns {object[]}
      */
@@ -497,7 +497,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the banlist address
-     * 
+     *
      * @async
      * @param {string} address
      * @returns {object}
@@ -508,7 +508,7 @@ module.exports = (Parent) => {
 
     /**
      * Check the ip is in the banlist
-     * 
+     *
      * @async
      * @param {string} ip - ipv6 address
      * @returns {boolean}
@@ -519,7 +519,7 @@ module.exports = (Parent) => {
 
     /**
      * Add the banlist address
-     * 
+     *
      * @async
      * @param {string} address
      * @param {number} lifetime
@@ -531,7 +531,7 @@ module.exports = (Parent) => {
 
     /**
      * Remove the banlist address
-     * 
+     *
      * @async
      * @param {string} address
      */
@@ -541,7 +541,7 @@ module.exports = (Parent) => {
 
     /**
      * Empty the banlist
-     * 
+     *
      * @async
      */
     async emptyBanlist() {
@@ -550,7 +550,7 @@ module.exports = (Parent) => {
 
     /**
      * Normalize the banlist
-     * 
+     *
      * @async
      */
     async normalizeBanlist() {
@@ -559,7 +559,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the cache
-     * 
+     *
      * @async
      * @param {string} type
      * @param {string} key
@@ -567,22 +567,22 @@ module.exports = (Parent) => {
     async getCache() {
       throw new Error('Method "getCache" is required for database transport');
     }
-  
+
     /**
-    * Set the cache
-    * 
-    * @async
-    * @param {string} type
-    * @param {string} key
-    * @param {string} link
-    */
+     * Set the cache
+     *
+     * @async
+     * @param {string} type
+     * @param {string} key
+     * @param {string} link
+     */
     async setCache() {
       throw new Error('Method "setCache" is required for database transport');
     }
 
     /**
      * Get the cache
-     * 
+     *
      * @async
      * @param {string} type
      * @param {string} key
@@ -593,7 +593,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the cache
-     * 
+     *
      * @async
      * @param {string} type
      * @param {object} [options]
@@ -604,12 +604,12 @@ module.exports = (Parent) => {
 
     /**
      * Flush the cache
-     * 
+     *
      * @async
      * @param {string} type
      */
     async flushCache() {
       throw new Error('Method "flushCache" is required for database transport');
     }
-  }
+  };
 };

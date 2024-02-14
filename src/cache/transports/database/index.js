@@ -1,6 +1,7 @@
-const Cache = require('../cache')();
+import cache from "../cache/index.js";
+const Cache = cache();
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Database cache transport
    */
@@ -10,7 +11,7 @@ module.exports = (Parent) => {
      */
     async get(key) {
       const cache = await this.node.db.getCache(this.name, key);
-      return cache? { key: cache.key, value: cache.value }: null;
+      return cache ? { key: cache.key, value: cache.value } : null;
     }
 
     /**
@@ -40,5 +41,5 @@ module.exports = (Parent) => {
     async flush() {
       return await this.node.db.flushCache(this.name);
     }
-  }
+  };
 };

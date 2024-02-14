@@ -1,22 +1,22 @@
-const Service = require('../../../service')();
-const utils = require('../../../utils');
-const errors = require('../../../errors');
+import Service from "../../../service.js";
+import utils from "../../../utils.js";
+import * as errors from "../../../errors.js";
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Approval transport
    */
   return class Approval extends (Parent || Service) {
-    /** 
+    /**
      * @param {object} options
      */
     constructor(options = {}) {
-      super(...arguments);    
+      super(...arguments);
       Object.assign(this, {
         approversCount: 'auto',
         decisionLevel: '66.6%',
         period: '5m'
-      }, options);      
+      }, options);
     }
 
     /**
@@ -29,33 +29,33 @@ module.exports = (Parent) => {
 
     /**
      * Test the approval client info
-     * 
+     *
      * @param {*} info
      */
     clientInfoTest(info) {
-      utils.validateSchema(this.getClientInfoSchema(), info);    
+      utils.validateSchema(this.getClientInfoSchema(), info);
     }
 
     /**
      * Test the approval time
-     * 
+     *
      * @param {number} time
      */
     async startTimeTest(time) {
-      if(typeof time != 'number' || isNaN(time)) {
+      if (typeof time != 'number' || isNaN(time)) {
         throw new errors.WorkError(`Approval time must be an integer`, 'ERR_SPREADABLE_WRONG_APPROVAL_TIME');
       }
 
       const closest = utils.getClosestPeriodTime(Date.now(), this.period);
 
-      if(time !== closest && time !== closest - this.period) {
+      if (time !== closest && time !== closest - this.period) {
         throw new errors.WorkError(`Incorrect approval time`, 'ERR_SPREADABLE_WRONG_APPROVAL_TIME');
       }
     }
 
     /**
      * Calculate the approvers count
-     * 
+     *
      * @returns {integer}
      */
     async calculateApproversCount() {
@@ -64,15 +64,15 @@ module.exports = (Parent) => {
 
     /**
      * Calculate the decision level
-     * 
+     *
      * @async
      * @returns {number}
      */
     async calculateDescisionLevel() {
       let level = this.decisionLevel;
       const count = await this.calculateApproversCount();
-
-      if(typeof level == 'string' && level.match('%')) {
+      
+      if (typeof level == 'string' && level.match('%')) {
         level = Math.ceil(count * parseFloat(level) / 100);
       }
 
@@ -81,21 +81,21 @@ module.exports = (Parent) => {
 
     /**
      * Test the approver decisions count
-     * 
+     *
      * @async
-     * @param {number} count 
+     * @param {number} count
      */
     async approversDecisionCountTest(count) {
       const decistionLevel = await this.calculateDescisionLevel(count);
 
-      if(count < decistionLevel) {
+      if (count < decistionLevel) {
         throw new errors.WorkError('Not enough approvers to make a decision', 'ERR_SPREADABLE_NOT_ENOUGH_APPROVER_DECISIONS');
       }
     }
 
     /**
      * Create the info
-     * 
+     *
      * @async
      * @param {object} approver
      * @returns {object}
@@ -106,7 +106,7 @@ module.exports = (Parent) => {
 
     /**
      * Create the question
-     * 
+     *
      * @async
      * @param {array} data
      * @param {*} info
@@ -119,7 +119,7 @@ module.exports = (Parent) => {
 
     /**
      * Check the answer
-     * 
+     *
      * @async
      * @param {object} approver
      * @param {string} answer
@@ -132,7 +132,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the client info schema
-     * 
+     *
      * @returns {object}
      */
     getClientInfoSchema() {
@@ -141,7 +141,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the client answer schema
-     * 
+     *
      * @returns {object}
      */
     getClientAnswerSchema() {
@@ -150,11 +150,11 @@ module.exports = (Parent) => {
 
     /**
      * Get the approver info schema
-     * 
+     *
      * @returns {object}
      */
     getApproverInfoSchema() {
       throw new Error('Method "getApproverInfoSchema" is required for approval transport');
     }
-  }
+  };
 };

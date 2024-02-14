@@ -1,8 +1,9 @@
-const Approval = require('../approval')();
-const utils = require('../../../utils');
-const schema = require('../../../schema');
+import approval from "../approval/index.js";
+import utils from "../../../utils.js";
+import schema from "../../../schema.js";
+const Approval = approval();
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Client approval transport
    */
@@ -14,7 +15,7 @@ module.exports = (Parent) => {
       return {
         info: approver.clientIp,
         answer: approver.clientIp
-      }
+      };
     }
 
     /**
@@ -37,7 +38,7 @@ module.exports = (Parent) => {
     getClientInfoSchema() {
       return {
         type: 'undefined'
-      }
+      };
     }
 
     /**
@@ -53,5 +54,5 @@ module.exports = (Parent) => {
     getApproverInfoSchema() {
       return schema.getClientIp();
     }
-  }
+  };
 };

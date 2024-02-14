@@ -1,70 +1,71 @@
-const merge = require('lodash/merge');
-const shuffle = require('lodash/shuffle');
-const fetch = require('node-fetch');
-const FormData = require('form-data');
-const https = require('https');
-const qs = require('querystring');
-const utils = require('./utils');
-const errors = require('./errors');
-const ms = require('ms');
-const LoggerConsole = require('./logger/transports/console')();
-const TaskInterval = require('./task/transports/interval')();
-const Service = require('./service')();
-const pack = require('../package.json');
+import merge from "lodash-es/merge.js";
+import shuffle from "lodash-es/shuffle.js";
+import FormData from "form-data";
+import https from "https";
+import fetch from "node-fetch";
+import qs from "querystring";
+import utils from "./utils.js";
+import * as errors from "./errors.js";
+import ms from "ms";
+import loggerConsole from "./logger/transports/console/index.js";
+import taskInterval from "./task/transports/interval/index.js";
+import Service from "./service.js";
+import pack from "../package.json" with { type: "json" };
 
-module.exports = (Parent) => {
+const LoggerConsole = loggerConsole();
+const TaskInterval = taskInterval();
+
+export default (Parent) => {
   /**
    * Class to manage client requests to the network
    */
   return class Client extends (Parent || Service) {
-    static get version () { return pack.version }
-    static get codename () { return pack.name }
-    static get utils () { return utils }
-    static get errors () { return errors }
-    static get LoggerTransport () { return LoggerConsole }
-    static get TaskTransport () { return TaskInterval }
-    
+    static get version() { return pack.version; }
+    static get codename() { return pack.name; }
+    static get utils() { return utils; }
+    static get errors() { return errors; }
+    static get LoggerTransport() { return LoggerConsole; }
+    static get TaskTransport() { return TaskInterval; }
+
     /**
      * Get the auth cookie value
-     * 
+     *
      * @returns {object}
      */
     static getAuthCookieValue() {
-      if(typeof location != 'object' || !location.hostname) {
+      if (typeof location != 'object' || !location.hostname) {
         return null;
       }
-     
+
       const address = this.getPageAddress();
-      const name = `spreadableNetworkAuth[${ address }]`;
+      const name = `spreadableNetworkAuth[${address}]`;
       const value = "; " + document.cookie;
       const parts = value.split("; " + name + "=");
       const res = parts.length == 2 && parts.pop().split(";").shift();
-      return res? JSON.parse(atob(res)): null;
+      return res ? JSON.parse(atob(res)) : null;
     }
 
     /**
      * Get the page address
-     * 
+     *
      * @returns {string}
      */
     static getPageAddress() {
-      if(typeof location != 'object' || !location.hostname) {
+      if (typeof location != 'object' || !location.hostname) {
         return '';
       }
-
-      return `${ location.hostname }:${ location.port || (this.getPageProtocol() == 'https'? 443: 80) }`;
+      return `${location.hostname}:${location.port || (this.getPageProtocol() == 'https' ? 443 : 80)}`;
     }
 
     /**
      * Get the page protocol
-     * 
+     *
      * @returns {string}
      */
     static getPageProtocol() {
-      if(typeof location != 'object' || !location.protocol) {
+      if (typeof location != 'object' || !location.protocol) {
         return '';
       }
-
       return location.protocol.split(':')[0];
     }
 
@@ -74,12 +75,12 @@ module.exports = (Parent) => {
      */
     constructor(options = {}) {
       super(...arguments);
-
       this.options = merge({
         request: {
           pingTimeout: '1s',
           clientTimeout: '10s',
-          approvalQuestionTimeout: '20s'
+          approvalQuestionTimeout: '20s',
+          ignoreVersion: false
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
@@ -91,7 +92,6 @@ module.exports = (Parent) => {
           workerChangeInterval: '30s'
         }
       }, options);
-      
       !this.options.logger && (this.options.logger = { level: false });
       typeof this.options.logger == 'string' && (this.options.logger = { level: this.options.logger });
       this.LoggerTransport = this.constructor.LoggerTransport;
@@ -103,40 +103,40 @@ module.exports = (Parent) => {
 
     /**
      * Initialize the client
-     * 
+     *
      * @async
      */
     async init() {
-      if(!this.address) {
+      if (!this.address) {
         throw new Error('You must pass the node address');
       }
-
+      
       await this.prepareServices();
       await super.init.apply(this, arguments);
       let address = this.address;
-      Array.isArray(address) && (address = shuffle(address));           
+      Array.isArray(address) && (address = shuffle(address));
       this.availableAddress = await this.getAvailableAddress(address);
-      
-      if(!this.availableAddress) {
+
+      if (!this.availableAddress) {
         throw new Error('Provided addresses are not available');
       }
 
-      this.workerAddress = this.availableAddress;      
+      this.workerAddress = this.availableAddress;
     }
 
     /**
      * Prepare the services
-     * 
+     *
      * @async
      */
     async prepareServices() {
       await this.prepareLogger();
-      await this.prepareTask();     
+      await this.prepareTask();
     }
 
     /**
      * Prepare the logger service
-     * 
+     *
      * @async
      */
     async prepareLogger() {
@@ -145,24 +145,24 @@ module.exports = (Parent) => {
 
     /**
      * Prepare the task service
-     * 
+     *
      * @async
      */
     async prepareTask() {
       this.options.task && (this.task = await this.addService('task', new this.TaskTransport(this.options.task)));
 
-      if(!this.task) {
-        return;        
+      if (!this.task) {
+        return;
       }
 
-      if(this.options.task.workerChangeInterval) {
+      if (this.options.task.workerChangeInterval) {
         await this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
       }
     }
 
     /**
      * Get an available address from the list
-     * 
+     *
      * @async
      * @param {string|string[]} addresses
      * @returns {string}
@@ -171,18 +171,18 @@ module.exports = (Parent) => {
       !Array.isArray(addresses) && (addresses = [addresses]);
       let availableAddress;
 
-      for(let i = 0; i < addresses.length; i++) {
+      for (let i = 0; i < addresses.length; i++) {
         const address = addresses[i];
-        
+
         try {
-          await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({ 
+          await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({
             method: 'GET',
             timeout: this.options.request.pingTimeout
           }));
           availableAddress = address;
           break;
         }
-        catch(err) {
+        catch (err) {
           this.logger.warn(err.stack);
         }
       }
@@ -192,26 +192,26 @@ module.exports = (Parent) => {
 
     /**
      * Change the worker address
-     * 
+     *
      * @async
      */
     async changeWorker() {
       const lastAddress = this.workerAddress;
       const result = await this.request('get-available-node', { address: this.availableAddress });
       const address = result.address;
-
-      if(address == lastAddress) {
+     
+      if (address == lastAddress) {
         return;
       }
 
       try {
-        await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({ 
+        await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({
           method: 'GET',
           timeout: this.options.request.pingTimeout
         }));
         this.workerAddress = address;
       }
-      catch(err) {        
+      catch (err) {
         this.logger.warn(err.stack);
         this.workerAddress = lastAddress;
       }
@@ -219,7 +219,7 @@ module.exports = (Parent) => {
 
     /**
      * Get the approval question
-     * 
+     *
      * @param {string} action
      * @param {object} [info]
      * @param {object} [options]
@@ -227,19 +227,18 @@ module.exports = (Parent) => {
      */
     async getApprovalQuestion(action, info, options = {}) {
       const timeout = options.timeout || this.options.request.approvalQuestionTimeout;
-      const timer = this.createRequestTimer(timeout);            
-      const result = await this.request('request-approval-key', Object.assign({}, options, {        
+      const timer = this.createRequestTimer(timeout);
+      const result = await this.request('request-approval-key', Object.assign({}, options, {
         body: { action },
         timeout: timer()
       }));
-      
       const approvers = result.approvers;
-      const key = result.key; 
+      const key = result.key;
       const startedAt = result.startedAt;
       const clientIp = result.clientIp;
       const confirmedAddresses = [];
       const targets = approvers.map(address => ({ address }));
-      const results = await this.requestGroup(targets, 'add-approval-info', Object.assign({}, options, { 
+      const results = await this.requestGroup(targets, 'add-approval-info', Object.assign({}, options, {
         includeErrors: true,
         timeout: timer(this.options.request.clientTimeout),
         body: {
@@ -250,18 +249,18 @@ module.exports = (Parent) => {
         }
       }));
 
-      for(let i = 0; i < results.length; i++) {
+      for (let i = 0; i < results.length; i++) {
         const result = results[i];
-
-        if(result instanceof Error) {
+        
+        if (result instanceof Error) {
           continue;
         }
 
         confirmedAddresses.push(targets[i].address);
       }
 
-      const res = await this.request('request-approval-question', Object.assign({}, options, {     
-        body: { 
+      const res = await this.request('request-approval-question', Object.assign({}, options, {
+        body: {
           action,
           key,
           info,
@@ -269,12 +268,11 @@ module.exports = (Parent) => {
         },
         timeout: timer()
       }));
-
-      return { 
+      return {
         action,
-        key, 
-        question: res.question, 
-        approvers: confirmedAddresses, 
+        key,
+        question: res.question,
+        approvers: confirmedAddresses,
         startedAt,
         clientIp
       };
@@ -282,35 +280,34 @@ module.exports = (Parent) => {
 
     /**
      * Make a group request
-     * 
+     *
      * @async
-     * @param {array} arr 
+     * @param {array} arr
      * @param {string} action
      * @param {object} [options]
      * @returns {object}
      */
     async requestGroup(arr, action, options = {}) {
       const requests = [];
-
-      for(let i = 0; i < arr.length; i++) {
+      
+      for (let i = 0; i < arr.length; i++) {
         const item = arr[i];
         const address = item.address;
-
         requests.push(new Promise(resolve => {
           this.request(action, merge({ address }, options, item.options))
-          .then(resolve)
-          .catch(resolve)
+            .then(resolve)
+            .catch(resolve);
         }));
       }
 
       let results = await Promise.all(requests);
-      !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));     
+      !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
       return results;
     }
 
     /**
      * Make a request to the api
-     * 
+     *
      * @async
      * @param {string} endpoint
      * @param {object} [options]
@@ -321,25 +318,25 @@ module.exports = (Parent) => {
       let body = options.formData || options.body || {};
       body.timeout = options.timeout;
       body.timestamp = Date.now();
-
-      if(options.approvalInfo) {
+      
+      if (options.approvalInfo) {
         const approvalInfo = options.approvalInfo;
         delete approvalInfo.question;
-
-        if(!Object.prototype.hasOwnProperty.call(approvalInfo, 'answer')) {
+        
+        if (!Object.prototype.hasOwnProperty.call(approvalInfo, 'answer')) {
           throw new Error('Request "approvalInfo" option must include "answer" property');
         }
 
-        body.approvalInfo = options.formData? JSON.stringify(approvalInfo): approvalInfo;
+        body.approvalInfo = options.formData ? JSON.stringify(approvalInfo) : approvalInfo;
       }
 
-      if(options.formData) {
+      if (options.formData) {
         const form = new FormData();
-
-        for(let key in body) {
+        
+        for (let key in body) {
           let val = body[key];
-
-          if(typeof val == 'object') {
+          
+          if (typeof val == 'object') {
             form.append(key, val.value, val.options);
           }
           else {
@@ -353,38 +350,38 @@ module.exports = (Parent) => {
       else {
         options.headers['content-type'] = 'application/json';
         options.body = JSON.stringify(body);
-      } 
-
+      }
+            
       if(options.timeout && !options.signal) {
         options.signal = AbortSignal.timeout(options.timeout);
       }
-      
+
       options.url = this.createRequestUrl(endpoint, options);
       const start = Date.now();
       let response = {};
 
-      try {        
+      try {
         response = await fetch(options.url, options);    
         this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);
-
-        if(response.ok) {
-          return options.getFullResponse? response: await response.json();
+        
+        if (response.ok) {
+          return options.getFullResponse ? response : await response.json();
         }
 
-        const type = (response.headers.get('content-type') || '').match('application/json')? 'json': 'text';
+        const type = (response.headers.get('content-type') || '').match('application/json') ? 'json' : 'text';
         const body = await response[type]();
-
-        if(!body || typeof body != 'object') {
+        
+        if (!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
         }
 
-        if(!body.code) {
+        if (!body.code) {
           throw new Error(body.message || body);
         }
-        
+
         throw new errors.WorkError(body.message, body.code);
       }
-      catch(err) {
+      catch (err) {
         options.timeout && err.type == 'aborted' && (err.type = 'request-timeout');        
         //eslint-disable-next-line no-ex-assign
         utils.isRequestTimeoutError(err) && (err = utils.createRequestTimeoutError());
@@ -396,12 +393,12 @@ module.exports = (Parent) => {
 
     /**
      * Create a api request url
-     * 
-     * @param {string} endpoint 
-     * @param {object} options 
+     *
+     * @param {string} endpoint
+     * @param {object} options
      */
     createRequestUrl(endpoint, options = {}) {
-      const query = options.query? qs.stringify(options.query): null;
+      const query = options.query ? qs.stringify(options.query) : null;
       const address = options.address || this.workerAddress;
       let url = `${this.getRequestProtocol()}://${address}/client/${endpoint}`;
       query && (url += '?' + query);
@@ -410,11 +407,11 @@ module.exports = (Parent) => {
 
     /**
      * Create default request options
-     * 
+     *
      * @param {object} options
      * @returns {object}
      */
-    createDefaultRequestOptions(options = {}) {   
+    createDefaultRequestOptions(options = {}) {
       const defaults = {
         method: 'POST',
         timeout: this.options.request.clientTimeout
@@ -426,12 +423,12 @@ module.exports = (Parent) => {
         }
       }
 
-      if(this.options.auth) {
+      if (this.options.auth) {
         const username = this.options.auth.username;
         const password = this.options.auth.password;
         let header = 'Basic ';
 
-        if(typeof Buffer == 'function') {
+        if (typeof Buffer == 'function') {
           header += Buffer.from(username + ":" + password).toString('base64');
         }
         else {
@@ -441,12 +438,12 @@ module.exports = (Parent) => {
         defaults.headers.authorization = header;
       }
 
-      if(options.timeout) {
+      if (options.timeout) {
         options.timeout = utils.getMs(options.timeout);
       }
 
-      if(typeof this.options.https == 'object' && this.options.https.ca) {
-        if(!https.Agent) {
+      if (typeof this.options.https == 'object' && this.options.https.ca) {
+        if (!https.Agent) {
           options.agent = options.agent || {};
           options.agent.ca = this.options.https.ca;
         }
@@ -461,9 +458,9 @@ module.exports = (Parent) => {
 
     /**
      * Create a request timer
-     * 
-     * @param {number} timeout 
-     * @param {object} [options] 
+     *
+     * @param {number} timeout
+     * @param {object} [options]
      * @returns {function}
      */
     createRequestTimer(timeout, options = {}) {
@@ -476,19 +473,19 @@ module.exports = (Parent) => {
     /**
      * Prepare the options
      */
-    prepareOptions() {  
-      this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);   
+    prepareOptions() {
+      this.options.request.pingTimeout = utils.getMs(this.options.request.pingTimeout);
       this.options.request.clientTimeout = utils.getMs(this.options.request.clientTimeout);
-      this.options.request.approvalQuestionTimeout = utils.getMs(this.options.request.approvalQuestionTimeout);           
+      this.options.request.approvalQuestionTimeout = utils.getMs(this.options.request.approvalQuestionTimeout);
     }
 
     /**
      * Get the request protocol
-     * 
+     *
      * @returns {string}
      */
     getRequestProtocol() {
-      return this.options.https? 'https': 'http';
+      return this.options.https ? 'https' : 'http';
     }
 
     /**
@@ -497,13 +494,13 @@ module.exports = (Parent) => {
     envTest(isBrowser, name) {
       const isBrowserEnv = utils.isBrowserEnv();
       
-      if(isBrowser && !isBrowserEnv) {
+      if (isBrowser && !isBrowserEnv) {
         throw new Error(`You can't use "${name}" method in the nodejs environment`);
       }
 
-      if(!isBrowser && isBrowserEnv) {
+      if (!isBrowser && isBrowserEnv) {
         throw new Error(`You can't use "${name}" method in the browser environment`);
       }
     }
-  }
+  };
 };

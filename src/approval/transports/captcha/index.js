@@ -1,12 +1,16 @@
-const sharp = require('sharp');
-const textToSvg = require('text-to-svg');
-const isPng = require('is-png');
-const path = require('path');
-const _ = require('lodash');
-const Approval = require('../approval')();
-const utils = require('../../../utils');
+import isPng from "is-png";
+import random from "lodash-es/random.js";
+import path from "path";
+import sharp from "sharp";
+import textToSvg from "text-to-svg";
+import { fileURLToPath } from 'url';
+import utils from "../../../utils.js";
+import approval from "../approval/index.js";
 
-module.exports = (Parent) => {
+const Approval = approval();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default (Parent) => {
   /**
    * Captcha approval transport
    */
@@ -37,19 +41,19 @@ module.exports = (Parent) => {
 
     /**
      * Create SVG handler
-     * 
+     *
      * @async
      * @returns {object}
      */
     async createSvgHandler() {
       return new Promise((resolve, reject) => {
         textToSvg.load(path.join(__dirname, '/fonts/ipag.ttf'), (err, handler) => {
-          if(err) {
+          if (err) {
             return reject(err);
           }
 
           resolve(handler);
-        })
+        });
       });
     }
 
@@ -59,7 +63,7 @@ module.exports = (Parent) => {
     async createInfo(approver) {
       const options = Object.assign({}, this, approver.info || {});
       const answer = this.createText();
-      const bgImg = await this.createImage(answer, options);      
+      const bgImg = await this.createImage(answer, options);
       const buffer = await bgImg.toBuffer();
       return { info: buffer.toString('base64'), answer };
     }
@@ -79,25 +83,25 @@ module.exports = (Parent) => {
           background: 'transparent'
         }
       });
-      bgImg.png();      
+      bgImg.png();
       let length = this.captchaLength;
       const comp = [];
 
-      for(let i = 0; i < data.length; i++) {
+      for (let i = 0; i < data.length; i++) {
         const img = sharp(Buffer.from(data[i], 'base64'));
         const count = Math.floor(length / (data.length - i));
         img.extract({ left: 0, top: 0, height: size, width: size * count });
-        comp.push({ 
-          input: await img.toBuffer(), 
-          left: size * (this.captchaLength - length), 
+        comp.push({
+          input: await img.toBuffer(),
+          left: size * (this.captchaLength - length),
           top: 0
         });
-        length -= count; 
+        length -= count;
       }
 
       bgImg.composite(comp);
       const buffer = await bgImg.toBuffer();
-      return `data:image/png;base64,${ buffer.toString('base64') }`;
+      return `data:image/png;base64,${buffer.toString('base64')}`;
     }
 
     /**
@@ -106,30 +110,30 @@ module.exports = (Parent) => {
     async checkAnswer(approver, answer, approvers) {
       let length = this.captchaLength;
 
-      for(let i = 0; i < approvers.length; i++) {
+      for (let i = 0; i < approvers.length; i++) {
         const address = approvers[i];
         const count = Math.floor(length / (approvers.length - i));
         const cLength = this.captchaLength - length;
         const from = String(answer).slice(cLength, cLength + count).toLowerCase();
         const to = String(approver.answer).slice(0, count).toLowerCase();
 
-        if(address == this.node.address) {
+        if (address == this.node.address) {
           return from === to;
         }
 
         length -= count;
       }
-      
+
       return false;
     }
 
     /**
      * Create an image
-     * 
-     * @param {string} text 
-     * @param {options} options 
-     * @param {string} options.captchaBackground 
-     * @param {number} options.captchaWidth 
+     *
+     * @param {string} text
+     * @param {options} options
+     * @param {string} options.captchaBackground
+     * @param {number} options.captchaWidth
      * @param {string} options.captchaColor
      * @returns {object}
      */
@@ -137,7 +141,7 @@ module.exports = (Parent) => {
       const length = this.captchaLength;
       const bg = options.captchaBackground;
       const size = Math.floor(options.captchaWidth / length);
-      const width = options.captchaWidth;      
+      const width = options.captchaWidth;
       const bgImg = sharp({
         create: {
           width,
@@ -146,26 +150,26 @@ module.exports = (Parent) => {
           background: bg
         }
       });
-      bgImg.png();     
+      bgImg.png();
       const comp = [];
       const maxFontSize = size * 0.9;
       const minFontSize = size * 0.5;
-      
-      for(let i = 0; i < length; i++) {
-        const color = (options.captchaColor == 'random')? utils.getRandomHexColor(): options.captchaColor;
-        const strokeColor = utils.invertHexColor(color);        
-        const fillOpacity = _.random(0.25, 1, true);
-        const strokeOpacity = fillOpacity * 0.5;
-        const strokeWidth = _.random(1, 1.3, true);      
 
-        for(let k = 0; k < options.captchaShadows + 1; k++) {
-          const fontSize = _.random(minFontSize, maxFontSize);
+      for (let i = 0; i < length; i++) {
+        const color = (options.captchaColor == 'random') ? utils.getRandomHexColor() : options.captchaColor;
+        const strokeColor = utils.invertHexColor(color);
+        const fillOpacity = random(0.25, 1, true);
+        const strokeOpacity = fillOpacity * 0.5;
+        const strokeWidth = random(1, 1.3, true);
+
+        for (let k = 0; k < options.captchaShadows + 1; k++) {
+          const fontSize = random(minFontSize, maxFontSize);
           const dev = Math.floor(size - fontSize);
           const svg = this.svgHandler.getSVG(text[i], {
-            fontSize, 
+            fontSize,
             anchor: 'left top',
-            attributes: { 
-              fill: color, 
+            attributes: {
+              fill: color,
               stroke: strokeColor,
               'stroke-opacity': strokeOpacity,
               'fill-opacity': fillOpacity,
@@ -173,11 +177,11 @@ module.exports = (Parent) => {
             }
           });
           const txtImg = sharp(Buffer.from(svg));
-          txtImg.rotate(_.random(-75, 75), { background: 'transparent' });
-          comp.push({ 
-            input: await txtImg.toBuffer(), 
-            left: size * i + _.random(0, dev), 
-            top: _.random(0, dev) 
+          txtImg.rotate(random(-75, 75), { background: 'transparent' });
+          comp.push({
+            input: await txtImg.toBuffer(),
+            left: size * i + random(0, dev),
+            top: random(0, dev)
           });
         }
       }
@@ -188,11 +192,11 @@ module.exports = (Parent) => {
 
     /**
      * Create a random captcha text
-     * 
+     *
      * @returns {string}
      */
     createText() {
-      return [...Array(this.captchaLength)].map(() =>(~~(Math.random() * 36)).toString(36)).join('');
+      return [...Array(this.captchaLength)].map(() => (~~(Math.random() * 36)).toString(36)).join('');
     }
 
     /**
@@ -219,7 +223,7 @@ module.exports = (Parent) => {
           expected: true
         },
         'undefined'
-      ]
+      ];
     }
 
     /**
@@ -228,7 +232,7 @@ module.exports = (Parent) => {
     getClientAnswerSchema() {
       return {
         type: 'string'
-      }
+      };
     }
 
     /**
@@ -238,7 +242,7 @@ module.exports = (Parent) => {
       return {
         type: 'string',
         value: val => Buffer.byteLength(val) < 1024 * 32 && isPng(Buffer.from(val, 'base64'))
-      }
+      };
     }
-  }
+  };
 };

@@ -1,12 +1,12 @@
-const controllers = require('./controllers');
-const midds = require('../midds');
+import * as controllers from "./controllers.js";
+import midds from "../midds.js";
 
-module.exports = [
+export default [
   { name: 'networkAccess', fn: node => midds.networkAccess(node, { version: true }) },
 
   /**
    * Get the available node from the network
-   * 
+   *
    * @api {post} /client/get-available-node
    * @apiSuccess {object} { address }
    */
@@ -22,7 +22,7 @@ module.exports = [
 
   /**
    * Request the approval key
-   * 
+   *
    * @api {post} /client/request-approval-key
    * @apiParam {string} action
    * @apiSuccess {object} { key, startedAt, approvers, clientIp }
@@ -39,7 +39,7 @@ module.exports = [
 
   /**
    * Request the approval question
-   * 
+   *
    * @api {post} /client/request-approval-question
    * @apiParam {string} action
    * @apiParam {string} key
@@ -58,7 +58,7 @@ module.exports = [
 
   /**
    * Add the approval info
-   * 
+   *
    * @api {post} /client/add-approval-info
    * @apiParam {string} action
    * @apiParam {string} key
@@ -66,10 +66,10 @@ module.exports = [
    * @apiParam {number} startedAt
    * @apiSuccess {object} - { info }
    */
-  { 
-    name: 'addApprovalInfo', 
-    method: 'post', 
-    url: '/add-approval-info', 
+  {
+    name: 'addApprovalInfo',
+    method: 'post',
+    url: '/add-approval-info',
     fn: controllers.addApprovalInfo
   },
 ];

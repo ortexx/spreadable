@@ -1,6 +1,6 @@
-const Service = require('../../../service')();
+import Service from "../../../service.js";
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Behavior transport
    */
@@ -12,5 +12,5 @@ module.exports = (Parent) => {
       super(...arguments);
       Object.assign(this, options);
     }
-  }
+  };
 };

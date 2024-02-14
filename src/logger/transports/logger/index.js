@@ -1,43 +1,45 @@
-const Service = require('../../../service')();
+import Service from "../../../service.js";
 
-module.exports = (Parent) => {
+export default (Parent) => {
+
   /**
    * Logger transport interface
    */
   return class Logger extends (Parent || Service) {
+
     /**
-     * @param {object} options 
+     * @param {object} options
      */
     constructor(options = {}) {
       super(...arguments);
-      this.options = options;    
+      this.options = options;
       this.levels = ['info', 'warn', 'error'];
       this.defaultLevel = 'info';
     }
 
-    /** 
+    /**
      * Initialize the logger
-     * 
+     *
      * @async
      */
     async init() {
-      this.setLevel(this.options.level === undefined? this.defaultLevel: this.options.level);
+      this.setLevel(this.options.level === undefined ? this.defaultLevel : this.options.level);
       await super.init.apply(this, arguments);
     }
 
-    /** 
+    /**
      * Deinitialize the logger
-     * 
+     *
      * @async
      */
     async deinit() {
       this.setLevel(false);
       await super.deinit.apply(this, arguments);
     }
-    
+
     /**
      * Log by levels
-     * 
+     *
      * @async
      * @param {string} level
      */
@@ -47,7 +49,7 @@ module.exports = (Parent) => {
 
     /**
      * Log info
-     * 
+     *
      * @async
      */
     async info(...args) {
@@ -56,7 +58,7 @@ module.exports = (Parent) => {
 
     /**
      * Log a warning
-     * 
+     *
      * @async
      */
     async warn(...args) {
@@ -65,7 +67,7 @@ module.exports = (Parent) => {
 
     /**
      * Log an error
-     * 
+     *
      * @async
      */
     async error(...args) {
@@ -74,32 +76,29 @@ module.exports = (Parent) => {
 
     /**
      * Check the log level is active
-     * 
+     *
      * @param {string} level
      */
-    isLevelActive(level) { 
-      if(!this.level) {
+    isLevelActive(level) {
+      if (!this.level) {
         return false;
       }
-      
-      return this.levels.indexOf(level) >= this.levels.indexOf(this.level)
+      return this.levels.indexOf(level) >= this.levels.indexOf(this.level);
     }
 
     /**
      * Set the active level
-     * 
+     *
      * @param {string} level
      */
     setLevel(level) {
-      if(level === false) {
+      if (level === false) {
         return this.level = false;
       }
-
-      if(this.levels.indexOf(level) == -1) {
+      if (this.levels.indexOf(level) == -1) {
         throw new Error(`Wrong logger level "${level}"`);
-      }    
-
+      }
       this.level = level;
     }
-  }
+  };
 };

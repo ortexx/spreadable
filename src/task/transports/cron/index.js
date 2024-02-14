@@ -1,11 +1,13 @@
-const Task = require('../task')();
-const CronJob = require('cron').CronJob;
+import task from "../task/index.js";
+import { CronJob } from "cron";
+const Task = task();
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Cron tasks transport
    */
   return class TaskCron extends (Parent || Task) {
+
     /**
      * @see Task.prototype.start
      */
@@ -22,5 +24,5 @@ module.exports = (Parent) => {
       task.cronTask.stop();
       await super.stop(task);
     }
-  }  
+  };
 };

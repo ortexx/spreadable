@@ -1,28 +1,30 @@
-const path = require('path');
-const fse = require('fs-extra');
-const _ = require('lodash');
-const Logger = require('../logger')();
-const utils = require('../../../utils');
+import path from "path";
+import fse from "fs-extra";
+import merge from "lodash-es/merge.js";
+import logger from "../logger/index.js";
+import utils from "../../../utils.js";
 
-module.exports = (Parent) => {
+const Logger = logger();
+
+export default (Parent) => {
   /**
    * File logger transport
    */
   return class LoggerFile extends (Parent || Logger) {
     constructor(options) {
-      options = _.merge({
+      options = merge({
         filesCount: 5,
         fileMaxSize: '10mb'
-      }, options);      
+      }, options);
       super(options);
-      this.defaultLevel = 'warn';      
+      this.defaultLevel = 'warn';
       this.prepareOptions();
     }
 
     /**
      * @see Logger.prototype.init
      */
-    async init() {      
+    async init() {
       !this.options.folder && (this.options.folder = path.join(this.node.storagePath, 'logs'));
       this.__filesQueue = new utils.FilesQueue(this.options.folder, {
         limit: this.options.filesCount,
@@ -52,7 +54,7 @@ module.exports = (Parent) => {
      * @see Logger.prototype.log
      */
     async log(level, message) {
-      if(!this.isLevelActive(level)) {   
+      if (!this.isLevelActive(level)) {
         return;
       }
 
@@ -60,31 +62,31 @@ module.exports = (Parent) => {
         let lastFile = this.getLastFile();
         message = this.prepareMessage(message, level);
 
-        if(!lastFile) {
+        if (!lastFile) {
           lastFile = await this.addNewFile();
         }
 
-        if(lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
+        if (lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
           lastFile = await this.addNewFile();
         }
 
         await this.addNewMessage(message, lastFile.filePath);
-      });     
+      });
     }
 
     /**
      * Add a new message
-     * 
+     *
      * @param {string} message
      * @param {string} filePath
      */
-    async addNewMessage(message, filePath) {     
+    async addNewMessage(message, filePath) {
       await fse.appendFile(filePath, message + '\n');
     }
 
     /**
      * Add a new file
-     * 
+     *
      * @async
      * @returns {Object}
      */
@@ -93,24 +95,24 @@ module.exports = (Parent) => {
       await fse.ensureFile(filePath);
       await this.__filesQueue.normalize();
       return this.getLastFile();
-    }    
+    }
 
     /**
      * Normalize the files count
-     * 
+     *
      * @async
      */
     async normalizeFilesCount() {
       await this.__filesQueue.normalize();
-
-      if(!this.__filesQueue.files.length) {
+      
+      if (!this.__filesQueue.files.length) {
         return await this.addNewFile();
       }
     }
 
     /**
      * Get the last file
-     * 
+     *
      * @returns {object}
      */
     getLastFile() {
@@ -119,8 +121,8 @@ module.exports = (Parent) => {
 
     /**
      * Get the message size
-     * 
-     * @param {string} message 
+     *
+     * @param {string} message
      * @returns {number}
      */
     getMessageSize(message) {
@@ -129,8 +131,8 @@ module.exports = (Parent) => {
 
     /**
      * Prepare the message
-     * 
-     * @param {string} message 
+     *
+     * @param {string} message
      * @param {string} level
      * @returns {number}
      */
@@ -144,6 +146,6 @@ module.exports = (Parent) => {
      */
     prepareOptions() {
       this.options.fileMaxSize = utils.getBytes(this.options.fileMaxSize);
-    } 
-  }
+    }
+  };
 };

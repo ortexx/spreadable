@@ -1,6 +1,6 @@
-const midds = require('../midds');
+import midds from "../midds.js";
 
-module.exports = [ 
+export default [
   { name: 'networkAccess', fn: node => midds.networkAccess(node, { address: true, version: true, root: true }) },
   { name: 'updateClientInfo', fn: midds.updateClientInfo },
   { name: 'master', url: '/master', fn: node => node.server.createRouter(node.server.getApiMasterRoutes()) },

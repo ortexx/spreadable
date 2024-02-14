@@ -1,7 +1,8 @@
-const Task = require('../task')();
-const utils = require('../../../utils');
+import task from "../task/index.js";
+import utils from "../../../utils.js";
+const Task = task();
 
-module.exports = (Parent) => {
+export default (Parent) => {
   /**
    * Interval tasks transport
    */
@@ -12,7 +13,7 @@ module.exports = (Parent) => {
     async add(name, interval, fn, options) {
       return super.add(name, utils.getMs(interval), fn, options);
     }
-    
+
     /**
      * @see Task.prototype.start
      */
@@ -29,5 +30,5 @@ module.exports = (Parent) => {
       clearInterval(task.intervalObject);
       await super.stop(task);
     }
-  }  
+  };
 };
