@@ -8,77 +8,69 @@ You can use it to combine servers in a public or private network for any purpose
 
 ```javascript
 // Server
-const Node = require("spreadable").Node;
+import { Node } from "spreadable";
 
-(async () => {
-  try {
-    const node = new Node({
-      port: 4000,
-      hostname: "localhost",
-      initialNetworkAddress: "localhost:4000",
-    });
-    await node.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const node = new Node({
+    port: 4000,
+    hostname: "localhost",
+    initialNetworkAddress: "localhost:4000",
+  });
+  await node.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
 // Client
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4000",
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4000",
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 In the example above we run the node and connected to it via the client to do something in the future. Let's add another node to our local network.
 
 ```javascript
 // Another server
-const Node = require("spreadable").Node;
+import { Node } from "spreadable";
 
-(async () => {
-  try {
-    const node = new Node({
-      port: 4001,
-      hostname: "localhost",
-      initialNetworkAddress: "localhost:4000",
-    });
-    await node.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const node = new Node({
+    port: 4001,
+    hostname: "localhost",
+    initialNetworkAddress: "localhost:4000",
+  });
+  await node.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 In order to join to an already existing network you need to pass **initialNetworkAddress** option containing the address of any of the network active node. If you are launching the very first server then simply indicate in the option a link to yourself as was done at the very beginning or just skip this option. Now you can add to the network the number of nodes you need. The client can use the address of any active network node to connect to the network itself.
 
 ```javascript
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4000",
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4000",
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ## How to use the client in a browser
@@ -169,24 +161,22 @@ Currently, the proxy server must have the same ip address as the node has. If yo
 When making requests the client can always specify a timeout.
 
 ```javascript
-const Client = require("storacle").Client;
+import { Client } from "storacle";
 const hash = "someFileHash";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4000",
-      request: {
-        clientTimeout: "10s",
-      },
-    });
-    await client.init();
-    const link = await client.getFileLink(hash, { timeout: 2000 });
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4000",
+    request: {
+      clientTimeout: "10s",
+    },
+  });
+  await client.init();
+  const link = await client.getFileLink(hash, { timeout: 2000 });
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 First, we set the default timeout, then for a specific request passed a unique one.
@@ -202,47 +192,44 @@ You can extend the library code and add various interesting features. A detailed
 Suppose you have a trusted certificate for **example.com**.
 
 ```javascript
-const Node = require("spreadable").Node;
-const fs = require("fs");
+import { Node } from "spreadable";
+import fs from "fs";
+
 const key = fs.readFileSync("key.pem");
 const cert = fs.readFileSync("cert.pem");
 
-(async () => {
-  try {
-    for (let i = 0; i < 10; i++) {
-      const node = new Node({
-        port: 4000 + i,
-        initialNetworkAddress: "example.com:4000",
-        hostname: "example.com",
-        server: {
-          key,
-          cert,
-        },
-      });
-      await node.init();
-    }
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
+try {
+  for (let i = 0; i < 10; i++) {
+    const node = new Node({
+      port: 4000 + i,
+      initialNetworkAddress: "example.com:4000",
+      hostname: "example.com",
+      server: {
+        key,
+        cert,
+      },
+    });
+    await node.init();
   }
-})();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "example.com:4000",
-      https: true,
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "example.com:4000",
+    https: true,
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ### 2. Run https server on the node using self-signed certificates
@@ -250,55 +237,53 @@ const Client = require("spreadable").Client;
 You can also create a self-signed certificate, and use an authentication certificate to make requests. To simplify the example, suppose that one certificate simultaneously contains the addresses of all network nodes.
 
 ```javascript
-const Node = require("spreadable").Node;
-const fs = require("fs");
+import { Node } from "spreadable";
+import fs from "fs";
+
 const key = fs.readFileSync("key.pem");
 const cert = fs.readFileSync("cert.pem");
 const ca = fs.readFileSync("ca.pem");
 
-(async () => {
-  try {
-    for (let i = 0; i < 10; i++) {
-      const node = new Node({
-        port: 4000 + i,
-        hostname: "localhost",
-        initialNetworkAddress: "localhost:4000",
-        server: {
-          https: {
-            key,
-            cert,
-            ca,
-          },
+try {
+  for (let i = 0; i < 10; i++) {
+    const node = new Node({
+      port: 4000 + i,
+      hostname: "localhost",
+      initialNetworkAddress: "localhost:4000",
+      server: {
+        https: {
+          key,
+          cert,
+          ca,
         },
-      });
-      await node.init();
-    }
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
+      },
+    });
+    await node.init();
   }
-})();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
-const Client = require("spreadable").Client;
-const fs = require("fs");
+import { Client } from "spreadable";
+import fs from "fs";
+
 const ca = fs.readFileSync("ca.pem");
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4001",
-      https: {
-        ca,
-      },
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4001",
+    https: {
+      ca,
+    },
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 Don't forget to pass the authentication certificate in this case.
@@ -308,44 +293,40 @@ Don't forget to pass the authentication certificate in this case.
 Suppose you have a certificate for all **example.com** subdomains.
 
 ```javascript
-const Node = require("spreadable").Node;
+import { Node } from "spreadable";
 
-(async () => {
-  try {
-    for (let i = 0; i < 10; i++) {
-      const node = new Node({
-        port: 4000 + i,
-        publicPort: 443,
-        initialNetworkAddress: "sub1.example.com:443",
-        hostname: `sub${i + 1}.example.com`,
-        server: {
-          https: true,
-        },
-      });
-      await node.init();
-    }
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
+try {
+  for (let i = 0; i < 10; i++) {
+    const node = new Node({
+      port: 4000 + i,
+      publicPort: 443,
+      initialNetworkAddress: "sub1.example.com:443",
+      hostname: `sub${i + 1}.example.com`,
+      server: {
+        https: true,
+      },
+    });
+    await node.init();
   }
-})();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "sub1.example.com:443",
-      https: true,
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "sub1.example.com:443",
+    https: true,
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 You need to make all the necessary settings and redirects on the receiving server.
@@ -355,51 +336,47 @@ You need to make all the necessary settings and redirects on the receiving serve
 ### 1. Use the basic authentication
 
 ```javascript
-const Node = require("spreadable").Node;
+import { Node } from "spreadable";
 const auth = { username: "user", password: "pass" };
 
-(async () => {
-  try {
-    const node = new Node({
-      port: 4000,
-      hostname: "localhost",
-      initialNetworkAddress: "localhost:4000",
-      network: {
-        auth,
-      },
-    });
-    await node.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const node = new Node({
+    port: 4000,
+    hostname: "localhost",
+    initialNetworkAddress: "localhost:4000",
+    network: {
+      auth,
+    },
+  });
+  await node.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 const auth = { username: "user", password: "pass" };
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4000",
-      auth,
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4000",
+    auth,
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ### 2. Use your own network access filter
 
 ```javascript
-const Node = require('spreadable').Node;
-const db = require('some-db');
-const errors = require('spreadable/src/errors');
+import { Node } from "spreadable";
+import db from 'some-db';
+import { AccessError } from 'spreadable/src/errors.js';
 
 class MyNode extends Node {
   networkAccess(req) {
@@ -407,41 +384,37 @@ class MyNode extends Node {
 
     // we can do any check we want here
     if(!await db.AllowedIpAddresses.count(req.clientIp)) {
-      throw new errors.AccessError('You ip address is denied');
+      throw new AccessError('You ip address is denied');
     }
   }
 }
 
-(async () => {
-  try {
-    const node = new MyNode({
-      port: 4000,
-      hostname: 'localhost',
-      initialNetworkAddress: 'localhost:4000'
-    });
-    await node.init();
-  }
-  catch(err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const node = new MyNode({
+    port: 4000,
+    hostname: 'localhost',
+    initialNetworkAddress: 'localhost:4000'
+  });
+  await node.init();
+}
+catch(err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ```javascript
-const Client = require("spreadable").Client;
+import { Client } from "spreadable";
 
-(async () => {
-  try {
-    const client = new Client({
-      address: "localhost:4000",
-    });
-    await client.init();
-  } catch (err) {
-    console.error(err.stack);
-    process.exit(1);
-  }
-})();
+try {
+  const client = new Client({
+    address: "localhost:4000",
+  });
+  await client.init();
+} catch (err) {
+  console.error(err.stack);
+  process.exit(1);
+}
 ```
 
 ## Ban system
@@ -551,6 +524,8 @@ When you create an instance of the client you can pass options below:
 - {number|string} **[request.clientTimeout="10s"]** - default timeout for a typical client request for any purpose.
 
 - {number|string} **[request.approvalQuestionTimeout="20s"]** - timeout for an approval question.
+
+- {boolean} **[request.ignoreVersion=false]** - don't send the client version to compare.
 
 - {boolean|object} **[https=false]** - use https or not.
 

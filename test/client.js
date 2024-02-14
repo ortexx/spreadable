@@ -34,6 +34,7 @@ export default function () {
       it('should not throw an exception', async function () {
         await client.init();
       });
+      
       it('should set the worker address', async function () {
         assert.equal(client.workerAddress, node.address);
       });
@@ -45,7 +46,7 @@ export default function () {
         assert.isDefined(info.question);
       });
     });
-    
+
     describe('.deinit()', function () {
       it('should not throw an exception', async function () {
         await client.deinit();

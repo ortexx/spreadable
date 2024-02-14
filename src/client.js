@@ -79,7 +79,8 @@ export default (Parent) => {
         request: {
           pingTimeout: '1s',
           clientTimeout: '10s',
-          approvalQuestionTimeout: '20s'
+          approvalQuestionTimeout: '20s',
+          ignoreVersion: false
         },
         auth: this.constructor.getAuthCookieValue(),
         address: this.constructor.getPageAddress(),
@@ -413,11 +414,14 @@ export default (Parent) => {
     createDefaultRequestOptions(options = {}) {
       const defaults = {
         method: 'POST',
-        timeout: this.options.request.clientTimeout,
-        headers: {
+        timeout: this.options.request.clientTimeout,        
+      };
+
+      if(!this.options.request.ignoreVersion) {
+        defaults.headers = {
           'client-version': this.getVersion()
         }
-      };
+      }
 
       if (this.options.auth) {
         const username = this.options.auth.username;

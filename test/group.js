@@ -141,7 +141,9 @@ export default function () {
         nodes.push(node);
         await node.init();
       }
+      
       await tools.nodesSync(nodes, nodes.length * 3);
+
       for (let i = 0; i < nodes.length; i++) {
         assert.equal(await nodes[i].getNetworkSize(), nodes.length);
       }
@@ -150,13 +152,16 @@ export default function () {
     it("should remove the node from the network", async () => {
       await nodes[0].deinit();
       nodes.shift();
+
       for (let i = 0; i < nodes.length; i++) {
         nodes[i].initialNetworkAddress = nodes[0].address;
       }
+
       await tools.wait(await nodes[0].getSyncLifetime());
       await tools.nodesSync(nodes, nodes.length * 3);
       await tools.wait(await nodes[0].getSyncLifetime());
       await tools.nodesSync(nodes, nodes.length * 3);
+
       for (let i = 0; i < nodes.length; i++) {
         assert.equal(await nodes[i].getNetworkSize(), nodes.length);
       }
@@ -168,9 +173,8 @@ export default function () {
         await nodes[i].addApproval("captcha", new ApprovalCaptcha());
         await nodes[i].sync();
       }
-      client = new Client(
-        await tools.createClientOptions({ address: nodes[0].address })
-      );
+
+      client = new Client( await tools.createClientOptions({ address: nodes[0].address }));
       await client.init();
     });
 
@@ -203,24 +207,28 @@ export default function () {
         assert.isTrue(err.code == "ERR_SPREADABLE_APPROVAL_INFO_REQUIRED");
       }
     });
-    
+
     it("should approve captcha requests", async () => {
       const approval = await nodes[0].getApproval("captcha");
       const approvalInfo = await client.getApprovalQuestion("captcha");
       const approvers = approvalInfo.approvers;
       const answers = {};
+
       for (let i = 0; i < nodes.length; i++) {
         const info = await nodes[i].db.getApproval(approvalInfo.key);
         answers[nodes[i].address] = info.answer;
       }
+
       let length = approval.captchaLength;
       let answer = "";
+
       for (let i = 0; i < approvers.length; i++) {
         const address = approvers[i];
         const count = Math.floor(length / (approvers.length - i));
         answer += answers[address].slice(0, count);
         length -= count;
       }
+
       approvalInfo.answer = answer;
       delete approvalInfo.question;
       const result = await nodes[0].requestServer(
