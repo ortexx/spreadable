@@ -7,17 +7,20 @@ const Task = task();
 export default function () {
   describe('Task', () => {
     let task;
+
     describe('instance creation', function () {
       it('should create an instance', function () {
         assert.doesNotThrow(() => task = new Task());
         task.node = this.node;
       });
     });
+
     describe('.init()', function () {
       it('should not throw an exception', async function () {
         await task.init();
       });
     });
+
     describe('.add()', function () {
       it('should create the task', async function () {
         const name = 'test';
@@ -30,6 +33,7 @@ export default function () {
         assert.equal(res.interval, interval, 'check the interval');
         assert.equal(res.test, option, 'check the option');
       });
+
       it('should update the task', async function () {
         const name = 'test';
         const interval = 2;
@@ -42,6 +46,7 @@ export default function () {
         assert.equal(res.test, option, 'check the option');
       });
     });
+
     describe('.get()', function () {
       it('should get the task', async function () {
         const name = 'test';
@@ -53,10 +58,12 @@ export default function () {
         assert.equal(res.interval, interval, 'check the interval');
         assert.equal(res.test, option, 'check the option');
       });
+
       it('should not get the wrong task', async function () {
         assert.isNull(await task.get('wrong'));
       });
     });
+
     describe('.remove()', function () {
       it('should remove the task', async function () {
         const name = 'test';
@@ -64,6 +71,7 @@ export default function () {
         assert.isNull(await task.get(name));
       });
     });
+
     describe('.start()', function () {
       it('should start the task', async function () {
         const res = await task.add('test', 1, () => { });
@@ -72,6 +80,7 @@ export default function () {
         assert.isFalse(res.isStopped, 'check the status after');
       });
     });
+
     describe('.stop()', function () {
       it('should stop the task', async function () {
         const res = await task.get('test');
@@ -80,6 +89,7 @@ export default function () {
         assert.isTrue(res.isStopped, 'check the status after');
       });
     });
+
     describe('.run()', function () {
       it('should run the task callback', async function () {
         let counter = 0;
@@ -89,6 +99,7 @@ export default function () {
         assert.equal(counter, 1, 'check the function calling');
       });
     });
+
     describe('blocking', function () {
       it('should block the task', async function () {
         let counter = 0;
@@ -101,16 +112,19 @@ export default function () {
         assert.equal(counter, 2, 'check after the second iteration');
       });
     });
+
     describe('.deinit()', function () {
       it('should not throw an exception', async function () {
         await task.deinit();
       });
     });
+
     describe('reinitialization', () => {
       it('should not throw an exception', async function () {
         await task.init();
       });
     });
+    
     describe('.destroy()', function () {
       it('should not throw an exception', async function () {
         await task.destroy();

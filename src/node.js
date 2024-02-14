@@ -7,25 +7,24 @@ import ms from "ms";
 import fetch from "node-fetch";
 import path from "path";
 import urlib from "url";
-import pack from "../package.json" assert { type: "json" };
-import fail from "./behavior/transports/fail/index.js";
+import pack from "../package.json" with { type: "json" };
+import behaviorFail from "./behavior/transports/fail/index.js";
 import loki from "./db/transports/loki/index.js";
 import * as errors from "./errors.js";
-import console from "./logger/transports/console/index.js";
+import loggerConsole from "./logger/transports/console/index.js";
 import schema from "./schema.js";
 import express from "./server/transports/express/index.js";
 import Service from "./service.js";
-import interval from "./task/transports/interval/index.js";
+import taskInterval from "./task/transports/interval/index.js";
 import utils from "./utils.js";
 
 const DatabaseLoki = loki();
 const ServerExpress = express();
-const LoggerConsole = console();
-const TaskInterval = interval();
-const BehaviorFail = fail();
+const LoggerConsole = loggerConsole();
+const TaskInterval = taskInterval();
+const BehaviorFail = behaviorFail();
 
 export default (Parent) => {
-
   /**
    * The node class
    */
@@ -44,9 +43,11 @@ export default (Parent) => {
      */
     constructor(options = {}) {
       super(...arguments);
+
       if (!options.port) {
         throw new Error('You must pass the necessary port');
       }
+      
       this.options = merge({
         hostname: '',
         storage: {
@@ -118,19 +119,25 @@ export default (Parent) => {
       this.hostname = this.options.hostname || this.externalIp || this.localIp;
       this.address = utils.createAddress(this.hostname, this.publicPort);
       this.ip = await utils.getHostIp(this.hostname);
+
       if (!this.ip) {
         throw new Error(`Hostname ${this.hostname} is not found`);
       }
+
       await fse.ensureDir(this.storagePath);
       await this.prepareServices();
       await super.init.apply(this, arguments);
+
       if (!this.options.server) {
         return;
       }
+
       await this.initBeforeSync();
+
       if (!this.options.network.autoSync) {
         return;
       }
+      
       const fn = async () => {
         try {
           await this.sync();
@@ -138,7 +145,7 @@ export default (Parent) => {
         catch (err) {
           this.logger.error(err.stack);
         }
-      };
+      };    
       this.__syncInterval = setInterval(fn, this.options.network.syncInterval);
       await fn();
     }
@@ -167,11 +174,14 @@ export default (Parent) => {
     async initBeforeSync() {
       this.__rootNetworkAddress = await this.db.getData('rootNetworkAddress');
       let initialNetworkAddress = this.options.initialNetworkAddress || this.address;
+
       if (Array.isArray(initialNetworkAddress)) {
         initialNetworkAddress = shuffle(initialNetworkAddress);
         initialNetworkAddress = initialNetworkAddress.sort(a => a === this.address ? 0 : -1);
       }
+
       this.initialNetworkAddress = await this.getAvailableAddress(initialNetworkAddress);
+
       if (!this.initialNetworkAddress) {
         throw new Error('Provided initial network addresses are not available');
       }
@@ -259,11 +269,14 @@ export default (Parent) => {
     async getAvailableAddress(addresses) {
       !Array.isArray(addresses) && (addresses = [addresses]);
       let availableAddress;
+
       for (let i = 0; i < addresses.length; i++) {
         const address = addresses[i];
+
         if (address == this.address) {
           return address;
         }
+
         try {
           await this.nodeAddressTest(address);
           return address;
@@ -272,6 +285,7 @@ export default (Parent) => {
           this.logger.warn(err.stack);
         }
       }
+
       return availableAddress || null;
     }
 
@@ -285,6 +299,7 @@ export default (Parent) => {
         method: 'GET',
         timeout: this.options.request.pingTimeout
       });
+
       if (!result.address) {
         throw new Error(`Host ${address} is wrong`);
       }
@@ -317,13 +332,16 @@ export default (Parent) => {
      */
     async syncDown(options = {}) {
       const slaves = await this.db.getSlaves();
+
       if (!slaves.length) {
         return [];
       }
+
       let actualMasters = [];
       const results = await this.requestGroup(slaves, 'structure', { timeout: options.timeout });
       const behaviorSlaveMasters = await this.getBehavior('slaveMasters');
       const behaviorSlaveBacklink = await this.getBehavior('slaveBacklink');
+
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const masters = result.masters;
@@ -333,12 +351,14 @@ export default (Parent) => {
         const master = masters.find(m => m.address == this.address);
         const checkSelf = !!master && master.size == await this.db.getSlavesCount();
         const checkBacklink = !!backlink && backlink.address == this.address;
+
         if (!checkSelf) {
           await behaviorSlaveMasters.add(address);
         }
         else {
           await behaviorSlaveMasters.sub(address);
         }
+
         if (!checkBacklink) {
           await this.db.removeSlave(address);
           await behaviorSlaveBacklink.add(address);
@@ -347,6 +367,7 @@ export default (Parent) => {
           await this.db.addSlave(address);
           await behaviorSlaveBacklink.sub(address);
         }
+
         if (slaves.length) {
           await this.db.addMaster(address, slaves.length);
           actualMasters = actualMasters.concat(masters);
@@ -363,16 +384,20 @@ export default (Parent) => {
      */
     async syncUp(options = {}) {
       const backlink = await this.db.getBacklink();
+      
       if (!backlink) {
         return [];
       }
+
       let result;
+      
       try {
         result = await this.requestNode(backlink.address, 'structure', { timeout: options.timeout });
       }
       catch (err) {
         return [];
       }
+
       const slaves = result.slaves;
       const masters = result.masters;
       const isMaster = await this.db.isMaster();
@@ -387,18 +412,21 @@ export default (Parent) => {
       const checkBacklinkSize = !!master && master.size == slaves.length;
       const checkBacklinkLength = slaves.length <= coef;
       const checkArrBacklink = [checkBacklinkSize, checkBacklinkLength];
+      
       if (!checkSelfMaster) {
         await behaviorBacklinkMasters.add(backlink.address);
       }
       else {
         await behaviorBacklinkMasters.sub(backlink.address);
       }
+
       if (checkArrBacklink.includes(false)) {
         await behaviorNetworkSize.add(backlink.address, checkArrBacklink);
       }
       else {
         await behaviorNetworkSize.sub(backlink.address);
       }
+
       if (!slaves.find(s => s.address == this.address)) {
         await this.db.removeBacklink();
         await behaviorBacklinkSlaves.add(backlink.address);
@@ -407,6 +435,7 @@ export default (Parent) => {
       else {
         await behaviorBacklinkSlaves.sub(backlink.address);
       }
+
       await this.db.addBacklink(backlink.address);
       await this.db.addMaster(backlink.address, slaves.length);
       return masters;
@@ -433,6 +462,7 @@ export default (Parent) => {
       const mastersUp = await this.syncUp({ timeout: timer() });
       const mastersDown = await this.syncDown({ timeout: timer() });
       const actualMasters = mastersUp.concat(mastersDown);
+      
       if (size) {
         const masters = await this.db.getMasters();
         await this.updateMastersInfo(masters.concat(actualMasters), { timeout: timer() });
@@ -447,9 +477,11 @@ export default (Parent) => {
           await this.db.addMaster(master.address, master.size);
         }
       }
+
       await this.normalizeBacklink();
       await this.normalizeMastersCount();
       await this.normalizeSlavesCount();
+      
       try {
         await this.register({ timeout: timer() });
       }
@@ -457,6 +489,7 @@ export default (Parent) => {
         await this.db.removeBacklink();
         this.logger.warn(err.stack);
       }
+
       const time = Date.now() - startTime;
       this.__syncList.push({ time });
       this.__syncList.length > this.getSyncListSize() && this.__syncList.shift();
@@ -472,15 +505,18 @@ export default (Parent) => {
       if (await this.db.getBacklink()) {
         return;
       }
+
       const slaveHashes = {};
       const timer = this.createRequestTimer(options.timeout);
       const slaves = await this.db.getSlaves();
       let timeout = timer();
       let provider = this.initialNetworkAddress;
       slaves.forEach(s => slaveHashes[s.address] = true);
+      
       if (this.initialNetworkAddress === this.address && !await this.db.getMastersCount()) {
         slaves.length && (provider = slaves[0].address);
       }
+
       let result = await this.requestNode(provider, 'provide-registration', {
         body: {
           target: this.address,
@@ -490,6 +526,7 @@ export default (Parent) => {
         timeout,
         responseSchema: schema.getProvideRegistrationResponse()
       });
+
       const results = result.results;
       const networkSize = result.networkSize;
       const syncLifetime = result.syncLifetime;
@@ -502,16 +539,21 @@ export default (Parent) => {
         if (server.address == this.address) {
           return false;
         }
+
         if (networkSize > 2 && slaveHashes[server.address]) {
           return false;
         }
+
         return true;
       };
+
       for (let i = results.length - 1; i >= 0; i--) {
         const res = results[i];
         const behavior = await this.db.getBehaviorDelay('registration', res.address);
+        
         if (res.networkSize != networkSize) {
           await this.db.addBehaviorDelay('registration', res.address);
+          
           if (behavior && behavior.createdAt + syncLifetime > Date.now()) {
             results.splice(i);
             continue;
@@ -524,43 +566,53 @@ export default (Parent) => {
         else if (behavior) {
           await this.db.removeBehaviorDelay('registration', res.address);
         }
+
         if (!await this.isAddressAllowed(res.address)) {
           results.splice(i, 1);
           continue;
         }
+
         res.appropriate = checkState(res);
+        
         for (let k = res.candidates.length - 1; k >= 0; k--) {
           const candidate = res.candidates[k];
           if (!await this.isAddressAllowed(candidate.address)) {
             res.candidates.splice(k, 1);
             continue;
           }
+
           if (!checkState(candidate)) {
             res.candidates.splice(k, 1);
           }
         }
       }
+
       if (failed) {
         const msg = `Network hasn't been normalized yet, try later`;
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_NETWORK_NOT_NORMALIZED');
       }
+
       for (let i = 0; i < results.length; i++) {
         const res = results[i];
         const coef = await this.getNetworkOptimum(res.networkSize);
         candidates.push(utils.getRandomElement(res.candidates));
         res.appropriate && res.candidates.length < coef && freeMasters.push(res);
       }
+
       if (freeMasters.length > coef) {
         freeMasters = orderBy(freeMasters, ['size', 'address'], ['desc', 'asc']);
         freeMasters = freeMasters.slice(0, coef);
       }
+
       freeMasters = freeMasters.filter(m => m.address != this.address);
       winner = utils.getRandomElement(freeMasters.length ? freeMasters : candidates);
       const behavior = await this.getBehavior('registration');
+      
       if (!winner) {
         const msg = 'No available server to register the node';
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_NETWORK_NO_AVAILABLE_MASTER');
       }
+
       try {
         timeout = timer();
         result = await this.requestNode(winner.address, 'register', {
@@ -578,6 +630,7 @@ export default (Parent) => {
         await behavior.add(winner.address);
         throw err;
       }
+
       await this.db.cleanBehaviorDelays('registration');
       await this.db.setData('registrationTime', Date.now());
       await this.db.addBacklink(winner.address);
@@ -595,6 +648,7 @@ export default (Parent) => {
         const msg = 'Not found the interview summary';
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_INTERVIEW_NOT_FOUND_SUMMARY');
       }
+
       if (!utils.isValidHostname(utils.splitAddress(summary.address)[0])) {
         const msg = 'Invalid interview summary address';
         throw new errors.WorkError(msg, 'ERR_SPREADABLE_INTERVIEW_INVALID_SUMMARY_ADDRESS');
@@ -673,6 +727,7 @@ export default (Parent) => {
      */
     async updateMastersInfo(masters, options = {}) {
       const obj = {};
+
       for (let i = 0; i < masters.length; i++) {
         const master = masters[i];
         if (master.address == this.address) {
@@ -683,26 +738,35 @@ export default (Parent) => {
         }
         obj[master.address] = { master };
       }
+
       const arr = [];
+
       for (let key in obj) {
         const item = obj[key];
         arr.push({ address: item.master.address });
       }
+
       const results = await this.requestGroup(arr, 'structure', { includeErrors: true, timeout: options.timeout });
+      
       for (let i = results.length - 1; i >= 0; i--) {
         const result = results[i];
+
         if (utils.isRequestTimeoutError(result)) {
           continue;
         }
+
         const address = result.address;
         let size = 0;
+
         if (!(result instanceof Error)) {
           size = result.slaves.length;
         }
+
         if (!size) {
           await this.db.removeMaster(address);
           continue;
         }
+
         await this.db.addMaster(address, size);
       }
     }
@@ -716,19 +780,24 @@ export default (Parent) => {
       const lifetime = await this.getSyncLifetime();
       const isNormalized = await this.isNormalized();
       const servers = await this.db.getServers();
+
       for (let i = servers.length - 1; i >= 0; i--) {
         const server = servers[i];
+        
         if (await this.db.getBanlistAddress(server.address)) {
           continue;
         }
+
         if (server.isBroken) {
           await this.db.removeServer(server.address);
           continue;
         }
+
         if (isNormalized && server.isMaster) {
           server.updatedAt < Date.now() - lifetime && await this.db.removeServer(server.address);
           continue;
         }
+
         if (server.isMaster && server.address == this.address && !await this.isMaster()) {
           await this.db.removeMaster(server.address);
         }
@@ -744,11 +813,15 @@ export default (Parent) => {
       if (!this.isNormalized()) {
         return;
       }
+
       const backlink = await this.db.getBacklink();
+      
       if (!backlink) {
         return;
       }
+
       const slaves = await this.db.getSlaves();
+      
       if (await this.getNetworkSize() > 2 && slaves.find(s => s.address == backlink.address)) {
         await this.db.removeBacklink();
       }
@@ -763,8 +836,10 @@ export default (Parent) => {
       if (!await this.isMaster()) {
         return;
       }
+
       let masters = await this.db.getMasters();
       const size = await this.getNetworkOptimum();
+      
       if (masters.length > size) {
         masters = orderBy(masters, ['size', 'address'], ['desc', 'asc']);
         masters = masters.slice(0, size).map(m => m.address);
@@ -780,6 +855,7 @@ export default (Parent) => {
     async normalizeSlavesCount() {
       let count = await this.db.getSlavesCount();
       const size = await this.getNetworkOptimum();
+      
       if (count > size) {
         await this.db.shiftSlaves(count - size);
       }
@@ -795,10 +871,13 @@ export default (Parent) => {
       const timer = this.createRequestTimer(options.timeout);
       const time = await this.getSyncLifetime();
       const now = Date.now();
+      
       if (this.__rootNetworkAddress && this.__rootCheckedAt && now - time <= this.__rootCheckedAt) {
         return;
       }
+
       let newRoot;
+      
       if (this.address == this.initialNetworkAddress) {
         newRoot = this.address;
       }
@@ -813,7 +892,9 @@ export default (Parent) => {
           this.logger.warn(err.stack);
         }
       }
+
       await this.db.setData('rootNetworkAddress', newRoot || this.initialNetworkAddress);
+      
       if (newRoot) {
         this.__rootNetworkAddress = newRoot;
         this.__rootCheckedAt = Date.now();
@@ -831,14 +912,18 @@ export default (Parent) => {
       const timer = this.createRequestTimer(options.timeout);
       const masters = await this.db.getMasters();
       const master = utils.getRandomElement(masters);
+      
       if (!master) {
         return this.address;
       }
+
       const result = await this.requestNode(master.address, 'structure', { timeout: timer() });
       const server = utils.getRandomElement(result.slaves);
+      
       if (!server) {
         return this.address;
       }
+
       try {
         await this.requestServer(server.address, 'ping', { method: 'GET', timeout: timer() });
         return server.address;
@@ -879,9 +964,11 @@ export default (Parent) => {
       return (a, b) => {
         const suspicionLevelA = obj[a.address] || 0;
         const suspicionLevelB = obj[b.address] || 0;
+        
         if (fn && suspicionLevelA == suspicionLevelB) {
           return fn(a, b);
         }
+
         return suspicionLevelA - suspicionLevelB;
       };
     }
@@ -898,9 +985,11 @@ export default (Parent) => {
         if (a == this.address && b != this.address) {
           return -1;
         }
+
         if (b == this.address && a != this.address) {
           return 1;
         }
+
         return fn ? fn(a, b) : 0;
       };
     }
@@ -919,6 +1008,7 @@ export default (Parent) => {
         if (err instanceof errors.AccessError) {
           return false;
         }
+
         throw err;
       }
     }
@@ -934,16 +1024,21 @@ export default (Parent) => {
       if (this.options.network.isTrusted) {
         return true;
       }
+
       if (!address) {
         return false;
       }
+
       if (address == this.address) {
         return true;
       }
+
       try {
         const trust = this.options.network.trustlist || [];
+
         if (trust.length) {
           const info = await this.getAddressInfo(address);
+          
           for (let i = 0; i < trust.length; i++) {
             if (await this.compareAddressInfo(trust[i], info)) {
               return true;
@@ -954,6 +1049,7 @@ export default (Parent) => {
       catch (err) {
         return false;
       }
+
       return false;
     }
 
@@ -968,17 +1064,21 @@ export default (Parent) => {
       if (!utils.isValidAddress(address)) {
         throw new Error(`Address "${address}" is invalid`);
       }
+
       const hostname = utils.splitAddress(address)[0];
       let ip;
+
       try {
         ip = await utils.getHostIp(hostname);
       }
       catch (err) {
         throw new Error(`Hostname "${hostname}" is invalid`);
       }
+
       if (!ip) {
         throw new Error(`Ip address for "${hostname}" is invalid`);
       }
+
       const ipv6 = utils.isIpv6(ip) ? utils.getFullIpv6(ip) : utils.ipv4Tov6(ip);
       return { address, ip, ipv6, hostname };
     }
@@ -994,10 +1094,13 @@ export default (Parent) => {
       if (utils.isIpv6(item)) {
         item = utils.getFullIpv6(item);
       }
-      return (item == info.address ||
-                item == info.hostname ||
-                item == info.ip ||
-                item == info.ipv6);
+
+      return (
+        item == info.address ||
+        item == info.hostname ||
+        item == info.ip ||
+        item == info.ipv6
+      );
     }
 
     /**
@@ -1009,37 +1112,48 @@ export default (Parent) => {
       if (address == this.address) {
         return;
       }
+
       if (await this.isAddressTrusted(address)) {
         return;
       }
+
       let info;
+
       try {
         info = await this.getAddressInfo(address);
       }
       catch (err) {
         throw new errors.AccessError(err.message);
       }
+
       const white = this.options.network.whitelist || [];
       const black = this.options.network.blacklist || [];
+      
       if (this.options.behavior.banByAddress && await this.db.getBanlistAddress(address)) {
         throw new errors.AccessError(`Address "${address}" is in the banlist`);
       }
+
       if (!this.options.behavior.banByAddress && await this.db.checkBanlistIp(info.ipv6)) {
         throw new errors.AccessError(`Ip "${info.ip}" is in the banlist`);
       }
+
       if (white.length) {
         let exists = false;
+        
         for (let i = 0; i < white.length; i++) {
           if (await this.compareAddressInfo(white[i], info)) {
             exists = true;
             break;
           }
         }
+
         if (!exists) {
           throw new errors.AccessError(`Address "${address}" is denied`);
         }
+
         return;
       }
+
       for (let i = 0; i < black.length; i++) {
         if (await this.compareAddressInfo(black[i], info)) {
           throw new errors.AccessError(`Address "${address}" is in the blacklist`);
@@ -1058,21 +1172,26 @@ export default (Parent) => {
      */
     async request(url, options = {}) {
       options = merge({}, options);
+      
       if (typeof url == 'object') {
         options = url;
       }
       else {
         options.url = `${this.getRequestProtocol()}://${url}`;
       }
+
       options = this.createDefaultRequestOptions(options);
       const urlInfo = urlib.parse(options.url);
       const address = `${urlInfo.hostname}:${urlInfo.port}`;
       await this.addressFilter(address);
       let body = options.formData || options.body || {};
+      
       if (options.formData) {
         const form = new FormData();
+        
         for (let key in body) {
           let val = body[key];
+          
           if (typeof val == 'object') {
             form.append(key, val.value, val.options);
           }
@@ -1091,22 +1210,29 @@ export default (Parent) => {
       if (options.timeout && !options.signal) {
         options.signal = AbortSignal.timeout(options.timeout);
       }
+
       const start = Date.now();
       let response = {};
+      
       try {
         response = await fetch(options.url, options);
         this.logger.info(`Request from "${this.address}" to "${options.url}": ${ms(Date.now() - start)}`);
+        
         if (response.ok) {
           return options.getFullResponse ? response : await response.json();
         }
+
         const type = (response.headers.get('content-type') || '').match('application/json') ? 'json' : 'text';
         const body = await response[type]();
+        
         if (!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
         }
+
         if (!body.code) {
           throw new Error(body.message || body);
         }
+
         throw new errors.WorkError(body.message, body.code);
       }
       catch (err) {
@@ -1134,13 +1260,16 @@ export default (Parent) => {
       const level = options.level === undefined ? 1 : options.level;
       const timeout = options.timeout || await this.getRequestMasterTimeout();
       const requests = [];
+      
       if (timeout <= 0) {
         return requests;
       }
+
       const body = options.body || {};
       const actionType = level > 1 ? 'master' : (level ? 'butler' : 'slave');
       let servers = level ? await this.db.getMasters() : await this.db.getSlaves();
       !servers.length && (servers = [{ address: this.address }]);
+      
       for (let i = 0; i < servers.length; i++) {
         const address = servers[i].address;
         requests.push(new Promise(resolve => {
@@ -1156,6 +1285,7 @@ export default (Parent) => {
             .catch(resolve);
         }));
       }
+
       let results = await Promise.all(requests);
       !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
       return results;
@@ -1186,6 +1316,7 @@ export default (Parent) => {
     async requestGroup(arr, url, options = {}) {
       const requests = [];
       const timer = this.createRequestTimer(options.timeout);
+      
       for (let i = 0; i < arr.length; i++) {
         const item = arr[i];
         requests.push(new Promise(resolve => {
@@ -1196,6 +1327,7 @@ export default (Parent) => {
           p.then(resolve).catch(resolve);
         }));
       }
+
       let results = await Promise.all(requests);
       !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
       return results;
@@ -1216,20 +1348,24 @@ export default (Parent) => {
       options.timeout = timeout;
       const behaviorResponseSchema = await this.getBehavior('responseSchema');
       const behaviorRequestDelays = await this.getBehavior('requestDelays');
+      
       try {
         const opts = Object.assign({}, options, { getFullResponse: true });
         let result = await this.request(`${address}/${url}`.replace(/[/]+/, '/'), opts);
         await behaviorRequestDelays.sub(address);
         let body = await result.json();
+        
         if (options.getFullResponse) {
           result.__json = body;
         }
         else {
           result = body;
         }
+
         if (body && typeof body == 'object' && !Array.isArray(body)) {
           body.address = address;
         }
+
         if (options.responseSchema) {
           try {
             utils.validateSchema(options.responseSchema, body);
@@ -1241,20 +1377,24 @@ export default (Parent) => {
             throw err;
           }
         }
+
         await this.db.successServerAddress(address);
         return result;
       }
       catch (err) {
         this.logger.warn(err.stack);
+        
         if (utils.isRequestTimeoutError(err)) {
           await behaviorRequestDelays.add(address);
         }
+        
         if (err instanceof errors.WorkError) {
           await this.db.successServerAddress(address);
         }
         else {
           await this.db.failedServerAddress(address);
         }
+
         throw err;
       }
     }
@@ -1274,16 +1414,19 @@ export default (Parent) => {
     async duplicateData(action, servers, options = {}) {
       options = merge({}, options);
       const timer = this.createRequestTimer(options.timeout);
+      
       while (servers.length) {
         const address = servers[0];
         let serverOptions = typeof options.serverOptions == 'function' ? options.serverOptions(address) : options.serverOptions;
         serverOptions = merge({}, options, serverOptions || {});
+        
         if (serverOptions.formData) {
           servers.slice(1).forEach((val, i) => serverOptions.formData[`duplicates[${i}]`] = val);
         }
         else {
           serverOptions.body.duplicates = servers.slice(1);
         }
+
         try {
           serverOptions.timeout = timer(serverOptions.timeout);
           return await this.requestNode(address, action, serverOptions);
@@ -1338,11 +1481,8 @@ export default (Parent) => {
      * @returns {float} 0-1
      */
     async getAvailabilityMemory() {
-      //const stats = getHeapStatistics();
       const stats = process.memoryUsage();
-      //console.log("console.log(process.memoryUsage());");
       return 1 - stats.heapUsed / stats.heapTotal;
-      //return 1 - stats.used_heap_size / stats.total_available_size;
     }
 
     /**
@@ -1405,12 +1545,15 @@ export default (Parent) => {
      */
     async getValueGivenNetworkSize(value) {
       const networkSize = await this.getNetworkSize();
+      
       if (value == 'auto') {
         value = Math.ceil(Math.sqrt(networkSize));
       }
+
       else if (typeof value == 'string') {
         value = Math.ceil(networkSize * parseFloat(value) / 100);
       }
+
       value > networkSize && (value = networkSize);
       value <= 0 && (value = 1);
       return value;
@@ -1468,9 +1611,11 @@ export default (Parent) => {
      */
     async filterCandidatesMatrix(matrix, options = {}) {
       let candidates = [];
+      
       for (let i = 0; i < matrix.length; i++) {
         candidates = await this.filterCandidates(candidates.concat(matrix[i]), options);
       }
+
       return candidates;
     }
 
@@ -1488,17 +1633,21 @@ export default (Parent) => {
      */
     async filterCandidates(arr, options = {}) {
       arr = arr.slice();
+      
       if (options.uniq) {
         arr = options.uniq === true ? [...new Set(arr)] : uniqBy(arr, options.uniq);
       }
+
       if (options.fnFilter) {
         arr = arr.filter(options.fnFilter);
       }
+
       for (let i = arr.length - 1; i >= 0; i--) {
         if (!await this.isAddressAllowed(arr[i].address)) {
           arr.splice(i, 1);
         }
       }
+
       if (options.schema) {
         arr = arr.filter(item => {
           try {
@@ -1510,6 +1659,7 @@ export default (Parent) => {
           }
         });
       }
+
       options.fnCompare && arr.sort(options.fnCompare);
       options.limit && (arr = arr.slice(0, options.limit));
       return arr;
@@ -1678,45 +1828,58 @@ export default (Parent) => {
       let approvers = [];
       const timer = this.createRequestTimer(options.timeout);
       const masters = await this.db.getMasters();
+      
       if (!masters.length) {
         return [this.address];
       }
+
       const results = await this.requestGroup(masters, 'structure', { timeout: timer() });
+      
       for (let i = 0; i < results.length; i++) {
         const slaves = results[i].slaves;
+        
         for (let k = 0; k < slaves.length; k++) {
           const server = slaves[k];
           const address = server.address;
           approvers.push({ address, hash: utils.createDataHash([address, String(time)]) });
         }
       }
+
       approvers = approvers.sort((a, b) => {
         return a.hash > b.hash ? 1 : (a.hash < b.hash ? -1 : 0);
       }).map(it => it.address);
       const additional = Math.ceil(Math.sqrt(totalCount));
       let total = [];
       let targets = [];
+      
       for (let i = 0; i < approvers.length; i++) {
         const count = totalCount - total.length + additional;
         targets.push({ address: approvers[i] });
+        
         if (targets.length % count != 0 && i + 1 < approvers.length) {
           continue;
         }
+
         const timeout = timer(this.options.request.pingTimeout);
         const opts = { method: 'GET', timeout, requestType: 'server', includeErrors: true };
         const results = await this.requestGroup(targets, 'ping', opts);
+        
         for (let k = 0; k < results.length; k++) {
           const result = results[k];
           if (result && typeof result == 'object' && result.address != targets[k].address) {
             targets[k] = null;
           }
         }
+
         total = total.concat(targets.filter(t => t).map(t => t.address));
         targets = [];
+        
         if (total.length >= totalCount) {
           break;
         }
+
       }
+
       return total.slice(0, totalCount);
     }
 
@@ -1750,21 +1913,27 @@ export default (Parent) => {
           'node-root': this.getRoot()
         }
       };
+
       if (this.options.network.auth) {
         const user = this.options.network.auth.username;
         const pass = this.options.network.auth.password;
         defaults.headers.authorization = `Basic ${Buffer.from(user + ":" + pass).toString('base64')}`;
       }
+
       if (!options.agent) {
         options.agent = new (this.options.server.https ? https : http).Agent();
       }
+
       options.agent.maxSockets = Infinity;
+      
       if (options.timeout) {
         options.timeout = utils.getMs(options.timeout);
       }
+
       if (typeof this.options.server.https == 'object' && this.options.server.https.ca) {
         options.agent.options.ca = this.options.server.https.ca;
       }
+
       return merge(defaults, options);
     }
 
@@ -1795,9 +1964,11 @@ export default (Parent) => {
         timeout: this.createRequestTimeout(body),
         approvalInfo: body.approvalInfo
       }, options);
+
       if (body.approvalInfo && typeof body.approvalInfo == 'string') {
         options.approvalInfo = JSON.parse(body.approvalInfo);
       }
+
       return options;
     }
 
@@ -1812,6 +1983,7 @@ export default (Parent) => {
       if (!data || typeof data != 'object' || !data.timeout) {
         return;
       }
+
       return (data.timeout - (Date.now() - data.timestamp)) - this.__timeoutSlippage;
     }
 
@@ -1855,6 +2027,7 @@ export default (Parent) => {
       if (!this.__syncList.length) {
         return 0;
       }
+
       return this.__syncList.reduce((p, c) => c.time + p, 0) / this.__syncList.length;
     }
 

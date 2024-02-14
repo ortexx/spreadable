@@ -11,12 +11,10 @@ const Approval = approval();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default (Parent) => {
-
   /**
    * Captcha approval transport
    */
   return class ApprovalCaptcha extends (Parent || Approval) {
-
     /**
      * @param {object} options
      */
@@ -53,6 +51,7 @@ export default (Parent) => {
           if (err) {
             return reject(err);
           }
+
           resolve(handler);
         });
       });
@@ -87,6 +86,7 @@ export default (Parent) => {
       bgImg.png();
       let length = this.captchaLength;
       const comp = [];
+
       for (let i = 0; i < data.length; i++) {
         const img = sharp(Buffer.from(data[i], 'base64'));
         const count = Math.floor(length / (data.length - i));
@@ -98,6 +98,7 @@ export default (Parent) => {
         });
         length -= count;
       }
+
       bgImg.composite(comp);
       const buffer = await bgImg.toBuffer();
       return `data:image/png;base64,${buffer.toString('base64')}`;
@@ -108,17 +109,21 @@ export default (Parent) => {
      */
     async checkAnswer(approver, answer, approvers) {
       let length = this.captchaLength;
+
       for (let i = 0; i < approvers.length; i++) {
         const address = approvers[i];
         const count = Math.floor(length / (approvers.length - i));
         const cLength = this.captchaLength - length;
         const from = String(answer).slice(cLength, cLength + count).toLowerCase();
         const to = String(approver.answer).slice(0, count).toLowerCase();
+
         if (address == this.node.address) {
           return from === to;
         }
+
         length -= count;
       }
+
       return false;
     }
 
@@ -149,12 +154,14 @@ export default (Parent) => {
       const comp = [];
       const maxFontSize = size * 0.9;
       const minFontSize = size * 0.5;
+
       for (let i = 0; i < length; i++) {
         const color = (options.captchaColor == 'random') ? utils.getRandomHexColor() : options.captchaColor;
         const strokeColor = utils.invertHexColor(color);
         const fillOpacity = random(0.25, 1, true);
         const strokeOpacity = fillOpacity * 0.5;
         const strokeWidth = random(1, 1.3, true);
+
         for (let k = 0; k < options.captchaShadows + 1; k++) {
           const fontSize = random(minFontSize, maxFontSize);
           const dev = Math.floor(size - fontSize);
@@ -178,6 +185,7 @@ export default (Parent) => {
           });
         }
       }
+      
       bgImg.composite(comp);
       return bgImg;
     }

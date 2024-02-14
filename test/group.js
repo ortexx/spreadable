@@ -56,6 +56,7 @@ export default function () {
   describe("group communication", () => {
     let nodes;
     let client;
+
     before(async () => {
       nodes = [];
       nodes.push(new Node(await tools.createNodeOptions()));
@@ -67,11 +68,13 @@ export default function () {
         )
       );
     });
+
     after(async () => {
       for (let i = 0; i < nodes.length; i++) {
         await nodes[i].deinit();
       }
     });
+
     it("should register two nodes", async () => {
       await nodes[0].init();
       await nodes[0].sync();
@@ -90,6 +93,7 @@ export default function () {
         "check the first node registration as master"
       );
     });
+
     it("should reregister node", async () => {
       nodes.push(new Node(await tools.createNodeOptions()));
       await nodes[2].init();
@@ -109,6 +113,7 @@ export default function () {
         "check the slave is removed in the master"
       );
     });
+
     it("should add the third node to the network", async () => {
       nodes[2].initialNetworkAddress = nodes[0].address;
       await tools.wait(await nodes[1].getSyncLifetime());
@@ -125,6 +130,7 @@ export default function () {
         "check the new slave"
       );
     });
+
     it("should show the right network size", async () => {
       for (let i = 0; i < 2; i++) {
         const node = new Node(
@@ -140,6 +146,7 @@ export default function () {
         assert.equal(await nodes[i].getNetworkSize(), nodes.length);
       }
     });
+
     it("should remove the node from the network", async () => {
       await nodes[0].deinit();
       nodes.shift();
@@ -154,6 +161,7 @@ export default function () {
         assert.equal(await nodes[i].getNetworkSize(), nodes.length);
       }
     });
+
     it("should prepare node and client for requests", async () => {
       for (let i = 0; i < nodes.length; i++) {
         await nodes[i].addApproval("client", new ApprovalClient());
@@ -165,6 +173,7 @@ export default function () {
       );
       await client.init();
     });
+
     it("should not approve client requests", async () => {
       try {
         await nodes[0].requestServer(nodes[0].address, "approval-client-test");
@@ -173,6 +182,7 @@ export default function () {
         assert.isTrue(err.code == "ERR_SPREADABLE_APPROVAL_INFO_REQUIRED");
       }
     });
+
     it("should approve client requests", async () => {
       const approvalInfo = await client.getApprovalQuestion("client");
       approvalInfo.answer = approvalInfo.question;
@@ -184,6 +194,7 @@ export default function () {
       );
       assert.isTrue(result.success);
     });
+
     it("should not approve captcha requests", async () => {
       try {
         await nodes[0].requestServer(nodes[0].address, "approval-captcha-test");
@@ -192,6 +203,7 @@ export default function () {
         assert.isTrue(err.code == "ERR_SPREADABLE_APPROVAL_INFO_REQUIRED");
       }
     });
+    
     it("should approve captcha requests", async () => {
       const approval = await nodes[0].getApproval("captcha");
       const approvalInfo = await client.getApprovalQuestion("captcha");

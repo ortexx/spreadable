@@ -4,12 +4,10 @@ import schema from "../../../schema.js";
 const Approval = approval();
 
 export default (Parent) => {
-
   /**
    * Client approval transport
    */
   return class ApprovalClient extends (Parent || Approval) {
-
     /**
      * @see Approval.prototype.createInfo
      */

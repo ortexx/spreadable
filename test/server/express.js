@@ -7,6 +7,7 @@ export default function () {
   describe('ServerExpress', () => {
     let server;
     let nodeServer;
+
     describe('instance creation', function () {
       it('should create an instance', function () {
         assert.doesNotThrow(() => server = new ServerExpress());
@@ -15,21 +16,25 @@ export default function () {
         this.node.server = server;
       });
     });
+
     describe('.init()', function () {
       it('should not throw an exception', async function () {
         await server.init();
       });
     });
+
     describe('.deinit()', function () {
       it('should not throw an exception', async function () {
         await server.deinit();
       });
     });
+
     describe('reinitialization', () => {
       it('should not throw an exception', async function () {
         await server.init();
       });
     });
+    
     describe('.destroy()', function () {
       it('should not throw an exception', async function () {
         await server.destroy();

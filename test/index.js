@@ -1,6 +1,5 @@
 import fse from "fs-extra";
 import tools from "./tools.js";
-
 import utils from "./utils.js";
 import service from "./service.js";
 import node from "./node.js";
@@ -13,7 +12,7 @@ describe('spreadable', () => {
   before(() => fse.ensureDir(tools.tmpPath));
   after(() => fse.remove(tools.tmpPath));
 
-  describe('Utils', utils.bind(this));
+  describe('utils', utils.bind(this));
   describe('service', service.bind(this));
   describe('node', node.bind(this));
   describe('client', client.bind(this));

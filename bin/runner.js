@@ -4,6 +4,7 @@ import path from "path";
 import merge from "lodash-es/merge.js";
 import { Spinner } from "cli-spinner";
 import utils from "./utils.js";
+
 const argv = yargs.argv;
 
 export default async (name, Node, actions) => {
@@ -21,6 +22,7 @@ export default async (name, Node, actions) => {
       }
     });
   });
+
   try {
     const action = argv.action || argv.a;
     const logger = argv.logger === undefined ? argv.l : argv.logger;
@@ -28,35 +30,42 @@ export default async (name, Node, actions) => {
     let configPath = argv.configPath || argv.c;
     let config;
     let spinner;
+
     if (configPath) {
       configPath = utils.getAbsolutePath(configPath);
     }
     else {
       configPath = path.join(process.cwd(), name + '.config');
     }
+
     try {
       config = require(configPath);
     }
     catch (err) {
       throw new Error(`Not found the config file ${configPath}`);
     }
+
     config = merge(config, {
       logger: logger === false ? false : config.logger,
       server: server === false ? false : config.server
     });
     node = new Node(config);
+
     if (!node.options.logger.level) {
       spinner = new Spinner('Initializing... %s');
       spinner.start();
     }
+
     await node.init();
     spinner && spinner.stop(true);
     //eslint-disable-next-line no-console
     console.log(chalk.cyan('Node has been initialized'));
+
     if (action) {
       if (!actions[action]) {
         throw new Error(`Not found action "${action}"`);
       }
+      
       await actions[action](node);
       await node.deinit();
       process.exit();

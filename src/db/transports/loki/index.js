@@ -10,7 +10,6 @@ import { onExit } from "signal-exit";
 const Database = database();
 
 export default (Parent) => {
-
   /**
    * Lokijs database transport
    */
@@ -71,9 +70,11 @@ export default (Parent) => {
      */
     async restore(index) {
       const file = !index ? this.__backupQueue.getLast() : this.__backupQueue.files[index - 1];
+
       if (!file) {
         throw new Error('Not found anything to restore the database');
       }
+
       await fse.copy(file.filePath, this.options.filename);
     }
 
@@ -91,6 +92,7 @@ export default (Parent) => {
             if (err) {
               return reject(err);
             }
+
             this.initCollections();
             resolve(this.loki);
           }
@@ -144,6 +146,7 @@ export default (Parent) => {
       if (!this.loki) {
         return;
       }
+
       return new Promise((resolve, reject) => {
         this.loki.saveDatabase((err) => {
           if (err) {
@@ -163,11 +166,13 @@ export default (Parent) => {
       if (!this.loki || !(await fse.pathExists(this.loki.filename))) {
         return;
       }
+
       return new Promise((resolve, reject) => {
         this.loki.deleteDatabase((err) => {
           if (err) {
             return reject(err);
           }
+
           resolve();
         });
       });
@@ -185,32 +190,38 @@ export default (Parent) => {
         disableMeta: true
       }, options);
       let collection = this.loki.getCollection(name);
+
       if (!collection) {
         return this.loki.addCollection(name, options);
       }
+
       if (options.unique) {
         !Array.isArray(options.unique) && (options.unique = [options.unique]);
         for (const field of options.unique) {
           collection.ensureUniqueIndex(field);
         }
       }
+
       if (options.indices) {
         !Array.isArray(options.indices) && (options.indices = [options.indices]);
         for (const field of options.indices) {
           collection.ensureIndex(field);
         }
       }
+
       for (let key in collection.binaryIndices) {
         if (!options.indices.includes(key)) {
           delete collection.binaryIndices[key];
         }
       }
+
       for (let key in collection.constraints.unique) {
         if (!options.unique.includes(key)) {
           delete collection.constraints.unique[key];
           collection.uniqueNames = collection.uniqueNames.filter(v => v != key);
         }
       }
+
       return collection;
     }
 
@@ -242,9 +253,11 @@ export default (Parent) => {
       this.col.data = this.prepareCollection('data', { unique: ['name'] });
       const rootNetworkAddress = this.col.data.findOne({ name: 'rootNetworkAddress' });
       const registrationTime = this.col.data.findOne({ name: 'registrationTime' });
+
       if (!rootNetworkAddress) {
         this.col.data.insert({ name: 'rootNetworkAddress', value: '' });
       }
+
       if (!registrationTime) {
         this.col.data.insert({ name: 'registrationTime', value: null });
       }
@@ -315,9 +328,11 @@ export default (Parent) => {
         isMaster: false,
         isBroken: false,
       }, obj);
+
       if (!fields.createdAt) {
         fields.createdAt = now;
       }
+
       return fields;
     }
 
@@ -483,12 +498,14 @@ export default (Parent) => {
      */
     async addMaster(address, size) {
       let server = this.col.servers.findOne({ address });
+
       if (server) {
         server.isMaster = true;
         server.updatedAt = Date.now();
         size !== undefined && (server.size = size);
         return this.col.servers.update(server);
       }
+
       return this.col.servers.insert(this.createServerFields({
         address,
         size,
@@ -502,21 +519,25 @@ export default (Parent) => {
      */
     async addSlave(address) {
       let server = this.col.servers.findOne({ address });
+
       if (server) {
         server.isSlave = true;
         server.updatedAt = Date.now();
         return this.col.servers.update(server);
       }
+
       server = this.col.servers.insert(this.createServerFields({
         address,
         isSlave: true
       }));
       const master = await this.getMaster(this.node.address);
+
       if (master) {
         master.size += 1;
         master.updatedAt = Date.now();
         this.col.servers.update(master);
       }
+
       return server;
     }
 
@@ -525,6 +546,7 @@ export default (Parent) => {
      */
     async addBacklink(address) {
       let server = this.col.servers.findOne({ address });
+
       if (server) {
         server.isBacklink = true;
         server.updatedAt = Date.now();
@@ -536,6 +558,7 @@ export default (Parent) => {
           isBacklink: true
         }));
       }
+
       this.col.servers.chain()
         .find({
           isBacklink: true,
@@ -549,15 +572,18 @@ export default (Parent) => {
      */
     async removeMaster(address) {
       let server = this.col.servers.findOne({ address, isMaster: true });
+
       if (!server) {
         return;
       }
+
       if (server.isSlave || server.isBacklink) {
         server.updatedAt = Date.now();
         server.isMaster = false;
         server.size = 0;
         return this.col.servers.update(server);
       }
+
       this.col.servers.remove(server);
     }
 
@@ -566,6 +592,7 @@ export default (Parent) => {
      */
     async removeMasters() {
       const servers = this.col.servers.find({ isMaster: true });
+
       for (let i = 0; i < servers.length; i++) {
         await this.removeMaster(servers[i].address);
       }
@@ -579,16 +606,20 @@ export default (Parent) => {
      */
     async removeSlave(address) {
       let server = this.col.servers.findOne({ address });
+
       if (!server) {
         return;
       }
+
       if (server.isMaster || server.isBacklink) {
         server.updatedAt = Date.now();
         server.isSlave = false;
         return this.col.servers.update(server);
       }
+
       this.col.servers.remove(server);
       const master = await this.getMaster(this.node.address);
+
       if (master) {
         master.size -= 1;
         master.updatedAt = Date.now();
@@ -601,6 +632,7 @@ export default (Parent) => {
      */
     async removeSlaves() {
       const servers = this.col.servers.find({ isSlave: true });
+
       for (let i = 0; i < servers.length; i++) {
         await this.removeSlave(servers[i].address);
       }
@@ -616,6 +648,7 @@ export default (Parent) => {
         .simplesort('createdAt', true)
         .limit(limit)
         .data();
+
       for (let i = 0; i < servers.length; i++) {
         await this.removeSlave(servers[i].address);
       }
@@ -626,9 +659,11 @@ export default (Parent) => {
      */
     async removeBacklink() {
       let server = this.col.servers.findOne({ isBacklink: true });
+
       if (!server) {
         return;
       }
+
       if (server.isSlave || server.isMaster) {
         server.updatedAt = Date.now();
         server.isBacklink = false;
@@ -637,6 +672,7 @@ export default (Parent) => {
       else {
         this.col.servers.remove(server);
       }
+      
       this.col.servers.chain()
         .find({
           isBacklink: true,
@@ -701,6 +737,7 @@ export default (Parent) => {
      */
     async successServerAddress(address) {
       let server = this.col.servers.findOne({ address });
+
       if (server) {
         server.fails = 0;
         server.isBroken = false;
@@ -715,14 +752,19 @@ export default (Parent) => {
       if (address == this.node.address) {
         return;
       }
+
       let server = this.col.servers.findOne({ address });
+
       if (!server) {
         return false;
       }
+
       server.fails += 1;
+
       if (server.fails > this.node.options.network.serverMaxFails) {
         server.isBroken = true;
       }
+
       this.col.servers.update(server);
     }
 
@@ -748,8 +790,10 @@ export default (Parent) => {
       if (await this.node.isAddressTrusted(address)) {
         return;
       }
+
       const data = this.col.behaviorCandidates.chain().find({ action }).simplesort('updatedAt', true).limit(1).data();
       const last = data.length ? data[0] : null;
+
       if (last && last.address != address) {
         const step = await this.node.getCandidateExcuseStep();
         this.col.behaviorCandidates
@@ -763,15 +807,18 @@ export default (Parent) => {
             return obj;
           });
       }
+
       this.col.behaviorCandidates
         .chain()
         .where((obj) => obj.excuse >= obj.suspicion)
         .remove();
       const candidate = this.col.behaviorCandidates.findOne({ address, action });
+
       if (candidate) {
         candidate.suspicion += 1;
         return this.col.behaviorCandidates.update(candidate);
       }
+
       const opts = { action, address };
       return this.col.behaviorCandidates.insert(this.createBehaviorCandidateFields(opts));
     }
@@ -803,14 +850,17 @@ export default (Parent) => {
       if (!await this.node.getApproval(action)) {
         throw new Error(`Approval ${action} doesn't exist`);
       }
+
       const usedBy = [];
       const updatedAt = Date.now();
       clientIp = utils.isIpv6(clientIp) ? utils.getFullIpv6(clientIp) : utils.ipv4Tov6(clientIp);
       const approval = this.col.approval.findOne({ action, clientIp });
+
       if (approval) {
         Object.assign(approval, { key, info, clientIp, startedAt, usedBy, updatedAt });
         return this.col.approval.update(approval);
       }
+
       return this.col.approval.insert({ action, clientIp, key, info, startedAt, usedBy, updatedAt });
     }
 
@@ -827,10 +877,12 @@ export default (Parent) => {
      */
     async useApproval(key, address) {
       const approval = this.col.approval.findOne({ key });
+
       if (!approval.usedBy.includes(address)) {
         approval.usedBy.push(address);
         approval.updatedAt = Date.now();
       }
+
       this.col.approval.update(approval);
     }
 
@@ -850,6 +902,7 @@ export default (Parent) => {
     async normalizeApproval() {
       const data = this.col.approval.find();
       const now = Date.now();
+
       for (let i = 0; i < data.length; i++) {
         const approver = data[i];
         const approval = await this.node.getApproval(approver.action);
@@ -865,10 +918,12 @@ export default (Parent) => {
      */
     async addBehaviorDelay(action, address) {
       const behavior = this.col.behaviorDelays.findOne({ address, action });
+
       if (behavior) {
         behavior.updatedAt = Date.now();
         return this.col.behaviorDelays.update(behavior);
       }
+
       return this.col.behaviorDelays.insert(this.createBehaviorDelaysFields({ address, action }));
     }
 
@@ -910,11 +965,14 @@ export default (Parent) => {
       if (!await this.node.getBehavior(action)) {
         throw new Error(`Behavior ${action} doesn't exist`);
       }
+      
       if (await this.node.isAddressTrusted(address)) {
         return;
       }
+
       const behavior = this.col.behaviorFails.findOne({ address, action });
       typeof step == 'function' && (step = step(behavior));
+
       if (behavior) {
         behavior.suspicion += step;
         behavior.balance += 1;
@@ -923,6 +981,7 @@ export default (Parent) => {
         behavior.updatedAt = Date.now();
         return this.col.behaviorFails.update(behavior);
       }
+
       const opts = { address, action, suspicion: step, up: 1, balance: 1 };
       return this.col.behaviorFails.insert(this.createBehaviorFailsFields(opts));
     }
@@ -932,17 +991,21 @@ export default (Parent) => {
      */
     async subBehaviorFail(action, address, step = 1) {
       const behavior = this.col.behaviorFails.findOne({ address, action });
+
       if (!behavior) {
         return;
       }
+
       typeof step == 'function' && (step = step(behavior));
       behavior.suspicion -= step;
       behavior.balance > 0 && (behavior.balance -= 1);
       behavior.up = 0;
       behavior.down += 1;
+
       if (behavior.suspicion <= 0) {
         return this.col.behaviorFails.remove(behavior);
       }
+
       behavior.updatedAt = Date.now();
       return this.col.behaviorFails.update(behavior);
     }
@@ -952,9 +1015,11 @@ export default (Parent) => {
      */
     async cleanBehaviorFail(action, address) {
       const behavior = this.col.behaviorFails.findOne({ address, action });
+
       if (!behavior) {
         return;
       }
+
       this.col.behaviorFails.remove(behavior);
     }
 
@@ -965,19 +1030,25 @@ export default (Parent) => {
       const data = this.col.behaviorFails.find();
       const syncLifetime = await this.node.getSyncLifetime();
       const now = Date.now();
+
       for (let i = 0; i < data.length; i++) {
         const behavior = data[i];
         const options = await this.node.getBehavior(behavior.action);
+
         if (!options) {
           this.col.behaviorFails.remove(behavior);
           continue;
         }
+
         const lifetime = options.failLifetime == 'auto' ? syncLifetime : options.failLifetime;
+
         if (behavior.updatedAt < now - lifetime) {
           this.col.behaviorFails.remove(behavior);
           continue;
         }
+        
         const delay = options.banDelay == 'auto' ? lifetime * 2 : options.banDelay;
+       
         if (options.ban && behavior.suspicion > options.failSuspicionLevel && now - behavior.createdAt > delay) {
           await this.addBanlistAddress(behavior.address, options.banLifetime, behavior.action);
           this.col.behaviorFails.remove(behavior);
@@ -1013,11 +1084,13 @@ export default (Parent) => {
       if (await this.node.isAddressTrusted(address)) {
         return;
       }
+
       let ip = await utils.getAddressIp(address);
       ip = utils.isIpv6(ip) ? utils.getFullIpv6(ip) : utils.ipv4Tov6(ip);
       const server = this.col.banlist.findOne({ address });
       const now = Date.now();
       let resolvedAt = now + lifetime;
+      
       if (server) {
         server.updatedAt = now;
         server.resolvedAt = resolvedAt;
@@ -1025,6 +1098,7 @@ export default (Parent) => {
         reason !== undefined && (server.reason = reason);
         return this.col.banlist.update(server);
       }
+
       return this.col.banlist.insert(this.createBanlistFields({ address, ip, resolvedAt, reason }));
     }
 
@@ -1033,6 +1107,7 @@ export default (Parent) => {
      */
     async removeBanlistAddress(address) {
       const server = this.col.banlist.findOne({ address });
+      
       if (server) {
         return this.col.banlist.remove(server);
       }
@@ -1062,10 +1137,12 @@ export default (Parent) => {
      */
     async getCache(type, key) {
       const cache = this.col.cache.findOne({ type, key });
+
       if (cache) {
         cache.accessedAt = Date.now();
         return this.col.cache.update(cache);
       }
+
       return cache;
     }
 
@@ -1075,11 +1152,13 @@ export default (Parent) => {
     async setCache(type, key, value, options = {}) {
       let cache = this.col.cache.findOne({ type, key });
       const now = Date.now();
+
       if (cache) {
         cache.value = value;
         cache.accessedAt = now;
         return this.col.cache.update(cache);
       }
+      
       cache = this.col.cache.insert({ type, key, value, accessedAt: now, createdAt: now });
       options.limit && this.col.cache.chain().find({ type }).simplesort('accessedAt', true).offset(options.limit).remove();
       return cache;

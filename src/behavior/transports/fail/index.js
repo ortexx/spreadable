@@ -3,12 +3,10 @@ import utils from "../../../utils.js";
 const Behavior = behavior();
 
 export default (Parent) => {
-
   /**
    * Fail behavior transport
    */
   return class BehaviorlFail extends (Parent || Behavior) {
-
     /**
      * @param {object} [options]
      */
@@ -34,19 +32,24 @@ export default (Parent) => {
      */
     createStep(add, step = 1, options = {}) {
       options = Object.assign({ exp: this.exp }, options);
+
       if (Array.isArray(step)) {
         step = step.map(s => !!s).reduce((p, c, i, a) => !c ? (p += 1 / a.length) : p, 0);
       }
+
       if (typeof step == 'function') {
         return step;
       }
+
       if (!options.exp) {
         return step;
       }
+
       return behavior => {
         if (!behavior) {
           return step;
         }
+        
         const coef = Math.sqrt(add ? behavior.up : behavior.down) || 1;
         return add ? step * coef : step / coef;
       };

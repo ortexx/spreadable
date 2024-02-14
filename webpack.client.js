@@ -24,5 +24,5 @@ export default (options = {}, wp) => {
     options
   );
   options.include.push([path.resolve(__dirname, "src/browser/client")]);
-  return wp ? config(options, wp) : options;
+  return wp? config(options, wp) : options;
 };

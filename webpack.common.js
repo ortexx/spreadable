@@ -1,8 +1,7 @@
 import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import fse from "fs-extra";
-import merge from "lodash-es/merge.js";
-
+import  { merge, capitalize } from "lodash-es";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
 import path from "path";
@@ -11,12 +10,6 @@ import { fileURLToPath } from "url";
 import webpack from "webpack";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const capitalize = (string) => {
-  return string
-    ? string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
-    : "";
-};
 
 export default (options = {}) => {
   const cwd = process.cwd();
@@ -30,9 +23,7 @@ export default (options = {}) => {
     )
   );
   pack.name = pack.name.split("-")[0] || pack.name;
-  const banner =
-    options.banner ||
-    `${pack.name} ${name}\n@version ${pack.version}\n{@link ${pack.homepage}}`;
+  const banner = options.banner || `${pack.name} ${name}\n@version ${pack.version}\n{@link ${pack.homepage}}`;
   let plugins = [];
   plugins.push(new webpack.BannerPlugin({ banner }));
   plugins.push(new MiniCssExtractPlugin({ filename: "style.css" }));
@@ -53,23 +44,23 @@ export default (options = {}) => {
     options.mock
   );
   const include = options.include || [];
-  const mockIndexPath =
-    options.mockIndexPath || path.resolve(__dirname, "src/browser/mock");
-  const isProd =
-    options.isProd === undefined
-      ? process.env.NODE_ENV == "production"
-      : options.isProd;
+  const mockIndexPath = options.mockIndexPath || path.resolve(__dirname, "src/browser/mock");
+  const isProd = options.isProd === undefined? process.env.NODE_ENV == "production": options.isProd;
   const alias = options.alias || {};
   const entry = {};
   const mainEntry = options.entry || path.resolve(cwd, `src/browser/${name}`);
   entry[`${pack.name}.${name}`] = mainEntry;
+
   for (let key in mock) {
     const val = mock[key];
+
     if (val === false) {
       continue;
     }
+
     alias[key] = val === true ? mockIndexPath : val;
   }
+
   return merge(
     {
       mode: isProd ? "production" : "development",
@@ -149,8 +140,8 @@ export default (options = {}) => {
         ],
       },
       resolve: {
-        alias,
-      },
+        alias
+      }
     },
     options.config
   );

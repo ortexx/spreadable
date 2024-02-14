@@ -1,18 +1,22 @@
 import utils from "./utils.js";
 import merge from "lodash-es/merge.js";
+
 const schema = {};
+
 schema.getAddress = function () {
   return {
     type: 'string',
     value: utils.isValidAddress.bind(utils)
   };
 };
+
 schema.getClientIp = function () {
   return {
     type: 'string',
     value: utils.isValidIp.bind(utils)
   };
 };
+
 schema.getApprovers = function () {
   return {
     type: 'array',
@@ -20,6 +24,7 @@ schema.getApprovers = function () {
     items: this.getAddress()
   };
 };
+
 schema.getStatusResponse = function () {
   return {
     type: 'object',
@@ -35,6 +40,7 @@ schema.getStatusResponse = function () {
     strict: true
   };
 };
+
 schema.getStatusPrettyResponse = function () {
   return merge(this.getStatusResponse(), {
     props: {
@@ -43,6 +49,7 @@ schema.getStatusPrettyResponse = function () {
     }
   });
 };
+
 schema.getAvailableNodeResponse = function () {
   return {
     type: 'object',
@@ -52,6 +59,7 @@ schema.getAvailableNodeResponse = function () {
     strict: true
   };
 };
+
 schema.getRequestApprovalKeyResponse = function () {
   return {
     type: 'object',
@@ -64,6 +72,7 @@ schema.getRequestApprovalKeyResponse = function () {
     strict: true
   };
 };
+
 schema.getStructureResponse = function () {
   const address = this.getAddress();
   return {
@@ -105,6 +114,7 @@ schema.getStructureResponse = function () {
     strict: true
   };
 };
+
 schema.getProvideRegistrationResponse = function () {
   const address = this.getAddress();
   return {
@@ -139,6 +149,7 @@ schema.getProvideRegistrationResponse = function () {
     strict: true
   };
 };
+
 schema.getRegisterResponse = function () {
   const address = this.getAddress();
   return {
@@ -150,6 +161,7 @@ schema.getRegisterResponse = function () {
     strict: true
   };
 };
+
 schema.getInterviewSummaryResponse = function () {
   const address = this.getAddress();
   return {
@@ -167,6 +179,7 @@ schema.getInterviewSummaryResponse = function () {
     strict: true
   };
 };
+
 schema.getApprovalApproverInfoResponse = function (infoSchema) {
   const address = this.getAddress();
   return {
@@ -178,6 +191,7 @@ schema.getApprovalApproverInfoResponse = function (infoSchema) {
     strict: true
   };
 };
+
 schema.getApprovalInfoRequest = function (answerSchema) {
   return {
     type: 'object',

@@ -1,28 +1,13 @@
-import loggerModule from "./transports/logger/index.js";
-import consoleModule from "./transports/console/index.js";
-import fileModule from "./transports/file/index.js";
-import adapterModule from "./transports/adapter/index.js";
+import logger from "./transports/logger/index.js";
+import loggerConsole from "./transports/console/index.js";
+import loggerFile from "./transports/file/index.js";
 
-const Logger = loggerModule();
-const LoggerConsole = consoleModule();
-const LoggerFile = fileModule();
-const LoggerAdapter = adapterModule();
+const Logger = logger();
+const LoggerConsole = loggerConsole();
+const LoggerFile = loggerFile();
 
-export default class Loggers {
-  constructor() {
-    if (!Loggers.instance) {
-      Loggers.instance = this;
-      this.loggers = [ Logger, LoggerConsole, LoggerFile, LoggerAdapter ];
-    }
-
-    return Loggers.instance;
-  }
-
-  getLoggers() {
-    return Loggers.instance.loggers;
-  }
-
-  addLogger(Logger) {
-    Loggers.instance.loggers.push(Logger);
-  }
+export default {
+  Logger,
+  LoggerConsole,
+  LoggerFile
 }

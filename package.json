@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.2.31",
+  "version": "0.3.1",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -48,7 +48,7 @@
     "css-minimizer-webpack-plugin": "^5.0.1",
     "eslint": "^8.56.0",
     "eslint-webpack-plugin": "^4.0.1",
-    "husky": "^8.0.3",
+    "husky": "^4.3.8",
     "mini-css-extract-plugin": "^2.7.7",
     "mocha": "^10.2.0",
     "node-mocks-http": "^1.14.1",
@@ -89,6 +89,6 @@
     "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=16.0.0"
   }
 }

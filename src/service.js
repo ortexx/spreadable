@@ -12,6 +12,7 @@ export default class Service {
     if (!this.node && !this.__isMasterService) {
       throw new Error(`You have to register the service "${this.constructor.name}" at first`);
     }
+    
     await this.initServices();
     this.__initialized = Date.now();
   }
@@ -77,9 +78,11 @@ export default class Service {
    */
   async removeService(name, type) {
     const index = this.__services.findIndex(s => s.name === name && s.type == type);
+    
     if (index == -1) {
       return;
     }
+
     const res = this.__services[index];
     await res.service.destroy();
     this.__services.splice(index, 1);
@@ -116,6 +119,7 @@ export default class Service {
     for (let i = this.__services.length - 1; i >= 0; i--) {
       await this.__services[i].service.destroy();
     }
+
     this.__services = [];
   }
 

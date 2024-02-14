@@ -7,17 +7,20 @@ const TaskInterval = interval();
 export default function () {
   describe('TaskInterval', () => {
     let task;
+
     describe('instance creation', function () {
       it('should create an instance', function () {
         assert.doesNotThrow(() => task = new TaskInterval());
         task.node = this.node;
       });
     });
+
     describe('.init()', function () {
       it('should not throw an exception', async function () {
         await task.init();
       });
     });
+
     describe('.start()', function () {
       it('should start the task every 100ms', async function () {
         let counter = 0;
@@ -33,16 +36,19 @@ export default function () {
         assert.equal(counter, 2, 'check after the second iteration');
       });
     });
+
     describe('.deinit()', function () {
       it('should not throw an exception', async function () {
         await task.deinit();
       });
     });
+
     describe('reinitialization', () => {
       it('should not throw an exception', async function () {
         await task.init();
       });
     });
+    
     describe('.destroy()', function () {
       it('should not throw an exception', async function () {
         await task.destroy();

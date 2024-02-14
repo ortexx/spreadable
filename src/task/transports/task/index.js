@@ -2,12 +2,10 @@ import merge from "lodash-es/merge.js";
 import Service from "../../../service.js";
 
 export default (Parent) => {
-
   /**
    * Tasks transport
    */
   return class Task extends (Parent || Service) {
-
     /**
      * @param {object} options
      */
@@ -31,10 +29,12 @@ export default (Parent) => {
       }, options);
       task.isStopped === undefined && (task.isStopped = true);
       this.tasks[name] = task;
+
       if (!task.isStopped) {
         await this.stop(task);
         await this.start(task);
       }
+
       return task;
     }
 
@@ -52,9 +52,11 @@ export default (Parent) => {
      */
     async remove(name) {
       const task = this.tasks[name];
+
       if (!task) {
         return;
       }
+
       !task.isStopped && await this.stop(task);
       delete this.tasks[name];
     }
@@ -112,11 +114,14 @@ export default (Parent) => {
         this.options.showFailLogs && this.node.logger.warn(`Task "${task.name}" should be started at first`);
         return;
       }
+
       if (task.isRun) {
         this.options.showFailLogs && this.node.logger.warn(`Task "${task.name}" has blocking operations`);
         return;
       }
+
       task.isRun = true;
+
       try {
         await task.fn();
         this.options.showCompletionLogs && this.node.logger.info(`Task "${task.name}" has been completed`);
@@ -124,6 +129,7 @@ export default (Parent) => {
       catch (err) {
         this.options.showFailLogs && this.node.logger.error(`Task "${task.name}", ${err.stack}`);
       }
+      
       task.isRun = false;
     }
 

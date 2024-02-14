@@ -4,7 +4,6 @@ import https from "https";
 import http from "http";
 
 export default (Parent) => {
-
   /**
    * The main server transport
    */
@@ -26,9 +25,11 @@ export default (Parent) => {
      */
     async init() {
       this.port = this.node.port;
+
       if (await utils.isPortUsed(this.port)) {
         throw new Error(`Port ${this.port} is already used`);
       }
+
       await this.startServer();
       await super.init.apply(this, arguments);
     }
@@ -86,6 +87,7 @@ export default (Parent) => {
     async stopServer() {
       this.server && await new Promise((resolve, reject) => this.server.close((err) => err ? reject(err) : resolve()));
     }
+    
     getServerHandler() {
       return (req, res) => res.end('success');
     }

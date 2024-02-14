@@ -20,6 +20,7 @@ export default function () {
         { name: 'undefined', value: undefined },
         { name: 'nan', value: NaN },
       ];
+
       for (let i = 0; i < types.length; i++) {
         const type = types[i];
         if (type.name != name) {
@@ -27,6 +28,7 @@ export default function () {
         }
       }
     };
+
     describe('multiple types', () => {
       it('should be true', () => {
         assert.doesNotThrow(() => {
@@ -44,6 +46,7 @@ export default function () {
           ], { x: 5 });
         });
       });
+
       it('should be false', () => {
         assert.throws(() => {
           utils.validateSchema([
@@ -61,6 +64,7 @@ export default function () {
         });
       });
     });
+
     describe('number', () => {
       it('should verify a number', () => {
         assert.doesNotThrow(() => {
@@ -68,57 +72,68 @@ export default function () {
           utils.validateSchema('number', 1.5, 'check float');
         });
       });
+
       it('should not verify a wrong number', () => {
         assert.throws(() => testFails('number'));
       });
     });
+    
     describe('string', () => {
       it('should verify a string', () => {
         assert.doesNotThrow(() => {
           utils.validateSchema('string', '1');
         });
       });
+
       it('should not verify a wrong string', () => {
         assert.throws(() => testFails('string'));
       });
     });
+
     describe('boolean', () => {
       it('should verify a boolean', () => {
         assert.doesNotThrow(() => {
           utils.validateSchema('boolean', true);
         });
       });
+
       it('should not verify a wrong boolean', () => {
         assert.throws(() => testFails('boolean'));
       });
     });
+
     describe('array', () => {
       it('should verify an array', () => {
         assert.doesNotThrow(() => {
           utils.validateSchema('array', []);
         });
       });
+
       it('should not verify a wrong array', () => {
         assert.throws(() => testFails('array'));
       });
+
       it('should verify array items', () => {
         assert.doesNotThrow(() => utils.validateSchema({
           type: 'array',
           items: 'number'
         }, [1, 2]));
       });
+
       it('should not verify wrong array "minLength"', () => {
         assert.throws(() => utils.validateSchema({
           type: 'array',
           minLength: 1
         }, []));
       });
+
       it('should not verify wrong array "maxLength"', () => {
         assert.throws(() => utils.validateSchema({
           type: 'array',
           maxLength: 1
         }, [1, 2]));
       });
+
       it('should not verify wrong array "uniq"', () => {
         assert.throws(() => utils.validateSchema({
           type: 'array',
@@ -130,15 +145,18 @@ export default function () {
         }, [{ x: 1 }, { x: 1 }, { x: 2 }]), '', 'check with the key');
       });
     });
+
     describe('object', () => {
       it('should verify an object', () => {
         assert.doesNotThrow(() => {
           utils.validateSchema('object', {});
         });
       });
+
       it('should not verify a wrong object', () => {
         assert.throws(() => testFails('object'));
       });
+
       it('should check props', () => {
         assert.doesNotThrow(() => {
           utils.validateSchema({
@@ -168,6 +186,7 @@ export default function () {
           }, { x: 1, y: '1' }, 'check wrong props');
         });
       });
+
       it('should check strict props', () => {
         assert.throws(() => {
           utils.validateSchema({
@@ -190,6 +209,7 @@ export default function () {
           }, { x: 1, y: 1 }, 'check the right case');
         });
       });
+
       it('should check expected props', () => {
         assert.throws(() => {
           utils.validateSchema({
@@ -212,6 +232,7 @@ export default function () {
           }, { x: 1 }, 'check the right case');
         });
       });
+
       it('should check required props', () => {
         assert.throws(() => {
           utils.validateSchema({
@@ -235,6 +256,7 @@ export default function () {
         });
       });
     });
+
     describe('check the "value" option', () => {
       it('should verify the right value', () => {
         assert.doesNotThrow(() => {
@@ -262,6 +284,7 @@ export default function () {
           }, 1, 'check a function');
         });
       });
+
       it('should not verify the wrong value', () => {
         assert.throws(() => {
           utils.validateSchema({
@@ -290,15 +313,19 @@ export default function () {
       });
     });
   });
+
   describe('.getRandomElement()', () => {
     it('should return the list item', () => {
       const arr = [];
+
       for (let i = 0; i < 1000; i++) {
         arr.push(i);
       }
+
       assert.include(arr, utils.getRandomElement(arr));
     });
   });
+
   describe('.getMs()', () => {
     it('should return the same value', () => {
       let val = 1000;
@@ -306,10 +333,12 @@ export default function () {
       val = 'auto';
       assert.equal(val, utils.getMs(val), 'check "auto"');
     });
+
     it('should convert to ms', () => {
       assert.equal(1000, utils.getMs('1s'));
     });
   });
+
   describe('.getBytes()', () => {
     it('should return the same value', () => {
       let val = 1024;
@@ -319,10 +348,12 @@ export default function () {
       val = '1%';
       assert.equal(val, utils.getBytes(val), 'check a percentage');
     });
+
     it('should convert to bytes', () => {
       assert.equal(1024, utils.getBytes('1kb'));
     });
   });
+
   describe('.getCpuUsage()', () => {
     it('should return the percentage', async () => {
       for (let i = 0; i < 5; i++) {
@@ -331,20 +362,25 @@ export default function () {
       }
     });
   });
+
   describe('.isPortUsed()', () => {
     let port;
     let server;
+
     before(async () => {
       port = await getPort();
       server = http.createServer(() => { });
     });
+
     it('should return false before', async () => {
       assert.isFalse(await utils.isPortUsed(port));
     });
+
     it('should return true', async () => {
       await new Promise(resolve => server.listen(port, resolve));
       assert.isTrue(await utils.isPortUsed(port));
     });
+
     it('should return false after', async () => {
       await new Promise(resolve => server.close(resolve));
       assert.isFalse(await utils.isPortUsed(port));
@@ -354,16 +390,20 @@ export default function () {
     it('should return localhost ip', async () => {
       assert.equal(await utils.getHostIp('localhost'), '127.0.0.1');
     });
+
     it('should return null for a wrong host', async () => {
       assert.isNull(await utils.getHostIp('somewronghostname'));
     });
+
     it('should return a valid ip address', async () => {
       assert.isTrue(utils.isValidIp(await utils.getHostIp('example.com')));
     });
+
     it('should return the same value for ipv4', async () => {
       const val = '8.8.8.8';
       assert.equal(await utils.getHostIp(val), val);
     });
+
     it('should return the same value for ipv6', async () => {
       const val = '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]';
       assert.equal(await utils.getHostIp(val), val);
@@ -373,10 +413,12 @@ export default function () {
     let timer;
     let timeout;
     let last;
+
     before(() => {
       timeout = 200;
       timer = utils.getRequestTimer(timeout);
     });
+
     it('should return the current timeout', (done) => {
       last = timeout;
       setTimeout(() => {
@@ -385,11 +427,13 @@ export default function () {
         done();
       });
     });
+
     it('should return the passed timeout', async () => {
       last = timeout;
       timeout = timer(last / 2);
       assert.equal(timeout, last / 2);
     });
+
     it('should return cut timeout', async () => {
       last = timeout;
       timeout = timer([last, last * 2]);
@@ -402,6 +446,7 @@ export default function () {
       const req = mocks.createRequest({ connection: { remoteAddress } });
       assert.equal(utils.getRemoteIp(req), remoteAddress);
     });
+
     it('should return the forwarded ip', () => {
       const remoteAddress = '127.0.0.1';
       const clientAddress = '1.1.1.1';
@@ -411,6 +456,7 @@ export default function () {
       });
       assert.equal(utils.getRemoteIp(req), clientAddress);
     });
+
     it('should return the remote ip with the trustlist', () => {
       const remoteAddress = '127.0.0.1';
       const clientAddress = '1.1.1.1';
@@ -420,6 +466,7 @@ export default function () {
       });
       assert.equal(utils.getRemoteIp(req, { trusted: ['2.2.2.2'] }), remoteAddress);
     });
+
     it('should return the client ip with the trustlist', () => {
       const remoteAddress = '127.0.0.1';
       const clientAddress = '1.1.1.1';
@@ -430,6 +477,7 @@ export default function () {
       });
       assert.equal(utils.getRemoteIp(req, { trusted }), clientAddress);
     });
+
     it('should return the remote ip with the trustlist broken chain', () => {
       const remoteAddress = '127.0.0.1';
       const clientAddress = '1.1.1.1';
@@ -441,16 +489,19 @@ export default function () {
       assert.equal(utils.getRemoteIp(req, { trusted: ['2.2.2.2'] }), remoteAddress);
     });
   });
+
   describe('.getExternalIp()', () => {
     it('should return a right ip', async () => {
       assert.isTrue(utils.isValidIp(await utils.getExternalIp()));
     });
   });
+
   describe('.getLocalIp()', () => {
     it('should return a right ip', async () => {
       assert.isTrue(utils.isValidIp(await utils.getLocalIp()));
     });
   });
+
   describe('.isValidPort()', () => {
     it('should return true', () => {
       for (let i = 0; i <= 65535; i++) {
@@ -458,6 +509,7 @@ export default function () {
       }
       assert.isTrue(utils.isValidPort('1'), 'check a string');
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isValidPort(65536));
       assert.isFalse(utils.isValidPort(65536 * 2));
@@ -468,12 +520,14 @@ export default function () {
       assert.isFalse(utils.isValidPort([]));
     });
   });
+
   describe('.isValidIp()', () => {
     it('should return true for ipv4', () => {
       for (let i = 0; i < 256; i++) {
         assert.isTrue(utils.isValidIp(`${i}.${i}.${i}.${i}`));
       }
     });
+
     it('should return true for ipv6', () => {
       assert.isTrue(utils.isValidIp('::'));
       assert.isTrue(utils.isValidIp('::1'));
@@ -486,6 +540,7 @@ export default function () {
       assert.isTrue(utils.isValidIp('[2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]'));
       assert.isTrue(utils.isValidIp('ff00::'));
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isValidIp('256.0.0.0'));
       assert.isFalse(utils.isValidIp(0));
@@ -498,14 +553,17 @@ export default function () {
       assert.isFalse(utils.isValidIp([]));
     });
   });
+
   describe('.ipv4Tov6()', () => {
     it('should convert ipv4 to ipv6 full format', () => {
       assert.equal(utils.ipv4Tov6('192.0.0.1'), '0000:0000:0000:0000:0000:ffff:c000:0001');
     });
+
     it('should throw an error', () => {
       assert.throws(() => utils.ipv4Tov6('0000:0000:0000:0000:0000:ffff:c000:0001'));
     });
   });
+
   describe('.isIpv6()', () => {
     it('should return true', () => {
       assert.isTrue(utils.isIpv6('::192.0.0.1'));
@@ -515,25 +573,31 @@ export default function () {
       assert.isTrue(utils.isIpv6('2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d'));
       assert.isTrue(utils.isIpv6('[2001:0db8:11a3:09d7:1f34:8a2e:07a0:765d]'));
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isIpv6('1.0.0.0'));
     });
   });
+
   describe('.getFullIpv6()', () => {
     it('should return the right option', () => {
       const value = 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff';
       assert.equal(utils.getFullIpv6(value), value);
     });
+
     it('should convert ipv6 short option to the full format', () => {
       assert.equal(utils.getFullIpv6('ffff::'), 'ffff:0000:0000:0000:0000:0000:0000:0000');
     });
+
     it('should convert ipv4 to ipv6 full format', () => {
       assert.equal(utils.getFullIpv6('192.0.0.1'), '0000:0000:0000:0000:0000:ffff:c000:0001');
     });
+
     it('should throw an error', () => {
       assert.throws(() => utils.getFullIpv6('wrong'));
     });
   });
+
   describe('.isIpEqual()', () => {
     it('should return true', () => {
       assert.isTrue(utils.isIpEqual('192.0.0.1', '192.0.0.1'));
@@ -542,22 +606,26 @@ export default function () {
       assert.isTrue(utils.isIpEqual('0000:0000:0000:0000:0000:ffff:c000:0001', '::ffff:c000:0001'));
       assert.isTrue(utils.isIpEqual('::ffff:c000:0001', '192.0.0.1'));
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isIpEqual('192.0.0.1', '192.0.0.2'));
     });
   });
+
   describe('.createAddress()', () => {
     it('should create ipv4 address', () => {
       const host = '192.0.0.1';
       const port = '1';
       assert.equal(utils.createAddress(host, port), `${host}:${port}`);
     });
+
     it('should create ipv6 address', () => {
       const host = '0000:0000:0000:0000:0000:ffff:c000:0001';
       const port = '1';
       assert.equal(utils.createAddress(host, port), `[${host}]:${port}`);
     });
   });
+
   describe('.isValidDomain()', () => {
     it('should return true', () => {
       assert.isTrue(utils.isValidDomain('localhost'));
@@ -565,6 +633,7 @@ export default function () {
       assert.isTrue(utils.isValidDomain('sub.example.com'));
       assert.isTrue(utils.isValidDomain('sub.sub.example.com'));
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isValidDomain(1));
       assert.isFalse(utils.isValidDomain());
@@ -576,6 +645,7 @@ export default function () {
       assert.isFalse(utils.isValidDomain('[0000:0000:0000:0000:0000:ffff:c000:0001]'));
     });
   });
+
   describe('.isValidHostname()', () => {
     it('should return true', () => {
       assert.isTrue(utils.isValidHostname('localhost'));
@@ -586,6 +656,7 @@ export default function () {
       assert.isTrue(utils.isValidHostname('0000:0000:0000:0000:0000:ffff:c000:0001'));
       assert.isTrue(utils.isValidHostname('[0000:0000:0000:0000:0000:ffff:c000:0001]'));
     });
+
     it('should return false', () => {
       assert.isFalse(utils.isValidHostname(1));
       assert.isFalse(utils.isValidHostname());
@@ -594,6 +665,7 @@ export default function () {
       assert.isFalse(utils.isValidHostname([]));
     });
   });
+
   describe('.splitAddress()', () => {
     it('should split ipv4', () => {
       const host = '192.0.0.1';
@@ -602,6 +674,7 @@ export default function () {
       assert.equal(res[0], host);
       assert.equal(res[1], port);
     });
+
     it('should split ipv6', () => {
       const host = '0000:0000:0000:0000:0000:ffff:c000:0001';
       const port = '1';
@@ -610,31 +683,39 @@ export default function () {
       assert.equal(res[1], port);
     });
   });
+
   describe('.createDataHash()', () => {
     let data;
     let result;
+
     before(() => data = ['1', '2']);
+
     it('should return a string', () => {
       result = utils.createDataHash(data);
       assert.isString(result);
     });
+
     it('should return the same string', () => {
       assert.equal(result, utils.createDataHash(data));
     });
+
     it('should return the another string', () => {
       assert.notDeepPropertyVal(result, utils.createDataHash(['3']));
     });
   });
+
   describe('.getClosestPeriodTime()', () => {
     it('should return the right time for 5 minutes', () => {
       const date = utils.getClosestPeriodTime(new Date('2011-10-10T14:48:00').getTime(), 1000 * 60 * 5);
       assert.equal(date, new Date('2011-10-10T14:45:00').getTime());
     });
+
     it('should return the right time for an hour', () => {
       const date = utils.getClosestPeriodTime(new Date('2011-10-10T14:48:00').getTime(), 1000 * 60 * 60);
       assert.equal(date, new Date('2011-10-10T14:00:00').getTime());
     });
   });
+
   describe('.isHexColor()', () => {
     it('should return false', () => {
       assert.isFalse(utils.isHexColor(1, 'check a number'));
@@ -646,38 +727,47 @@ export default function () {
       assert.isTrue(utils.isHexColor('#FFFFDD'));
     });
   });
+
   describe('.getRandomHexColor()', () => {
     it('should return a random color', () => {
       const color = utils.getRandomHexColor();
       assert.isTrue(utils.isHexColor(color));
     });
   });
+
   describe('.invertHexColor()', () => {
     it('should invert the color', () => {
       assert.equal(utils.invertHexColor('#ffffdd'), '#000022');
     });
   });
+
   describe('.FilesQueue', () => {
     let queue;
     let folderPath;
+
     before(() => {
       folderPath = path.join(tools.tmpPath, 'queue');
     });
+
     it('should create an instance', () => {
       queue = new utils.FilesQueue(folderPath, { limit: 3, ext: 'db' });
       assert.equal(queue.folderPath, folderPath);
     });
+
     it('should initialize it', async () => {
       await queue.init();
       assert.isTrue(await fse.pathExists(folderPath));
     });
+
     it('should normalize the queue', async () => {
       for (let i = queue.options.limit; i >= 0; i--) {
         await fse.ensureFile(path.join(folderPath, queue.createName(i + 1)));
       }
+
       await queue.normalize();
       assert.lengthOf(queue.files, queue.options.limit, 'check the size');
       let index = 0;
+      
       for (let i = 0; i < queue.files.length; i++) {
         const file = queue.files[i];
         assert.isOk(file.index > index, 'check the info');

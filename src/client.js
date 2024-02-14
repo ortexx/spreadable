@@ -7,16 +7,15 @@ import qs from "querystring";
 import utils from "./utils.js";
 import * as errors from "./errors.js";
 import ms from "ms";
-import console from "./logger/transports/console/index.js";
-import interval from "./task/transports/interval/index.js";
+import loggerConsole from "./logger/transports/console/index.js";
+import taskInterval from "./task/transports/interval/index.js";
 import Service from "./service.js";
-import pack from "../package.json" assert { type: "json" }
+import pack from "../package.json" with { type: "json" };
 
-const LoggerConsole = console();
-const TaskInterval = interval();
+const LoggerConsole = loggerConsole();
+const TaskInterval = taskInterval();
 
 export default (Parent) => {
-
   /**
    * Class to manage client requests to the network
    */
@@ -37,6 +36,7 @@ export default (Parent) => {
       if (typeof location != 'object' || !location.hostname) {
         return null;
       }
+
       const address = this.getPageAddress();
       const name = `spreadableNetworkAuth[${address}]`;
       const value = "; " + document.cookie;
@@ -109,14 +109,17 @@ export default (Parent) => {
       if (!this.address) {
         throw new Error('You must pass the node address');
       }
+      
       await this.prepareServices();
       await super.init.apply(this, arguments);
       let address = this.address;
       Array.isArray(address) && (address = shuffle(address));
       this.availableAddress = await this.getAvailableAddress(address);
+
       if (!this.availableAddress) {
         throw new Error('Provided addresses are not available');
       }
+
       this.workerAddress = this.availableAddress;
     }
 
@@ -146,9 +149,11 @@ export default (Parent) => {
      */
     async prepareTask() {
       this.options.task && (this.task = await this.addService('task', new this.TaskTransport(this.options.task)));
+
       if (!this.task) {
         return;
       }
+
       if (this.options.task.workerChangeInterval) {
         await this.task.add('workerChange', this.options.task.workerChangeInterval, () => this.changeWorker());
       }
@@ -164,8 +169,10 @@ export default (Parent) => {
     async getAvailableAddress(addresses) {
       !Array.isArray(addresses) && (addresses = [addresses]);
       let availableAddress;
+
       for (let i = 0; i < addresses.length; i++) {
         const address = addresses[i];
+
         try {
           await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({
             method: 'GET',
@@ -178,6 +185,7 @@ export default (Parent) => {
           this.logger.warn(err.stack);
         }
       }
+
       return availableAddress || null;
     }
 
@@ -190,9 +198,11 @@ export default (Parent) => {
       const lastAddress = this.workerAddress;
       const result = await this.request('get-available-node', { address: this.availableAddress });
       const address = result.address;
+     
       if (address == lastAddress) {
         return;
       }
+
       try {
         await fetch(`${this.getRequestProtocol()}://${address}/ping`, this.createDefaultRequestOptions({
           method: 'GET',
@@ -237,13 +247,17 @@ export default (Parent) => {
           startedAt
         }
       }));
+
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
+        
         if (result instanceof Error) {
           continue;
         }
+
         confirmedAddresses.push(targets[i].address);
       }
+
       const res = await this.request('request-approval-question', Object.assign({}, options, {
         body: {
           action,
@@ -274,6 +288,7 @@ export default (Parent) => {
      */
     async requestGroup(arr, action, options = {}) {
       const requests = [];
+      
       for (let i = 0; i < arr.length; i++) {
         const item = arr[i];
         const address = item.address;
@@ -283,6 +298,7 @@ export default (Parent) => {
             .catch(resolve);
         }));
       }
+
       let results = await Promise.all(requests);
       !options.includeErrors && (results = results.filter(r => !(r instanceof Error)));
       return results;
@@ -301,18 +317,24 @@ export default (Parent) => {
       let body = options.formData || options.body || {};
       body.timeout = options.timeout;
       body.timestamp = Date.now();
+      
       if (options.approvalInfo) {
         const approvalInfo = options.approvalInfo;
         delete approvalInfo.question;
+        
         if (!Object.prototype.hasOwnProperty.call(approvalInfo, 'answer')) {
           throw new Error('Request "approvalInfo" option must include "answer" property');
         }
+
         body.approvalInfo = options.formData ? JSON.stringify(approvalInfo) : approvalInfo;
       }
+
       if (options.formData) {
         const form = new FormData();
+        
         for (let key in body) {
           let val = body[key];
+          
           if (typeof val == 'object') {
             form.append(key, val.value, val.options);
           }
@@ -320,6 +342,7 @@ export default (Parent) => {
             form.append(key, val);
           }
         }
+
         options.body = form;
         delete options.formData;
       }
@@ -339,17 +362,22 @@ export default (Parent) => {
       try {
         response = await fetch(options.url, options);    
         this.logger.info(`Request to "${options.url}": ${ms(Date.now() - start)}`);
+        
         if (response.ok) {
           return options.getFullResponse ? response : await response.json();
         }
+
         const type = (response.headers.get('content-type') || '').match('application/json') ? 'json' : 'text';
         const body = await response[type]();
+        
         if (!body || typeof body != 'object') {
           throw new Error(body || 'Unknown error');
         }
+
         if (!body.code) {
           throw new Error(body.message || body);
         }
+
         throw new errors.WorkError(body.message, body.code);
       }
       catch (err) {
@@ -390,21 +418,26 @@ export default (Parent) => {
           'client-version': this.getVersion()
         }
       };
+
       if (this.options.auth) {
         const username = this.options.auth.username;
         const password = this.options.auth.password;
         let header = 'Basic ';
+
         if (typeof Buffer == 'function') {
           header += Buffer.from(username + ":" + password).toString('base64');
         }
         else {
           header += btoa(username + ":" + password);
         }
+
         defaults.headers.authorization = header;
       }
+
       if (options.timeout) {
         options.timeout = utils.getMs(options.timeout);
       }
+
       if (typeof this.options.https == 'object' && this.options.https.ca) {
         if (!https.Agent) {
           options.agent = options.agent || {};
@@ -415,6 +448,7 @@ export default (Parent) => {
           options.agent.options.ca = this.options.https.ca;
         }
       }
+
       return merge({}, defaults, options);
     }
 
@@ -455,9 +489,11 @@ export default (Parent) => {
      */
     envTest(isBrowser, name) {
       const isBrowserEnv = utils.isBrowserEnv();
+      
       if (isBrowser && !isBrowserEnv) {
         throw new Error(`You can't use "${name}" method in the nodejs environment`);
       }
+
       if (!isBrowser && isBrowserEnv) {
         throw new Error(`You can't use "${name}" method in the browser environment`);
       }

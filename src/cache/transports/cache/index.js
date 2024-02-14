@@ -3,12 +3,10 @@ import Service from "../../../service.js";
 import utils from "../../../utils.js";
 
 export default (Parent) => {
-
   /**
    * Cache transport
    */
   return class Cache extends (Parent || Service) {
-
     /**
      * @param {object} options
      */
@@ -17,6 +15,7 @@ export default (Parent) => {
       this.options = merge({
         limit: 50000
       }, options);
+      
       if (this.options.lifetime !== undefined) {
         this.options.lifetime = utils.getMs(this.options.lifetime);
       }

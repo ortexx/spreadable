@@ -7,9 +7,11 @@ export default function () {
   describe('CacheDatabase', () => {
     let cache;
     let type;
+
     before(function () {
       type = 'test';
     });
+
     describe('instance creation', function () {
       it('should create an instance', function () {
         assert.doesNotThrow(() => cache = new CacheDatabase());
@@ -17,11 +19,13 @@ export default function () {
         cache.name = 'test';
       });
     });
+
     describe('.init()', function () {
       it('should not throw an exception', async function () {
         await cache.init();
       });
     });
+
     describe('.set()', function () {
       it('should add the cache', async function () {
         const key = 'key1';
@@ -31,18 +35,21 @@ export default function () {
         assert.equal(res.value, value);
       });
     });
+
     describe('.get()', function () {
       it('should get the cache', async function () {
         const res = await cache.get('key1');
         assert.equal(res.value, 1, 'check the value');
       });
     });
+
     describe('.remove()', function () {
       it('should remove the cache', async function () {
         await cache.remove('key1');
         assert.isNull(await cache.get('key1'));
       });
     });
+
     describe('.flush()', function () {
       it('should remove the cache', async function () {
         const key = 'key';
@@ -51,16 +58,19 @@ export default function () {
         assert.isNull(await cache.get(key));
       });
     });
+
     describe('.deinit()', function () {
       it('should not throw an exception', async function () {
         await cache.deinit();
       });
     });
+
     describe('reinitialization', () => {
       it('should not throw an exception', async function () {
         await cache.init();
       });
     });
+    
     describe('.destroy()', function () {
       it('should not throw an exception', async function () {
         await cache.destroy();

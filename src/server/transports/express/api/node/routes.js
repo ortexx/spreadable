@@ -1,7 +1,6 @@
 import * as controllers from "./controllers.js";
 
 export default [
-
   /**
    * Register the address
    *

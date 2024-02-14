@@ -7,11 +7,11 @@ import routesApiMaster from "./api/master/routes.js";
 import routesApiButler from "./api/butler/routes.js";
 import routesApiSlave from "./api/slave/routes.js";
 import routesApiNode from "./api/node/routes.js";
+
 const Server = server();
 
 export default (Parent) => {
   return class ServerExpress extends (Parent || Server) {
-
     /**
      * @see Server.prototype.init
      */
@@ -20,6 +20,7 @@ export default (Parent) => {
       this.app.use(this.createRouter(this.getMainRoutes()));
       await super.init.apply(this, arguments);
     }
+    
     getServerHandler() {
       return this.app;
     }

@@ -3,12 +3,10 @@ import merge from "lodash-es/merge.js";
 import path from "path";
 
 export default (Parent) => {
-
   /**
    * Database transport interface
    */
   return class Database extends (Parent || Service) {
-
     /**
      * @param {object} options
      */
@@ -28,6 +26,7 @@ export default (Parent) => {
       if (this.options.backups && !this.options.backups.folder) {
         this.options.backups.folder = path.join(this.node.storagePath, 'backups', 'db');
       }
+
       super.init.apply(this, arguments);
     }
 

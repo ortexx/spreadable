@@ -1,12 +1,15 @@
 import logger from "../logger/index.js";
+import transports from "../../index.js";
+
 const Logger = logger();
 
 export default (Parent) => {
-
   /**
    * Console logger transport
    */
   return class LoggerAdapter extends (Parent || Logger) {
+    static transports = transports;
+
     constructor() {
       super(...arguments);
       this.transports = [];
@@ -17,24 +20,17 @@ export default (Parent) => {
      */
     async init() {
       const arr = this.options.transports || [];
-      for (let i = 0; i < arr.length; i++) {
+
+      for(let i = 0; i < arr.length; i++) {
         const obj = arr[i];
-        let CurrentLogger;
-
-        if(typeof obj.transport == 'string') {
-          const LoggerModule = await import("../../index.js");
-          const Transport = LoggerModule.default;
-          CurrentLogger = new Transport().getLoggers().find(logger => logger.name == obj.transport);
-        }
-        else {
-          CurrentLogger = obj.transport;
-        }
-
+        const transports = this.constructor.transports[obj.transport];
+        const CurrentLogger = typeof obj.transport == 'string'? transports: obj.transport;       
         const logger = new CurrentLogger(obj.options);
         logger.node = this.node;
         await logger.init();
         this.addTransport(logger);
       }
+
       return await super.init.apply(this, arguments);
     }
 
@@ -45,6 +41,7 @@ export default (Parent) => {
       for (let i = 0; i < this.transports.length; i++) {
         await this.transports[i].deinit();
       }
+      
       this.transports = [];
       return await super.deinit.apply(this, arguments);
     }
@@ -56,6 +53,7 @@ export default (Parent) => {
       for (let i = 0; i < this.transports.length; i++) {
         await this.transports[i].destroy();
       }
+
       return await super.destroy.apply(this, arguments);
     }
 
@@ -66,6 +64,7 @@ export default (Parent) => {
       if (!this.isLevelActive(level)) {
         return;
       }
+
       for (let i = 0; i < this.transports.length; i++) {
         await this.transports[i].log(level, message);
       }

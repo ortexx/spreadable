@@ -3,12 +3,10 @@ import utils from "../../../utils.js";
 const Task = task();
 
 export default (Parent) => {
-
   /**
    * Interval tasks transport
    */
   return class TaskInterval extends (Parent || Task) {
-
     /**
      * @see Task.prototype.add
      */

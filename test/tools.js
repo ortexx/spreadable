@@ -42,8 +42,10 @@ tools.createJsonRequestOptions = function (options = {}) {
  */
 tools.createRequestFormData = function (body) {
   const form = new FormData();
+
   for (let key in body) {
     let val = body[key];
+
     if (typeof val == 'object') {
       form.append(key, val.value, val.options);
     }
@@ -51,6 +53,7 @@ tools.createRequestFormData = function (body) {
       form.append(key, val);
     }
   }
+  
   return form;
 };
 

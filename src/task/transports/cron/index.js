@@ -3,7 +3,6 @@ import { CronJob } from "cron";
 const Task = task();
 
 export default (Parent) => {
-
   /**
    * Cron tasks transport
    */

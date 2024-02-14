@@ -37,25 +37,31 @@ utils.validateSchema = function (schema, data) {
   const getHumanData = () => JSON.stringify(data, null, 2);
   let err = null;
   let isValid = false;
+
   for (let i = 0; i < fullSchema.length; i++) {
     const schema = typeof fullSchema[i] != 'object' ? { type: fullSchema[i] } : fullSchema[i];
     const getHumanSchema = () => JSON.stringify(schema, null, 2);
+    
     try {
       if (schema.type != dataType) {
         const msg = `Wrong data type "${dataType}" instead of "${schema.type}" ${getHumanData()} for ${getHumanSchema()}`;
         throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_DATA_TYPE');
       }
+
       if (dataType == 'array') {
         const minLength = typeof schema.minLength == 'function' ? minLength(data) : schema.minLength;
         const maxLength = typeof schema.maxLength == 'function' ? maxLength(data) : schema.maxLength;
+        
         if (minLength && data.length < minLength) {
           const msg = `Wrong array min length ${getHumanData()} for ${getHumanSchema()}`;
           throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MIN_LENGTH');
         }
+
         if (maxLength && data.length > maxLength) {
           const msg = `Wrong array max length ${getHumanData()} for ${getHumanSchema()}`;
           throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_MAX_LENGTH');
         }
+
         if (schema.uniq) {
           const arr = schema.uniq === true ? uniqBy(data) : uniqBy(data, schema.uniq);
           if (arr.length != data.length) {
@@ -63,6 +69,7 @@ utils.validateSchema = function (schema, data) {
             throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_WRONG_ARRAY_UNIQUENESS');
           }
         }
+
         if (schema.items) {
           data.forEach(item => this.validateSchema(schema.items, item));
         }
@@ -70,25 +77,31 @@ utils.validateSchema = function (schema, data) {
       else if (dataType == 'object') {
         const props = schema.props || {};
         const required = schema.required;
+        
         if (required && !Array.isArray(required)) {
           throw new Error(`Option "required" for ${getHumanSchema()} must be an array`);
         }
+
         if (schema.canBeNull && data === null) {
           isValid = true;
           continue;
         }
+
         if (schema.canBeNull === false && data === null) {
           const msg = `Data for ${getHumanSchema()} can't be null`;
           throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_NULL');
         }
+
         if (schema.strict) {
           const schemaKeys = Object.keys(props).sort();
           const dataKeys = Object.keys(data).sort();
+          
           if (schemaKeys.toString() != dataKeys.toString()) {
             const msg = `Wrong strict object structure ${getHumanData()} for ${getHumanSchema()}`;
             throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_STRICT');
           }
         }
+
         if (schema.expected) {
           for (let key in data) {
             if (!Object.prototype.hasOwnProperty.call(props, key)) {
@@ -97,8 +110,10 @@ utils.validateSchema = function (schema, data) {
             }
           }
         }
+        
         const requiredKeys = {};
         required && required.forEach(item => requiredKeys[item] = true);
+        
         for (let prop in props) {
           if (!Object.prototype.hasOwnProperty.call(data, prop)) {
             if (required && requiredKeys[prop]) {
@@ -114,7 +129,9 @@ utils.validateSchema = function (schema, data) {
         isValid = true;
         continue;
       }
+
       let valid;
+      
       if (typeof schema.value == 'function') {
         valid = schema.value(data);
       }
@@ -125,16 +142,19 @@ utils.validateSchema = function (schema, data) {
         const value = Array.isArray(schema.value) ? schema.value : [schema.value];
         valid = value.indexOf(data) != -1;
       }
+
       if (!valid) {
         const msg = `Validation is failed for ${getHumanData()}`;
         throw new WorkError(msg, 'ERR_SPREADABLE_VALIDATE_SCHEMA_VALUE');
       }
+
       isValid = true;
     }
     catch (error) {
       err = error;
     }
   }
+
   if (!isValid && err) {
     throw err;
   }
@@ -169,6 +189,7 @@ utils.getMs = function (val) {
   if (typeof val != 'string' || val == 'auto') {
     return val;
   }
+
   return ms(val);
 };
 
@@ -182,6 +203,7 @@ utils.getBytes = function (val) {
   if (typeof val != 'string' || val.match('%') || val == 'auto') {
     return val;
   }
+
   return bytes(val);
 };
 
@@ -233,10 +255,13 @@ utils.getHostIp = async function (hostname) {
   if (hostname == 'localhost') {
     return '127.0.0.1';
   }
+
   if (this.isValidIp(hostname)) {
     return hostname;
   }
+
   const cache = this.dnsCache.get(hostname);
+  
   if (cache) {
     if (cache.createdAt + this.dnsCachePeriod > Date.now()) {
       return cache.value;
@@ -245,17 +270,21 @@ utils.getHostIp = async function (hostname) {
       this.dnsCache.delete(hostname);
     }
   }
+
   return await new Promise((resolve) => {
     dns.lookup(hostname, (err, ip) => {
       if (err || !ip || /^127/.test(ip)) {
         return resolve(null);
       }
+
       this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
       this.dnsCache.set(hostname, { value: ip, createdAt: Date.now() });
+
       if (this.dnsCache.size > this.dnsCacheLimit) {
         const keys = Array.from(this.dnsCache.keys()).slice(0, this.dnsCache.size - this.dnsCacheLimit);
         keys.forEach(k => this.dnsCache.delete(k));
       }
+
       return resolve(ip);
     });
   });
@@ -282,15 +311,19 @@ utils.getRequestTimer = function (timeout, options = {}) {
   let last = Date.now();
   return (fixArr, opts) => {
     opts = Object.assign({}, options, opts);
+    
     if (fixArr && !Array.isArray(fixArr)) {
       fixArr = [fixArr];
     }
+
     if (timeout === undefined) {
       return fixArr ? fixArr[0] : undefined;
     }
+
     const now = Date.now();
     timeout -= now - last;
     last = now;
+    
     if (fixArr) {
       let min = opts.min;
       let sum = fixArr.reduce((a, b) => a + b);
@@ -302,6 +335,7 @@ utils.getRequestTimer = function (timeout, options = {}) {
       res > timeout && (res = timeout);
       return res > 0 ? res : 0;
     }
+
     return timeout;
   };
 };
@@ -341,6 +375,7 @@ utils.getExternalIp = async function () {
 utils.getLocalIp = function () {
   const interfaces = os.networkInterfaces();
   let ip;
+  
   for (let k in interfaces) {
     for (let p in interfaces[k]) {
       const address = interfaces[k][p];
@@ -349,6 +384,7 @@ utils.getLocalIp = function () {
       }
     }
   }
+
   return ip;
 };
 
@@ -363,30 +399,38 @@ utils.getLocalIp = function () {
 utils.getRemoteIp = function (req, options = {}) {
   let ip = req.connection.remoteAddress || req.socket.remoteAddress;
   let isTrusted = true;
+  
   if (!ip) {
     return '';
   }
+
   const check = ip => {
     if (!options.trusted || !options.trusted.length) {
       return true;
     }
+
     for (let i = 0; i < options.trusted.length; i++) {
       if (this.isIpEqual(ip, options.trusted[i])) {
         return true;
       }
     }
+
     return false;
   };
+ 
   if (ip.match(':')) {
     ip = ip.replace('::1', '127.0.0.1');
     ip.match('.') && (ip = ip.replace(/^::ffff:/, ''));
   }
+
   if (options.trusted && req.headers['x-forwarded-for']) {
     isTrusted = check(ip);
   }
+
   if (req.headers['x-forwarded-for'] && isTrusted) {
     const list = req.headers['x-forwarded-for'].split(',').map(ip => ip.trim());
     const proxies = list.slice(1);
+    
     if (options.trusted) {
       const matches = proxies.reduce((p, c) => check(c) ? p + 1 : p, 0);
       matches === proxies.length && (ip = list[0]);
@@ -395,6 +439,7 @@ utils.getRemoteIp = function (req, options = {}) {
       ip = list[0];
     }
   }
+
   ip && this.isIpv6(ip) && (ip = this.getFullIpv6(ip));
   return ip;
 };
@@ -451,6 +496,7 @@ utils.createAddress = function (hostname, port) {
   if (this.isIpv6(hostname)) {
     return `[${this.getFullIpv6(hostname)}]:${port}`;
   }
+
   return `${hostname}:${port}`;
 };
 
@@ -464,6 +510,7 @@ utils.isValidPort = function (port) {
   if (!['number', 'string'].includes(typeof port)) {
     return false;
   }
+
   return +port >= 0 && +port <= 65535;
 };
 
@@ -487,6 +534,7 @@ utils.isValidDomain = function (domain) {
   if (typeof domain != 'string') {
     return false;
   }
+
   return this.domainValidationRegex.test(domain);
 };
 
@@ -510,6 +558,7 @@ utils.isValidAddress = function (address) {
   if (!address || typeof address != 'string') {
     return false;
   }
+
   const parts = this.splitAddress(address);
   const host = parts[0];
   const port = parts[1];
@@ -524,13 +573,16 @@ utils.isValidAddress = function (address) {
  */
 utils.splitAddress = function (address) {
   let sp;
+
   if (!address || typeof address != 'string') {
     return [];
   }
+
   if (address.match(']')) {
     sp = address.split(']:');
     return [this.getFullIpv6(sp[0].slice(1)), +sp[1]];
   }
+
   sp = address.split(':');
   return [sp[0], +sp[1]];
 };
@@ -566,6 +618,7 @@ utils.isHexColor = function (str) {
   if (typeof str != 'string') {
     return false;
   }
+
   return /^#[0-9A-F]{6}$/i.test(str);
 };
 
@@ -608,15 +661,17 @@ utils.isRequestTimeoutError = function (err) {
   if (!(err instanceof Error)) {
     return false;
   }
-  return (['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) ||
-        ['request-timeout', 'body-timeout'].includes(err.type));
+
+  return (
+    ['ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ERR_SPREADABLE_REQUEST_TIMEDOUT'].includes(err.code) ||
+    ['request-timeout', 'body-timeout'].includes(err.type)
+  );
 };
 
 /**
  * Manage files queue
  */
 utils.FilesQueue = class {
-
   /**
    * @param {string} folderPath
    * @param {object} [options]
@@ -671,21 +726,26 @@ utils.FilesQueue = class {
   async normalize() {
     await fse.ensureDir(this.folderPath);
     this.files = await fse.readdir(this.folderPath);
+
     for (let i = 0; i < this.files.length; i++) {
       this.files[i] = await this.info(path.join(this.folderPath, this.files[i]));
     }
+
     if (this.files.length <= this.options.limit) {
       return;
     }
+
     await this.sort();
     const diff = this.files.length - this.options.limit;
     const excess = this.files.slice(0, diff);
     const rest = this.files.slice(diff);
+
     for (let i = 0; i < excess.length; i++) {
       const file = excess[i];
       await fse.remove(file.filePath);
       this.files.splice(i, 1);
     }
+
     for (let i = 0; i < rest.length; i++) {
       const file = rest[i];
       const filePath = path.join(this.folderPath, this.createName(i + 1));
@@ -706,12 +766,14 @@ utils.FilesQueue = class {
       const handler = async () => {
         let err;
         let res;
+
         try {
           res = await fn();
         }
         catch (e) {
           err = e;
         }
+        
         err ? reject(err) : resolve(res);
         this.__queue.shift();
         this.__queue.length && this.__queue[0]();

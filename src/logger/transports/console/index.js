@@ -5,7 +5,6 @@ import utils from "../../../utils.js";
 const Logger = logger();
 
 export default (Parent) => {
-
   /**
    * Console logger transport
    */
@@ -26,6 +25,7 @@ export default (Parent) => {
       if (!this.isLevelActive(level)) {
         return;
       }
+      
       //eslint-disable-next-line no-console
       (console[level] || console.log)(utils.isBrowserEnv() ? message : chalk[this.colors[level]](message));
     }

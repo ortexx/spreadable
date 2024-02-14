@@ -2,12 +2,10 @@ import cache from "../cache/index.js";
 const Cache = cache();
 
 export default (Parent) => {
-
   /**
    * Database cache transport
    */
   return class CacheDatabase extends (Parent || Cache) {
-
     /**
      * @see Cache.prototype.get
      */

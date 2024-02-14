@@ -17,8 +17,7 @@
   },
   "extends": "eslint:recommended",
   "rules": {
-    "no-console": "warn",
-    "padded-blocks": "off"
+    "no-console": "warn"
   },
   "globals": {}
 }

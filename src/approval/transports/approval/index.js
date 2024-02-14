@@ -3,12 +3,10 @@ import utils from "../../../utils.js";
 import * as errors from "../../../errors.js";
 
 export default (Parent) => {
-
   /**
    * Approval transport
    */
   return class Approval extends (Parent || Service) {
-
     /**
      * @param {object} options
      */
@@ -47,7 +45,9 @@ export default (Parent) => {
       if (typeof time != 'number' || isNaN(time)) {
         throw new errors.WorkError(`Approval time must be an integer`, 'ERR_SPREADABLE_WRONG_APPROVAL_TIME');
       }
+
       const closest = utils.getClosestPeriodTime(Date.now(), this.period);
+
       if (time !== closest && time !== closest - this.period) {
         throw new errors.WorkError(`Incorrect approval time`, 'ERR_SPREADABLE_WRONG_APPROVAL_TIME');
       }
@@ -71,9 +71,11 @@ export default (Parent) => {
     async calculateDescisionLevel() {
       let level = this.decisionLevel;
       const count = await this.calculateApproversCount();
+      
       if (typeof level == 'string' && level.match('%')) {
         level = Math.ceil(count * parseFloat(level) / 100);
       }
+
       return level;
     }
 
@@ -85,6 +87,7 @@ export default (Parent) => {
      */
     async approversDecisionCountTest(count) {
       const decistionLevel = await this.calculateDescisionLevel(count);
+
       if (count < decistionLevel) {
         throw new errors.WorkError('Not enough approvers to make a decision', 'ERR_SPREADABLE_NOT_ENOUGH_APPROVER_DECISIONS');
       }

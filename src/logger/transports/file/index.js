@@ -3,10 +3,10 @@ import fse from "fs-extra";
 import merge from "lodash-es/merge.js";
 import logger from "../logger/index.js";
 import utils from "../../../utils.js";
+
 const Logger = logger();
 
 export default (Parent) => {
-
   /**
    * File logger transport
    */
@@ -57,15 +57,19 @@ export default (Parent) => {
       if (!this.isLevelActive(level)) {
         return;
       }
+
       return await this.__filesQueue.blocking(async () => {
         let lastFile = this.getLastFile();
         message = this.prepareMessage(message, level);
+
         if (!lastFile) {
           lastFile = await this.addNewFile();
         }
+
         if (lastFile.stat.size + this.getMessageSize(message) > this.options.fileMaxSize) {
           lastFile = await this.addNewFile();
         }
+
         await this.addNewMessage(message, lastFile.filePath);
       });
     }
@@ -100,6 +104,7 @@ export default (Parent) => {
      */
     async normalizeFilesCount() {
       await this.__filesQueue.normalize();
+      
       if (!this.__filesQueue.files.length) {
         return await this.addNewFile();
       }
