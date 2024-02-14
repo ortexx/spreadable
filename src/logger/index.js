@@ -9,21 +9,20 @@ const LoggerFile = fileModule();
 const LoggerAdapter = adapterModule();
 
 export default class Loggers {
-    constructor() {
-        if (!Loggers.instance) {
-            Loggers.instance = this;
-            this.loggers = [ Logger, LoggerConsole, LoggerFile, LoggerAdapter ];
-
-        }
-
-        return Loggers.instance;
+  constructor() {
+    if (!Loggers.instance) {
+      Loggers.instance = this;
+      this.loggers = [ Logger, LoggerConsole, LoggerFile, LoggerAdapter ];
     }
 
-    getLoggers() {
-        return Loggers.instance.loggers;
-    }
+    return Loggers.instance;
+  }
 
-    addLogger(Logger) {
-        Loggers.instance.loggers.push(Logger);
-    }
+  getLoggers() {
+    return Loggers.instance.loggers;
+  }
+
+  addLogger(Logger) {
+    Loggers.instance.loggers.push(Logger);
+  }
 }
