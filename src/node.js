@@ -1208,7 +1208,7 @@ export default (Parent) => {
       }
 
       if (options.timeout && !options.signal) {
-        options.signal = AbortSignal.timeout(options.timeout);
+        options.signal = AbortSignal.timeout(Math.floor(options.timeout));
       }
 
       const start = Date.now();
