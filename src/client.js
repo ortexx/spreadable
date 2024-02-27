@@ -54,6 +54,7 @@ export default (Parent) => {
       if (typeof location != 'object' || !location.hostname) {
         return '';
       }
+
       return `${location.hostname}:${location.port || (this.getPageProtocol() == 'https' ? 443 : 80)}`;
     }
 
@@ -66,6 +67,7 @@ export default (Parent) => {
       if (typeof location != 'object' || !location.protocol) {
         return '';
       }
+      
       return location.protocol.split(':')[0];
     }
 

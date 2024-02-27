@@ -10,7 +10,7 @@ export default class Service {
    */
   async init() {
     if (!this.node && !this.__isMasterService) {
-      throw new Error(`You have to register the service "${this.constructor.name}" at first`);
+      throw new Error(`You have to register the service "${ this.constructor.name }" at first`);
     }
     
     await this.initServices();

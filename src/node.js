@@ -1199,6 +1199,7 @@ export default (Parent) => {
             form.append(key, val);
           }
         }
+        
         options.body = form;
         delete options.formData;
       }

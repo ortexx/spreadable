@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -89,6 +89,6 @@
     "url": "https://github.com/ortexx/spreadable"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   }
 }
