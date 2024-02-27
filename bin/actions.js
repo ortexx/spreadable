@@ -3,11 +3,12 @@ import yargs from "yargs";
 import srcUtils from "../src/utils.js";
 
 const argv = yargs(process.argv).argv;
+const actions = {};
 
 /**
  * Show the node status info
  */
-export const status = async (node) => {
+actions.status = async (node) => {
   const info = await node.getStatusInfo(true);
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(JSON.stringify(info, null, 2)));
@@ -16,7 +17,7 @@ export const status = async (node) => {
 /**
  * Get all banlist
  */
-export const getBanlist = async (node) => {
+actions.getBanlist = async (node) => {
   const fullInfo = argv.fullInfo || argv.f;
   const list = await node.db.getBanlist();
 
@@ -36,7 +37,7 @@ export const getBanlist = async (node) => {
 /**
  * Get the banlist address info
  */
-export const getBanlistAddress = async (node) => {
+actions.getBanlistAddress = async (node) => {
   const address = argv.address || argv.n;
 
   if (!address) {
@@ -56,7 +57,7 @@ export const getBanlistAddress = async (node) => {
 /**
  * Add the address to the banlist
  */
-export const addBanlistAddress = async (node) => {
+actions.addBanlistAddress = async (node) => {
   const address = argv.address || argv.n;
   const lifetime = srcUtils.getMs(argv.lifetime || argv.t);
   const reason = argv.reason || argv.r;
@@ -77,7 +78,7 @@ export const addBanlistAddress = async (node) => {
 /**
  * Remove the address from the banlist
  */
-export const removeBanlistAddress = async (node) => {
+actions.removeBanlistAddress = async (node) => {
   const address = argv.address || argv.n;
 
   if (!address) {
@@ -92,7 +93,7 @@ export const removeBanlistAddress = async (node) => {
 /**
  * Empty the banlist
  */
-export const emptyBanlist = async (node) => {
+actions.emptyBanlist = async (node) => {
   await node.db.emptyBanlist();
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(`The banlist has been cleaned`));
@@ -101,7 +102,7 @@ export const emptyBanlist = async (node) => {
 /**
  * Create a backup
  */
-export const backup = async (node) => {
+actions.backup = async (node) => {
   await node.db.backup();
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(`The backup has been created`));
@@ -110,9 +111,11 @@ export const backup = async (node) => {
 /**
  * Restore the database
  */
-export const restore = async (node) => {
+actions.restore = async (node) => {
   const index = argv.index || argv.i;
   await node.db.restore(index);
   //eslint-disable-next-line no-console
   console.log(chalk.cyan(`The database has been restored`));
 };
+
+export default actions;
