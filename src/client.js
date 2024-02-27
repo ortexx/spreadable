@@ -67,7 +67,7 @@ export default (Parent) => {
       if (typeof location != 'object' || !location.protocol) {
         return '';
       }
-      
+
       return location.protocol.split(':')[0];
     }
 

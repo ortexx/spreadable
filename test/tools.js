@@ -164,7 +164,7 @@ tools.wait = async function (timeout) {
  */
 tools.nodesSync = async function (nodes, count = 1) {
   nodes = shuffle(nodes);
-  
+
   for (let i = 0; i < count; i++) {
     for (let k = 0; k < nodes.length; k++) {
       try {

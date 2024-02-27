@@ -1,8 +1,8 @@
-import FormData from "form-data";
 import fse from "fs-extra";
 import http from "http";
 import https from "https";
 import { capitalize, isPlainObject, merge, orderBy, pick, shuffle, uniqBy } from "lodash-es";
+import FormData from "form-data";
 import ms from "ms";
 import fetch from "node-fetch";
 import path from "path";
@@ -1199,7 +1199,7 @@ export default (Parent) => {
             form.append(key, val);
           }
         }
-        
+
         options.body = form;
         delete options.formData;
       }
