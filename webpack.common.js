@@ -58,15 +58,15 @@ export default (options = {}) => {
       continue;
     }
 
-    alias[key] = val === true ? mockIndexPath : val;
+    alias[key] = val === true? mockIndexPath : val;
   }
 
   return merge(
     {
-      mode: isProd ? "production" : "development",
+      mode: isProd? "production" : "development",
       performance: { hints: false },
       watch: !isProd,
-      devtool: isProd ? false : "inline-source-map",
+      devtool: isProd? false : "inline-source-map",
       entry,
       output: {
         path: options.distPath || path.join(cwd, `/dist/${name}`),
@@ -131,11 +131,8 @@ export default (options = {}) => {
           },
           {
             test: /\.(png|jpg|gif|svg|eot|ttf|woff|woff2)$/,
-            loader: "file-loader",
-            options: {
-              esModule: false,
-              name: "[name].[ext]",
-            },
+            type: 'asset/resource',
+            dependency: { not: ['url'] }
           },
         ],
       },
