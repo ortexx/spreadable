@@ -1,6 +1,6 @@
 {
   "name": "spreadable",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Decentralized network mechanism",
   "bin": {
     "spreadable": "./bin/index.js"
@@ -68,7 +68,7 @@
     "cors": "^2.8.5",
     "cron": "^3.1.6",
     "express": "^4.18.2",
-    "form-data": "^4.0.0",
+    "formdata-node": "^6.0.3",
     "fs-extra": "^11.2.0",
     "get-port": "^7.0.0",
     "ip6addr": "^0.2.5",
@@ -81,7 +81,7 @@
     "signal-exit": "^4.1.0",
     "tcp-port-used": "^1.0.2",
     "text-to-svg": "^3.1.5",
-    "validate-ip-node": "^1.0.8",    
+    "validate-ip-node": "^1.0.8",
     "yargs": "^17.7.2"
   },
   "repository": {

@@ -1,6 +1,6 @@
 import merge from "lodash-es/merge.js";
 import shuffle from "lodash-es/shuffle.js";
-import FormData from "form-data";
+import { FormData } from "formdata-node";
 import https from "https";
 import fetch from "node-fetch";
 import qs from "querystring";
@@ -67,7 +67,7 @@ export default (Parent) => {
       if (typeof location != 'object' || !location.protocol) {
         return '';
       }
-      
+
       return location.protocol.split(':')[0];
     }
 
