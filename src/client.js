@@ -417,7 +417,7 @@ export default (Parent) => {
       const defaults = {
         method: 'POST',
         timeout: this.options.request.clientTimeout,
-        headers: {},
+        headers: {}
       };
 
       if(!this.options.request.ignoreVersion) {
