@@ -328,7 +328,7 @@ utils.getRequestTimer = function (timeout, options = {}) {
       let min = opts.min;
       let sum = fixArr.reduce((a, b) => a + b);
       let dev = sum / timeout;
-      let res = dev > 1 ? fixArr[0] / dev : fixArr[0];
+      let res = dev > 1? fixArr[0] / dev: fixArr[0];
       res > fixArr[0] && (res = fixArr[0]);
       opts.grabFree && (timeout > sum) && (res += ((timeout - sum) / fixArr.length));
       min && res < min && (res = min);

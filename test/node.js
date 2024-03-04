@@ -57,6 +57,10 @@ export default function () {
         assert.equal(await node.getValueGivenNetworkSize('auto'), Math.ceil(Math.sqrt(networkSize)));
       });
 
+      it('should return cbrt', async () => {
+        assert.equal(await node.getValueGivenNetworkSize('r-3'), Math.ceil(Math.cbrt(networkSize)));
+      });
+
       it('should return the network size', async () => {
         assert.equal(await node.getValueGivenNetworkSize(networkSize + 10), networkSize);
       });

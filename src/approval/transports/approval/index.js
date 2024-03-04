@@ -13,7 +13,7 @@ export default (Parent) => {
     constructor(options = {}) {
       super(...arguments);
       Object.assign(this, {
-        approversCount: 'auto',
+        approversCount: 'r-6',
         decisionLevel: '66.6%',
         period: '5m'
       }, options);

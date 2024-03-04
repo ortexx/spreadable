@@ -386,6 +386,7 @@ export default function () {
       assert.isFalse(await utils.isPortUsed(port));
     });
   });
+
   describe('.getHostIp()', () => {
     it('should return localhost ip', async () => {
       assert.equal(await utils.getHostIp('localhost'), '127.0.0.1');
@@ -409,6 +410,7 @@ export default function () {
       assert.equal(await utils.getHostIp(val), val);
     });
   });
+
   describe('.getRequestTimer()', () => {
     let timer;
     let timeout;
@@ -440,6 +442,7 @@ export default function () {
       assert.isOk(timeout < last);
     });
   });
+  
   describe('.getRemoteIp()', () => {
     it('should return the right ip', () => {
       const remoteAddress = '127.0.0.1';
