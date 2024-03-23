@@ -5,7 +5,7 @@ import https from "https";
 import fetch from "node-fetch";
 import qs from "querystring";
 import utils from "./utils.js";
-import * as errors from "./errors.js";
+import errors from "./errors.js";
 import ms from "ms";
 import loggerConsole from "./logger/transports/console/index.js";
 import taskInterval from "./task/transports/interval/index.js";

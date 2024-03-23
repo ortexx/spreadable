@@ -10,7 +10,7 @@ import urlib from "url";
 import pack from "../package.json" with { type: "json" };
 import behaviorFail from "./behavior/transports/fail/index.js";
 import loki from "./db/transports/loki/index.js";
-import * as errors from "./errors.js";
+import errors from "./errors.js";
 import loggerConsole from "./logger/transports/console/index.js";
 import schema from "./schema.js";
 import express from "./server/transports/express/index.js";

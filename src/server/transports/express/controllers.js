@@ -1,7 +1,7 @@
 import compression from "compression";
 import express from "express";
 import cors from "cors";
-import * as errors from "../../../errors.js";
+import errors from "../../../errors.js";
 import utils from "../../../utils.js";
 
 const compressionFn = (node) => compression({ level: node.options.server.compressionLevel });

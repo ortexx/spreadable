@@ -1,6 +1,6 @@
 import Service from "../../../service.js";
 import utils from "../../../utils.js";
-import * as errors from "../../../errors.js";
+import errors from "../../../errors.js";
 
 export default (Parent) => {
   /**

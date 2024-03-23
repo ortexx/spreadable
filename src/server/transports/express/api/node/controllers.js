@@ -1,4 +1,4 @@
-import * as errors from "../../../../../errors.js";
+import errors from "../../../../../errors.js";
 import utils from "../../../../../utils.js";
 import schema from "../../../../../schema.js";
 import { pick } from "lodash-es";
